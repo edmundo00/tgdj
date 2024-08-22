@@ -775,6 +775,7 @@ class PresentationApp:
             title_box = slide.shapes.add_textbox(Cm(5), Cm(5), Cm(25), Cm(5))
             title_frame = title_box.text_frame
 
+            title_frame.clear()
             # First paragraph, first run: "title" in bold
             title_paragraph1 = title_frame.add_paragraph()
             title_paragraph1.level = 0  # Indicate bullet level (0 is the first level)
@@ -847,6 +848,22 @@ class PresentationApp:
             run_orquesta.font.color.rgb = RGBColor(255, 255, 255)  # Color blanco
             run_orquesta.font.bold = True
 
+            # tgdj  POSICION HORIZONTAL, POSICION VERTICAL, ANCHO, ALTURA
+            post = [25, 16, 8, 2.5]
+
+            # Añadir el cuadro de texto principal con el texto blanco
+            tgdj_box = slide.shapes.add_textbox(Cm(post[0]), Cm(post[1]), Cm(post[2]), Cm(post[3]))
+            tgdj_frame = tgdj_box.text_frame
+
+            tgdj_paragraph1 = tgdj_frame.add_paragraph()
+            tgdj_paragraph1.level = 0
+            run_tgdj = tgdj_paragraph1.add_run()
+            run_tgdj.text = f'© TDJ Edmundo Fraga\n{self.nombre_milonga_entry.get()}\n{self.fecha_entry.get()}'
+            run_tgdj.font.size = Pt(20)
+            run_tgdj.font.color.rgb = RGBColor(255, 255, 255)  # Color blanco
+            run_tgdj.font.bold = False
+
+
             # TITULOS POSICION HORIZONTAL, POSICION VERTICAL, ANCHO, ALTURA, DISTANCIA ENTRE ELLOS
             post = [15, 5, 20, 5, 3]
 
@@ -889,7 +906,6 @@ class PresentationApp:
 
                 paragraph2 = text_frame.add_paragraph()
                 run_compositor = paragraph2.add_run()
-
 
 
                 # Añadir el cuadro de texto principal con el compositor en blanco
