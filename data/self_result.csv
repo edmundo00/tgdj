@@ -1,0 +1,247 @@
+unique_value,repetition_count,position,same_orchestra,orchestra_value,group_data
+tango,3,0,True,Orquesta Típica Victor,"                         title                 artist1  ...   ano        artist2
+0  Viento norte (Bronca negra)  Orquesta Típica Victor  ...  1929            NaN
+1                      Coqueta  Orquesta Típica Victor  ...  1929            NaN
+2                    Ventarrón  Orquesta Típica Victor  ...  1933  Alberto Gómez
+
+[3 rows x 13 columns]"
+cortina entera,1,3,True,Em Beihold,"          title     artist1                album  ...     bitrate   ano artist2
+0  Too Precious  Em Beihold  Egg in the Backseat  ...  949.335394  2022     NaN
+
+[1 rows x 13 columns]"
+tango,3,4,True,Alfredo Gobbi,"          title        artist1  ...   ano artist2
+0        Chuzas  Alfredo Gobbi  ...  1949     NaN
+1        Jueves  Alfredo Gobbi  ...  1947     NaN
+2  Nueve puntos  Alfredo Gobbi  ...  1952     NaN
+
+[3 rows x 13 columns]"
+cortina entera,1,7,True,Pomplamoose,"                title      artist1  ...   ano         artist2
+0  Les Champs-Élysées  Pomplamoose  ...  2020  John Schroeder
+
+[1 rows x 13 columns]"
+tango,3,8,True,Francini-Pontier,"                    title           artist1  ...   ano     artist2
+0  Camouflage (Camuflaje)  Francini-Pontier  ...  1947  Raúl Berón
+1                Remolino  Francini-Pontier  ...  1946  Raúl Berón
+2               Uno y uno  Francini-Pontier  ...  1947  Raúl Berón
+
+[3 rows x 13 columns]"
+cortina entera,1,11,True,Ashe,"                title artist1               album  ...    bitrate   ano artist2
+0  Moral Of The Story    Ashe  Moral Of The Story  ...  858.48276  2020     NaN
+
+[1 rows x 13 columns]"
+tango vals,3,12,True,Juan D'Arienzo,"                 title         artist1  ...   ano       artist2
+0         Flor del mal  Juan D'Arienzo  ...  1940  Héctor Mauré
+1                Miedo  Juan D'Arienzo  ...  1940  Héctor Mauré
+2  La serenata de ayer  Juan D'Arienzo  ...  1941  Héctor Mauré
+
+[3 rows x 13 columns]"
+cortina entera,1,15,True,Taylor Swift,"         title       artist1  album  ...     bitrate   ano artist2
+0  Paper Rings  Taylor Swift  Lover  ...  946.408058  2019     NaN
+
+[1 rows x 13 columns]"
+tango,3,16,True,Florindo Sassone,"                                               title  ... artist2
+0                                        Ojos negros  ...     NaN
+1                                      Isla de Capri  ...     NaN
+2  Los pescadores de perlas (Les pêcheurs de perles)  ...     NaN
+
+[3 rows x 13 columns]"
+cortina entera,1,19,True,The Bangles,"                  title      artist1  ...   ano artist2
+0  Hazy Shade of Winter  The Bangles  ...  2017     NaN
+
+[1 rows x 13 columns]"
+tango,3,20,True,Ángel D'Agostino,"                       title           artist1  ...   ano       artist2
+0              Tres esquinas  Ángel D'Agostino  ...  1941  Ángel Vargas
+1        Ahora no me conocés  Ángel D'Agostino  ...  1941  Ángel Vargas
+2  Shusheta (El aristócrata)  Ángel D'Agostino  ...  1945  Ángel Vargas
+
+[3 rows x 13 columns]"
+cortina entera,1,23,True,Rosa Linn,"  title    artist1  ...   ano artist2
+0  Snap  Rosa Linn  ...  2022     NaN
+
+[1 rows x 13 columns]"
+tango,3,24,True,Carlos di Sarli,"              title          artist1  ...   ano artist2
+0  Milonguero viejo  Carlos di Sarli  ...  1955     NaN
+1      El ingeniero  Carlos di Sarli  ...  1955     NaN
+2   Champagne tango  Carlos di Sarli  ...  1958     NaN
+
+[3 rows x 13 columns]"
+cortina entera,1,27,True,Meghan Trainor,"                                         title         artist1  ...   ano artist2
+0  Like I'm Gonna Lose You (feat. John Legend)  Meghan Trainor  ...  2015     NaN
+
+[1 rows x 13 columns]"
+tango milonga,3,28,True,Francisco Canaro,"                     title           artist1  ...   ano        artist2
+0  Milonga del novecientos  Francisco Canaro  ...  1933   Ernesto Famá
+1          Silueta porteña  Francisco Canaro  ...  1936  Roberto Maida
+2       Reliquias porteñas  Francisco Canaro  ...  1938            NaN
+
+[3 rows x 13 columns]"
+cortina entera,1,31,True,Ed Sheeran,"          title     artist1 album  ...     bitrate   ano artist2
+0  Shape of You  Ed Sheeran     ÷  ...  1716.83772  2017     NaN
+
+[1 rows x 13 columns]"
+tango,3,32,True,Julio de Caro,"            title        artist1  ...   ano artist2
+0      La rayuela  Julio de Caro  ...  1941     NaN
+1  El pensamiento  Julio de Caro  ...  1942     NaN
+2       Catamarca  Julio de Caro  ...  1940     NaN
+
+[3 rows x 13 columns]"
+cortina entera,1,35,True,Raphael,"                title  artist1    album  ...    bitrate   ano artist2
+0  Les petits bateaux  Raphael  Caravan  ...  927.58884  2005     NaN
+
+[1 rows x 13 columns]"
+tango,3,36,True,Ricardo Tanturi,"                      title          artist1  ...   ano           artist2
+0         Decile que vuelva  Ricardo Tanturi  ...  1942  Alberto Castillo
+1  Bailongo de los domingos  Ricardo Tanturi  ...  1943  Alberto Castillo
+2   Mi piba (Mi piba linda)  Ricardo Tanturi  ...  1943  Alberto Castillo
+
+[3 rows x 13 columns]"
+cortina entera,1,39,True,Postmodern Jukebox,"   title             artist1           album  ...     bitrate   ano artist2
+0  Creep  Postmodern Jukebox  The Essentials  ...  818.814714  2016     NaN
+
+[1 rows x 13 columns]"
+tango,3,40,True,Juan D'Arienzo,"           title         artist1  ...   ano artist2
+0  Por qué razón  Juan D'Arienzo  ...  1939     NaN
+1    El cencerro  Juan D'Arienzo  ...  1937     NaN
+2          Maipo  Juan D'Arienzo  ...  1939     NaN
+
+[3 rows x 13 columns]"
+cortina entera,1,43,True,Camila Cabello feat. Young Thug,"                       title                          artist1  ...   ano artist2
+0  Havana (feat. Young Thug)  Camila Cabello feat. Young Thug  ...  2017     NaN
+
+[1 rows x 13 columns]"
+tango vals,3,44,True,Ricardo Tanturi,"                   title          artist1  ...   ano           artist2
+0             Mi romance  Ricardo Tanturi  ...  1941  Alberto Castillo
+1               Recuerdo  Ricardo Tanturi  ...  1941  Alberto Castillo
+2  La serenata (Mi amor)  Ricardo Tanturi  ...  1941  Alberto Castillo
+
+[3 rows x 13 columns]"
+cortina entera,1,47,True,Olivia Rodrigo,"     title         artist1 album  ...     bitrate   ano artist2
+0  Vampire  Olivia Rodrigo  GUTS  ...  962.454105  2023     NaN
+
+[1 rows x 13 columns]"
+tango,3,48,True,Rodolfo Biagi,"         title        artist1  ...   ano artist2
+0      Bélgica  Rodolfo Biagi  ...  1942     NaN
+1         Didí  Rodolfo Biagi  ...  1941     NaN
+2  El Yaguarón  Rodolfo Biagi  ...  1940     NaN
+
+[3 rows x 13 columns]"
+cortina entera,1,51,True,Justin Wellington Feat. Small Jam,"     title                            artist1  ...   ano artist2
+0  Iko Iko  Justin Wellington Feat. Small Jam  ...  2021     NaN
+
+[1 rows x 13 columns]"
+tango,3,52,True,Enrique Rodríguez,"                      title            artist1  ...   ano         artist2
+0    Cómo se pianta la vida  Enrique Rodríguez  ...  1940  Armando Moreno
+1  En la buena y en la mala  Enrique Rodríguez  ...  1940  Armando Moreno
+2                 La gayola  Enrique Rodríguez  ...  1941  Armando Moreno
+
+[3 rows x 13 columns]"
+cortina entera,1,55,True,Pomplamoose,"                                               title  ...         artist2
+0  Les yeux noirs (feat. The Vignes Rooftop Revival)  ...  John Schroeder
+
+[1 rows x 13 columns]"
+tango,3,56,True,Osvaldo Pugliese,"         title           artist1  ...   ano artist2
+0   Pata ancha  Osvaldo Pugliese  ...  1957     NaN
+1   La bordona  Osvaldo Pugliese  ...  1958     NaN
+2  Gallo ciego  Osvaldo Pugliese  ...  1959     NaN
+
+[3 rows x 13 columns]"
+cortina entera,1,59,True,Amy Winehouse,"                  title        artist1          album  ...    bitrate   ano artist2
+0  You Know I’m No Good  Amy Winehouse  Back to Black  ...  733.75331  2007     NaN
+
+[1 rows x 13 columns]"
+tango milonga,3,60,True,Francisco Lomuto,"                       title           artist1  ...   ano        artist2
+0  No hay tierra como la mia  Francisco Lomuto  ...  1939  Fernando Díaz
+1           Parque Patricios  Francisco Lomuto  ...  1941  Fernando Díaz
+2           Que tiempo aquel  Francisco Lomuto  ...  1938     Jorge Omar
+
+[3 rows x 13 columns]"
+cortina entera,1,63,True,The Weeknd,"             title     artist1                 album  ...      bitrate   ano artist2
+0  Save Your Tears  The Weeknd  After Hours (Deluxe)  ...  1660.260558  2020     NaN
+
+[1 rows x 13 columns]"
+tango,3,64,True,Francisco Canaro,"             title           artist1  ...   ano        artist2
+0            Dónde  Francisco Canaro  ...  1935  Roberto Maida
+1            Ciego  Francisco Canaro  ...  1935  Roberto Maida
+2  Mi noche triste  Francisco Canaro  ...  1936  Roberto Maida
+
+[3 rows x 13 columns]"
+cortina entera,1,67,True,Sia,"    title artist1                                album  ...    bitrate   ano artist2
+0  Genius     Sia  Labrinth, Sia, Diplo present... LSD  ...  976.03297  2019     LSD
+
+[1 rows x 13 columns]"
+tango,3,68,True,Juan D'Arienzo,"                  title         artist1  ...   ano          artist2
+0  No nos veremos nunca  Juan D'Arienzo  ...  1944  Alberto Echagüe
+1          La madrugada  Juan D'Arienzo  ...  1944  Alberto Echagüe
+2               Mandria  Juan D'Arienzo  ...  1939  Alberto Echagüe
+
+[3 rows x 13 columns]"
+cortina entera,1,71,True,Bob Dylan,"       title    artist1   album  year  ... extension      bitrate   ano artist2
+0  Hurricane  Bob Dylan  Desire  2014  ...      flac  1003.635439  2014     NaN
+
+[1 rows x 13 columns]"
+tango,3,72,True,Ricardo Malerba,"                     title          artist1  ...   ano         artist2
+0            Embrujamiento  Ricardo Malerba  ...  1943  Orlando Medina
+1              Gitana rusa  Ricardo Malerba  ...  1942  Orlando Medina
+2  La piba de los jazmines  Ricardo Malerba  ...  1943  Orlando Medina
+
+[3 rows x 13 columns]"
+cortina entera,1,75,True,Lana Del Rey,"                title       artist1          album  ...     bitrate   ano artist2
+0  Summertime Sadness  Lana Del Rey  Bravo Hits 78  ...  946.208292  2012     NaN
+
+[1 rows x 13 columns]"
+tango vals,3,76,True,Miguel Caló,"                        title      artist1  ...   ano          artist2
+0  Bajo un cielo de estrellas  Miguel Caló  ...  1941  Alberto Podestá
+1           Pedacito de cielo  Miguel Caló  ...  1942  Alberto Podestá
+2                Flor de lino  Miguel Caló  ...  1946     Raul Iriarte
+
+[3 rows x 13 columns]"
+cortina entera,1,79,True,Jain,"    title artist1   album        year  ... extension    bitrate   ano artist2
+0  Makeba    Jain  Zanaka  2017-05-05  ...      flac  858.55098  2017     NaN
+
+[1 rows x 13 columns]"
+tango,3,80,True,Aníbal Troilo,"                                           title  ...         artist2
+0  Tal vez será su voz (Tal vez será mi alcohol)  ...  Alberto Marino
+1                         Cotorrita de la suerte  ...  Alberto Marino
+2                                          María  ...  Alberto Marino
+
+[3 rows x 13 columns]"
+cortina entera,1,83,True,Bruce Springsteen,"                 title            artist1  ...   ano            artist2
+0  Paradise By the ""C""  Bruce Springsteen  ...  1978  The E Street Band
+
+[1 rows x 13 columns]"
+tango,3,84,True,Edgardo Donato,"       title         artist1  ...   ano        artist2
+0   Te busco  Edgardo Donato  ...  1941  Horacio Lagos
+1  A oscuras  Edgardo Donato  ...  1941  Horacio Lagos
+2   El adiós  Edgardo Donato  ...  1938  Horacio Lagos
+
+[3 rows x 13 columns]"
+cortina entera,1,87,True,Olivia Rodrigo,"           title         artist1 album  ...      bitrate   ano artist2
+0  get him back!  Olivia Rodrigo  Guts  ...  1852.127891  2023     NaN
+
+[1 rows x 13 columns]"
+tango,3,88,True,Pedro Laurenz,"                title        artist1  ...   ano          artist2
+0               Garúa  Pedro Laurenz  ...  1943  Alberto Podestá
+1  Que nunca me falte  Pedro Laurenz  ...  1943  Alberto Podestá
+2              Recién  Pedro Laurenz  ...  1943  Alberto Podestá
+
+[3 rows x 13 columns]"
+cortina entera,1,91,True,Sean Paul feat. Dua Lipa,"    title                   artist1  ...   ano artist2
+0  No Lie  Sean Paul feat. Dua Lipa  ...  2017     NaN
+
+[1 rows x 13 columns]"
+tango,3,92,True,Ricardo Tanturi,"                  title          artist1  ...   ano         artist2
+0                Malvón  Ricardo Tanturi  ...  1943  Enrique Campos
+1  Sollozo de bandoneón  Ricardo Tanturi  ...  1943  Enrique Campos
+2           Oigo tu voz  Ricardo Tanturi  ...  1943  Enrique Campos
+
+[3 rows x 13 columns]"
+cortina entera,1,95,True,Adele,"                              title artist1  ...   ano artist2
+0  Someone Like You (Live Acoustic)   Adele  ...  2011     NaN
+
+[1 rows x 13 columns]"
+tango,3,96,True,Juan D'Arienzo,"                  title         artist1  ...   ano       artist2
+0  Si la llegaran a ver  Juan D'Arienzo  ...  1943  Héctor Mauré
+1              El olivo  Juan D'Arienzo  ...  1941  Héctor Mauré
+2               Amarras  Juan D'Arienzo  ...  1944  Héctor Mauré
+
+[3 rows x 13 columns]"
