@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from tkinter import ttk
 from PIL import Image as PilImage, ImageTk
-from pptx.util import Inches, Pt
+from pptx.util import Cm, Pt
 from pptx import Presentation
 from pptx.dml.color import RGBColor
 import os
@@ -772,7 +772,7 @@ class PresentationApp:
 
             title, year, composer = self.canciones_tanda(tanda_number, ['title', 'ano', 'composer'])[0]
 
-            title_box = slide.shapes.add_textbox(Inches(2), Inches(2), Inches(2), Inches(2))
+            title_box = slide.shapes.add_textbox(Cm(5), Cm(5), Cm(25), Cm(5))
             title_frame = title_box.text_frame
 
             # First paragraph, first run: "title" in bold
@@ -785,7 +785,7 @@ class PresentationApp:
             run_orquesta.font.color.rgb = RGBColor(255, 255, 255)  # White color
             run_orquesta.font.bold = True
 
-            text_box = slide.shapes.add_textbox(Inches(4), Inches(8), Inches(1), Inches(1))
+            text_box = slide.shapes.add_textbox(Cm(8), Cm(10), Cm(22), Cm(5))
             text_frame = text_box.text_frame
 
             # First paragraph, first run: "title" in bold
@@ -810,61 +810,152 @@ class PresentationApp:
 
         else:
 
-
-            title_box = slide.shapes.add_textbox(Inches(5.5), Inches(1), Inches(13), Inches(1.5))
-            title_frame = title_box.text_frame
-
-            # First paragraph, first run: "title" in bold
-            title_paragraph1 = title_frame.add_paragraph()
-            title_paragraph1.level = 0  # Indicate bullet level (0 is the first level)
-            run_orquesta = title_paragraph1.add_run()
-
-            subtitle = ''
             if not orchestra_value.startswith("Orquesta"):
                 initial_text = 'Orquesta de '
             else:
                 initial_text =''
+
+            # Define el offset deseado en centímetros
+            offset_cm = 0.1  # Por ejemplo, 0.1 cm
+
+            # ORQUESTA POSICION HORIZONTAL, POSICION VERTICAL, ANCHO, ALTURA
+            poso = [9, 1, 28, 4]
+
+            # Añadir los cuadros de texto para simular el borde negro
+            for x_offset in [-offset_cm, offset_cm]:
+                for y_offset in [-offset_cm, offset_cm]:
+                    shadow_box = slide.shapes.add_textbox(Cm(poso[0]) + Cm(x_offset), Cm(poso[1]) + Cm(y_offset), Cm(poso[2]), Cm(poso[3]))
+                    shadow_frame = shadow_box.text_frame
+                    shadow_paragraph = shadow_frame.add_paragraph()
+                    shadow_paragraph.level = 0  # Primer nivel
+                    shadow_run = shadow_paragraph.add_run()
+
+                    shadow_run.text = f'{initial_text}{orchestra_value}'
+                    shadow_run.font.size = Pt(60)
+                    shadow_run.font.color.rgb = RGBColor(0, 0, 0)  # Color negro
+                    shadow_run.font.bold = True
+
+            # Añadir el cuadro de texto principal con el texto blanco
+            title_box = slide.shapes.add_textbox(Cm(poso[0]), Cm(poso[1]), Cm(poso[2]), Cm(poso[3]))
+            title_frame = title_box.text_frame
+
+            title_paragraph1 = title_frame.add_paragraph()
+            title_paragraph1.level = 0
+            run_orquesta = title_paragraph1.add_run()
             run_orquesta.text = f'{initial_text}{orchestra_value}'
             run_orquesta.font.size = Pt(60)
-            run_orquesta.font.color.rgb = RGBColor(255, 255, 255)  # White color
+            run_orquesta.font.color.rgb = RGBColor(255, 255, 255)  # Color blanco
             run_orquesta.font.bold = True
+
+            # TITULOS POSICION HORIZONTAL, POSICION VERTICAL, ANCHO, ALTURA, DISTANCIA ENTRE ELLOS
+            post = [15, 5, 20, 5, 3]
 
             counter = 0
             for rows in self.canciones_tanda(tanda_number, ['title', 'ano', 'composer']):
                 title, year, composer = rows
 
-                text_box = slide.shapes.add_textbox(Inches(5.5), Inches(2 + counter * 1), Inches(13), Inches(1.5))
-                text_frame = text_box.text_frame
+                # Añadir cuadros de texto para el título con borde negro
+                for x_offset in [-offset_cm, offset_cm]:
+                    for y_offset in [-offset_cm, offset_cm]:
+                        shadow_box = slide.shapes.add_textbox(Cm(post[0]) + Cm(x_offset), Cm(post[1] + counter * post[4]) + Cm(y_offset),
+                                                              Cm(post[2]), Cm(post[3]))
+                        shadow_frame = shadow_box.text_frame
+                        shadow_paragraph = shadow_frame.add_paragraph()
+                        shadow_paragraph.level = 0
+                        shadow_run_title = shadow_paragraph.add_run()
 
-                # First paragraph, first run: "title" in bold
+                        shadow_run_title.text = title
+                        shadow_run_title.font.size = Pt(35)
+                        shadow_run_title.font.color.rgb = RGBColor(0, 0, 0)  # Color negro
+                        shadow_run_title.font.bold = True
+
+                # Añadir el cuadro de texto principal con el título en blanco
+                text_box = slide.shapes.add_textbox(Cm(post[0]), Cm(post[1] + counter * post[4]),
+                                                              Cm(post[2]), Cm(post[3]))
+                text_frame = text_box.text_frame
                 paragraph1 = text_frame.add_paragraph()
-                paragraph1.level = 0  # Indicate bullet level (0 is the first level)
+                paragraph1.level = 0
+
                 run_titulo = paragraph1.add_run()
                 run_titulo.text = title
                 run_titulo.font.size = Pt(35)
-                run_titulo.font.color.rgb = RGBColor(255, 255, 255)  # White color
+                run_titulo.font.color.rgb = RGBColor(255, 255, 255)  # Color blanco
                 run_titulo.font.bold = True
 
-                # Add bullet
-                paragraph1.space_before = Pt(12)
-                paragraph1.space_after = Pt(12)
-                paragraph1.font.shadow = True
-
-                # First paragraph, second run: "year" in parentheses
                 run_fecha = paragraph1.add_run()
                 run_fecha.text = f'   ({year})'
                 run_fecha.font.size = Pt(30)
-                run_fecha.font.color.rgb = RGBColor(255, 255, 255)  # White color
+                run_fecha.font.color.rgb = RGBColor(255, 255, 255)  # Color blanco
 
-                # Second paragraph: "composer" in italics
                 paragraph2 = text_frame.add_paragraph()
                 run_compositor = paragraph2.add_run()
+
+
+
+                # Añadir el cuadro de texto principal con el compositor en blanco
                 run_compositor.text = composer
                 run_compositor.font.size = Pt(18)
-                run_compositor.font.color.rgb = RGBColor(255, 255, 255)  # White color
+                run_compositor.font.color.rgb = RGBColor(255, 255, 255)  # Color blanco
                 run_compositor.font.italic = True
 
                 counter += 1
+
+            #
+            #
+            # title_box = slide.shapes.add_textbox(Cm(9), Cm(1), Cm(28), Cm(4))
+            # title_frame = title_box.text_frame
+            #
+            # # First paragraph, first run: "title" in bold
+            # title_paragraph1 = title_frame.add_paragraph()
+            # title_paragraph1.level = 0  # Indicate bullet level (0 is the first level)
+            # run_orquesta = title_paragraph1.add_run()
+            #
+            # subtitle = ''
+            # if not orchestra_value.startswith("Orquesta"):
+            #     initial_text = 'Orquesta de '
+            # else:
+            #     initial_text =''
+            # run_orquesta.text = f'{initial_text}{orchestra_value}'
+            # run_orquesta.font.size = Pt(60)
+            # run_orquesta.font.color.rgb = RGBColor(255, 255, 255)  # White color
+            # run_orquesta.font.bold = True
+            #
+            # counter = 0
+            # for rows in self.canciones_tanda(tanda_number, ['title', 'ano', 'composer']):
+            #     title, year, composer = rows
+            #
+            #     text_box = slide.shapes.add_textbox(Cm(15), Cm(5 + counter * 3), Cm(20), Cm(5))
+            #     text_frame = text_box.text_frame
+            #
+            #     # First paragraph, first run: "title" in bold
+            #     paragraph1 = text_frame.add_paragraph()
+            #     paragraph1.level = 0  # Indicate bullet level (0 is the first level)
+            #     run_titulo = paragraph1.add_run()
+            #     run_titulo.text = title
+            #     run_titulo.font.size = Pt(35)
+            #     run_titulo.font.color.rgb = RGBColor(255, 255, 255)  # White color
+            #     run_titulo.font.bold = True
+            #
+            #     # Add bullet
+            #     paragraph1.space_before = Pt(12)
+            #     paragraph1.space_after = Pt(12)
+            #     paragraph1.font.shadow = True
+            #
+            #     # First paragraph, second run: "year" in parentheses
+            #     run_fecha = paragraph1.add_run()
+            #     run_fecha.text = f'   ({year})'
+            #     run_fecha.font.size = Pt(30)
+            #     run_fecha.font.color.rgb = RGBColor(255, 255, 255)  # White color
+            #
+            #     # Second paragraph: "composer" in italics
+            #     paragraph2 = text_frame.add_paragraph()
+            #     run_compositor = paragraph2.add_run()
+            #     run_compositor.text = composer
+            #     run_compositor.font.size = Pt(18)
+            #     run_compositor.font.color.rgb = RGBColor(255, 255, 255)  # White color
+            #     run_compositor.font.italic = True
+            #
+            #     counter += 1
 
     def create_presentation(self):
 
@@ -886,11 +977,12 @@ class PresentationApp:
         prs = Presentation()
 
         # Set slide dimensions (7:4 aspect ratio)
-        prs.slide_width = Inches(14)
-        prs.slide_height = Inches(8)
+        prs.slide_width = Cm(33.87)
+        prs.slide_height = Cm(19.05)
 
         # Add slides for different tanda numbers
-        for tanda_number in range(1, self.result.shape[0]+1):  # Adjust the range as needed
+        # for tanda_number in range(1, self.result.shape[0]+1):  # Adjust the range as needed
+        for tanda_number in range(1, 5):  # Adjust the range as needed
             self.create_slide_for_tanda(prs, tanda_number)
 
         # Save the presentation
