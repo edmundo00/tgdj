@@ -59,7 +59,8 @@ output_folder = os.path.join(project_root, "output")
 
 image_folder = os.path.join(project_root, "images")
 background_image_path = os.path.join(image_folder, "background_tango.png")
-orchestra_path = os.path.join(image_folder, "alfredo de angelis.png")
+
+background_image_path = join(image_folder, "background_tango.png")
 
 
 
@@ -376,8 +377,6 @@ class PresentationApp:
 
 
         self.merged_image_folder = image_folder
-        self.background_image_path = join(image_folder, "background_tango.png")
-        self.orchestra_path = join(image_folder, "alfredo de angelis.png")
         self.m3u_file_path = None
         self.audio_files = []
         # self.audio_tags = []
@@ -502,7 +501,6 @@ class PresentationApp:
         #                          "tgdj", "data", "self_result.csv")
         # self.result = pd.read_csv(load_path)
 
-
     def canciones_tanda(self, tanda, tags):
         # Check if the result has at least 'tanda' rows
         if len(self.result) < tanda:
@@ -526,55 +524,6 @@ class PresentationApp:
             list_of_values.append(selected_values)
 
         return list_of_values
-
-    def apply_gradient_overlay(self):
-        # Open the original image
-        base = PilImage.open(self.background_image_path).convert("RGBA")
-
-        orchestra = PilImage.open(self.orchestra_path).convert("RGBA")
-
-        maximum_in_width = 0.35 * base.width
-        maximum_in_height = base.height
-
-        resize_factor = maximum_in_height / orchestra.height
-
-        if (resize_factor * orchestra.width) > maximum_in_width:
-            resize_factor = maximum_in_width / orchestra.width
-
-        new_width = int(orchestra.width * resize_factor)
-        new_height = int(orchestra.height * resize_factor)
-
-        # Resize the orchestra image
-        orchestra = orchestra.resize((new_width, new_height), PilImage.Resampling.LANCZOS)
-
-        # Create a gradient overlay
-        gradient = PilImage.new('L', (base.width, base.height))
-        for x in range(base.width):
-            # Gradient from opaque dark gray (on the left) to fully transparent (on the right)
-            gradient_value = int(
-                255 * (1 - x / base.width))  # Fully opaque on the left to fully transparent on the right
-            for y in range(base.height):
-                gradient.putpixel((x, y), gradient_value)
-
-        # Convert gradient to RGBA
-        gradient_rgba = PilImage.new('RGBA', base.size)
-        for y in range(base.height):
-            for x in range(base.width):
-                gradient_rgba.putpixel((x, y), (
-                105, 105, 105, gradient.getpixel((x, y))))  # Dark gray with varying transparency
-
-        # Apply the gradient to the base image
-        combined = PilImage.alpha_composite(base, gradient_rgba)
-
-        # Paste the resized orchestra image onto the combined image
-        position = (0, combined.height - orchestra.height)  # Centering
-        combined.paste(orchestra, position, orchestra)  # The third argument is the mask to maintain transparency
-
-        # Save the gradient and the combined image
-        # gradient_rgba.save(self.path_gradiente, "PNG")
-        self.merged_image_path = join(image_folder, "merged_background.png")
-
-        combined.save(self.merged_image_path, "PNG")
 
     def open_m3u_file(self):
         # Temporarily make the window non-topmost to allow file dialog interaction
@@ -708,7 +657,7 @@ class PresentationApp:
         tk.Label(pref_window, text="Background Image:").grid(row=1, column=0, padx=10, pady=10, sticky="w")
         background_entry = tk.Entry(pref_window, width=70)
         background_entry.grid(row=1, column=1, padx=10, pady=10)
-        background_entry.insert(0, self.background_image_path)
+        background_entry.insert(0, background_image_path)
 
         tk.Label(pref_window, text="M3U Start Path:").grid(row=2, column=0, padx=10, pady=10, sticky="w")
         m3u_start_path_entry = tk.Entry(pref_window, width=70)
@@ -717,7 +666,7 @@ class PresentationApp:
 
         def save_preferences():
             output_folder = output_path_entry.get()
-            self.background_image_path = background_entry.get()
+            background_image_path = background_entry.get()
             m3u_start_path = m3u_start_path_entry.get()
             messagebox.showinfo("Preferences", "Preferences saved!")
             pref_window.destroy()
@@ -726,7 +675,7 @@ class PresentationApp:
         save_button.grid(row=3, column=0, columnspan=2, pady=20)
 
     def update_background_thumbnail(self):
-        image = PilImage.open(self.background_image_path)
+        image = PilImage.open(background_image_path)
         image.thumbnail((100, 100))
         self.thumbnail_image = ImageTk.PhotoImage(image)
 
@@ -739,14 +688,76 @@ class PresentationApp:
 
     def select_background_image(self):
         new_image_path = filedialog.askopenfilename(
-            initialdir=os.path.dirname(self.background_image_path),
+            initialdir=os.path.dirname(background_image_path),
             filetypes=[("Image files", "*.jpg;*.jpeg;*.png;*.webp;*.bmp"), ("All files", "*.*")]
         )
         if new_image_path:
-            self.background_image_path = new_image_path
+            background_image_path = new_image_path
             self.update_background_thumbnail()
 
+    def apply_gradient_overlay(self):
+        # Open the original image
+        base = PilImage.open(background_image_path).convert("RGBA")
+
+        orchestra = PilImage.open(self.orchestra_path).convert("RGBA")
+
+        maximum_in_width = 0.35 * base.width
+        maximum_in_height = base.height
+
+        resize_factor = maximum_in_height / orchestra.height
+
+        if (resize_factor * orchestra.width) > maximum_in_width:
+            resize_factor = maximum_in_width / orchestra.width
+
+        new_width = int(orchestra.width * resize_factor)
+        new_height = int(orchestra.height * resize_factor)
+
+        # Resize the orchestra image
+        orchestra = orchestra.resize((new_width, new_height), PilImage.Resampling.LANCZOS)
+
+        # Create a gradient overlay
+        gradient = PilImage.new('L', (base.width, base.height))
+        for x in range(base.width):
+            # Gradient from opaque dark gray (on the left) to fully transparent (on the right)
+            gradient_value = int(
+                255 * (1 - x / base.width))  # Fully opaque on the left to fully transparent on the right
+            for y in range(base.height):
+                gradient.putpixel((x, y), gradient_value)
+
+        # Convert gradient to RGBA
+        gradient_rgba = PilImage.new('RGBA', base.size)
+        for y in range(base.height):
+            for x in range(base.width):
+                gradient_rgba.putpixel((x, y), (
+                105, 105, 105, gradient.getpixel((x, y))))  # Dark gray with varying transparency
+
+        # Apply the gradient to the base image
+        combined = PilImage.alpha_composite(base, gradient_rgba)
+
+        # Paste the resized orchestra image onto the combined image
+        position = (0, combined.height - orchestra.height)  # Centering
+        combined.paste(orchestra, position, orchestra)  # The third argument is the mask to maintain transparency
+
+        # Save the gradient and the combined image
+        # gradient_rgba.save(self.path_gradiente, "PNG")
+        self.merged_image_path = join(image_folder, "merged_background.png")
+
+        combined.save(self.merged_image_path, "PNG")
+
     def create_slide_for_tanda(self, prs, tanda_number):
+
+        # NAME OF THE ORCHESTRA
+        orchestra_value = self.result.iloc[tanda_number - 1]['orchestra_value']
+        orchestra_value_min = unidecode(orchestra_value).lower()
+        self.tanda_gender = self.result.iloc[tanda_number - 1]['unique_value']
+        if 'tango' not in self.tanda_gender:
+            self.merged_image_path = join(self.merged_image_folder, "background_cortina.png")
+        else:
+            # Create a merged image with gradient overlay
+            self.path_gradiente = join(self.merged_image_folder, "gradiente_background.png")
+            self.orchestra_path = os.path.join(image_folder, f'{orchestra_value_min}.png')
+            self.apply_gradient_overlay()
+
 
         # Add a slide with a title and content layout
         slide_layout = prs.slide_layouts[5]  # Use a blank layout
@@ -755,32 +766,26 @@ class PresentationApp:
         # Set the merged background image with gradient
         slide.shapes.add_picture(self.merged_image_path, 0, 0, width=prs.slide_width, height=prs.slide_height)
 
-        title_box = slide.shapes.add_textbox(Inches(5.5), Inches(1), Inches(13), Inches(1.5))
-        title_frame = title_box.text_frame
+        if 'tango' not in self.tanda_gender:
 
-        # First paragraph, first run: "title" in bold
-        title_paragraph1 = title_frame.add_paragraph()
-        title_paragraph1.level = 0  # Indicate bullet level (0 is the first level)
-        run_orquesta = title_paragraph1.add_run()
-        orchestra_value = self.result.iloc[tanda_number - 1]['orchestra_value']
-        subtitle = ''
-        if not orchestra_value.startswith("Orquesta"):
-            initial_text = 'Orquesta de '
-        else:
-            initial_text =''
-        run_orquesta.text = f'{initial_text}{orchestra_value}'
-        run_orquesta.font.size = Pt(60)
-        run_orquesta.font.color.rgb = RGBColor(255, 255, 255)  # White color
-        run_orquesta.font.bold = True
+            lista = self.canciones_tanda(tanda_number, ['title', 'ano', 'composer'])
 
+            title, year, composer = self.canciones_tanda(tanda_number, ['title', 'ano', 'composer'])[0]
 
-        self.orchestra_path = join(image_folder, "alfredo de angelis.png")
+            title_box = slide.shapes.add_textbox(Inches(2), Inches(2), Inches(2), Inches(2))
+            title_frame = title_box.text_frame
 
-        counter = 0
-        for rows in self.canciones_tanda(tanda_number, ['title', 'ano', 'composer']):
-            title, year, composer = rows
+            # First paragraph, first run: "title" in bold
+            title_paragraph1 = title_frame.add_paragraph()
+            title_paragraph1.level = 0  # Indicate bullet level (0 is the first level)
+            run_orquesta = title_paragraph1.add_run()
 
-            text_box = slide.shapes.add_textbox(Inches(5.5), Inches(2 + counter * 1), Inches(13), Inches(1.5))
+            run_orquesta.text = f'{orchestra_value}'
+            run_orquesta.font.size = Pt(100)
+            run_orquesta.font.color.rgb = RGBColor(255, 255, 255)  # White color
+            run_orquesta.font.bold = True
+
+            text_box = slide.shapes.add_textbox(Inches(4), Inches(8), Inches(1), Inches(1))
             text_frame = text_box.text_frame
 
             # First paragraph, first run: "title" in bold
@@ -788,7 +793,7 @@ class PresentationApp:
             paragraph1.level = 0  # Indicate bullet level (0 is the first level)
             run_titulo = paragraph1.add_run()
             run_titulo.text = title
-            run_titulo.font.size = Pt(35)
+            run_titulo.font.size = Pt(50)
             run_titulo.font.color.rgb = RGBColor(255, 255, 255)  # White color
             run_titulo.font.bold = True
 
@@ -800,20 +805,69 @@ class PresentationApp:
             # First paragraph, second run: "year" in parentheses
             run_fecha = paragraph1.add_run()
             run_fecha.text = f'   ({year})'
-            run_fecha.font.size = Pt(30)
+            run_fecha.font.size = Pt(50)
             run_fecha.font.color.rgb = RGBColor(255, 255, 255)  # White color
 
-            # Second paragraph: "composer" in italics
-            paragraph2 = text_frame.add_paragraph()
-            run_compositor = paragraph2.add_run()
-            run_compositor.text = composer
-            run_compositor.font.size = Pt(18)
-            run_compositor.font.color.rgb = RGBColor(255, 255, 255)  # White color
-            run_compositor.font.italic = True
+        else:
 
-            counter += 1
+
+            title_box = slide.shapes.add_textbox(Inches(5.5), Inches(1), Inches(13), Inches(1.5))
+            title_frame = title_box.text_frame
+
+            # First paragraph, first run: "title" in bold
+            title_paragraph1 = title_frame.add_paragraph()
+            title_paragraph1.level = 0  # Indicate bullet level (0 is the first level)
+            run_orquesta = title_paragraph1.add_run()
+
+            subtitle = ''
+            if not orchestra_value.startswith("Orquesta"):
+                initial_text = 'Orquesta de '
+            else:
+                initial_text =''
+            run_orquesta.text = f'{initial_text}{orchestra_value}'
+            run_orquesta.font.size = Pt(60)
+            run_orquesta.font.color.rgb = RGBColor(255, 255, 255)  # White color
+            run_orquesta.font.bold = True
+
+            counter = 0
+            for rows in self.canciones_tanda(tanda_number, ['title', 'ano', 'composer']):
+                title, year, composer = rows
+
+                text_box = slide.shapes.add_textbox(Inches(5.5), Inches(2 + counter * 1), Inches(13), Inches(1.5))
+                text_frame = text_box.text_frame
+
+                # First paragraph, first run: "title" in bold
+                paragraph1 = text_frame.add_paragraph()
+                paragraph1.level = 0  # Indicate bullet level (0 is the first level)
+                run_titulo = paragraph1.add_run()
+                run_titulo.text = title
+                run_titulo.font.size = Pt(35)
+                run_titulo.font.color.rgb = RGBColor(255, 255, 255)  # White color
+                run_titulo.font.bold = True
+
+                # Add bullet
+                paragraph1.space_before = Pt(12)
+                paragraph1.space_after = Pt(12)
+                paragraph1.font.shadow = True
+
+                # First paragraph, second run: "year" in parentheses
+                run_fecha = paragraph1.add_run()
+                run_fecha.text = f'   ({year})'
+                run_fecha.font.size = Pt(30)
+                run_fecha.font.color.rgb = RGBColor(255, 255, 255)  # White color
+
+                # Second paragraph: "composer" in italics
+                paragraph2 = text_frame.add_paragraph()
+                run_compositor = paragraph2.add_run()
+                run_compositor.text = composer
+                run_compositor.font.size = Pt(18)
+                run_compositor.font.color.rgb = RGBColor(255, 255, 255)  # White color
+                run_compositor.font.italic = True
+
+                counter += 1
 
     def create_presentation(self):
+
         nombre_milonga = self.nombre_milonga_entry.get()
         fecha = self.fecha_entry.get()
 
@@ -824,10 +878,6 @@ class PresentationApp:
         if not self.m3u_file_path or not self.audio_files:
             messagebox.showwarning("Input Error", "Please load an M3U file.")
             return
-
-        # Create a merged image with gradient overlay
-        self.path_gradiente = join(self.merged_image_folder, "gradiente_background.png")
-        self.apply_gradient_overlay()
 
         # Path to save the presentation
         output_file = join(output_folder, "presentation.pptx")
@@ -840,7 +890,7 @@ class PresentationApp:
         prs.slide_height = Inches(8)
 
         # Add slides for different tanda numbers
-        for tanda_number in range(1, 4):  # Adjust the range as needed
+        for tanda_number in range(1, self.result.shape[0]+1):  # Adjust the range as needed
             self.create_slide_for_tanda(prs, tanda_number)
 
         # Save the presentation
