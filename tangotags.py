@@ -29,26 +29,40 @@ path_map = {
 # Identify the current computer name
 computer_name = os.getenv('COMPUTERNAME')
 dropbox_path = path_map[computer_name]
+
+# Define the root path of the project
+project_root = os.path.dirname(os.path.abspath(__file__))
+
 directorio_raiz = dropbox_path + "\\MUSICA\\MP3\\TANGO\\other_stuff\\"
-archivotest = directorio_raiz + "pythontest.csv"
-archivobackup = directorio_raiz + "backup"
 m3u_start_path = join(dropbox_path, "MUSICA", "MP3", "TANGO", "other_stuff")
-icono_archivo = directorio_raiz + "PYTHON\\tgdj\\icons\\" + "album.png"
-icono_directorio = directorio_raiz + "PYTHON\\tgdj\\icons\\" + "album-list.png"
-icono_correr = directorio_raiz + "PYTHON\\tgdj\\icons\\" + "search-window.png"
-icono_play = directorio_raiz + "PYTHON\\tgdj\\icons\\" + "play_resize.png"
-icono_stop = directorio_raiz + "PYTHON\\tgdj\\icons\\" + "pause_resize.png"
-icono_transfer = directorio_raiz + "PYTHON\\tgdj\\icons\\" + "transfer.png"
-icono_info = directorio_raiz + "PYTHON\\tgdj\\icons\\" + "info-circle_resize.png"
-icono_trash = directorio_raiz + "PYTHON\\tgdj\\icons\\" + "trash.png"
-icono_searchdb = directorio_raiz + "PYTHON\\tgdj\\icons\\" + "searchdb.png"
-icono_presentacion = directorio_raiz + "PYTHON\\tgdj\\icons\\" + "presentation.png"
-icono_playlist = directorio_raiz + "PYTHON\\tgdj\\icons\\" + "playlist.png"
-archivo_tocar = "E:\\Dropbox\\TDJ\\Ricardo Malerba\\Encuentro.mp3"
-data_folder = os.path.join(dropbox_path, "MUSICA", "MP3", "TANGO", "other_stuff", "PYTHON",
-                                       "tgdj", "data")
-csv_grabaciones = os.path.join(data_folder , 'todo.csv')
-mp3_dir = directorio_raiz + 'tangolinkdatabase\\MP3\\'
+
+archivotest = directorio_raiz + "pythontest.csv"
+
+
+# Define paths relative to the project root
+icono_archivo = os.path.join(project_root, "icons", "album.png")
+icono_directorio = os.path.join(project_root, "icons", "album-list.png")
+icono_correr = os.path.join(project_root, "icons", "search-window.png")
+icono_play = os.path.join(project_root, "icons", "play_resize.png")
+icono_stop = os.path.join(project_root, "icons", "pause_resize.png")
+icono_transfer = os.path.join(project_root, "icons", "transfer.png")
+icono_info = os.path.join(project_root, "icons", "info-circle_resize.png")
+icono_trash = os.path.join(project_root, "icons", "trash.png")
+icono_searchdb = os.path.join(project_root, "icons", "searchdb.png")
+icono_presentacion = os.path.join(project_root, "icons", "presentation.png")
+icono_playlist = os.path.join(project_root, "icons", "playlist.png")
+
+data_folder = os.path.join(project_root, "data")
+csv_grabaciones = os.path.join(data_folder, 'todo.csv')
+mp3_dir = os.path.join(project_root, 'audio')
+output_folder = os.path.join(project_root, "output")
+
+image_folder = os.path.join(project_root, "images")
+background_image_path = os.path.join(image_folder, "background_tango.png")
+orchestra_path = os.path.join(image_folder, "alfredo de angelis.png")
+
+
+
 filetofind_list = []
 numero_canciones = 0
 articulos_preposiciones_comunes = [
@@ -358,17 +372,12 @@ class PresentationApp:
 
         # Default paths
 
-        self.output_folder = join(dropbox_path, "MUSICA", "MP3", "TANGO", "other_stuff", "Presentacion")
-        # self.background_image_path = join(dropbox_path, "MUSICA", "MP3", "TANGO", "other_stuff",
-        #                                   "Presentacion", "Fotos Orquestas", "background_tango.png")
-        # self.merged_image_path = join(self.output_folder, "Fotos Orquestas", "merged_background.png")
-        # self.merged_image_folder = join(self.output_folder, "Fotos Orquestas")
+        output_folder = join(dropbox_path, "MUSICA", "MP3", "TANGO", "other_stuff", "Presentacion")
 
-        self.image_folder = join(dropbox_path, "MUSICA", "MP3", "TANGO", "other_stuff",
-                                          "PYTHON", "tgdj", "images")
-        self.merged_image_folder = self.image_folder
-        self.background_image_path = join(self.image_folder, "background_tango.png")
-        self.orchestra_path = join(self.image_folder, "alfredo de angelis.png")
+
+        self.merged_image_folder = image_folder
+        self.background_image_path = join(image_folder, "background_tango.png")
+        self.orchestra_path = join(image_folder, "alfredo de angelis.png")
         self.m3u_file_path = None
         self.audio_files = []
         # self.audio_tags = []
@@ -563,7 +572,7 @@ class PresentationApp:
 
         # Save the gradient and the combined image
         # gradient_rgba.save(self.path_gradiente, "PNG")
-        self.merged_image_path = join(self.image_folder, "merged_background.png")
+        self.merged_image_path = join(image_folder, "merged_background.png")
 
         combined.save(self.merged_image_path, "PNG")
 
@@ -694,7 +703,7 @@ class PresentationApp:
         tk.Label(pref_window, text="Output Path:").grid(row=0, column=0, padx=10, pady=10, sticky="w")
         output_path_entry = tk.Entry(pref_window, width=70)
         output_path_entry.grid(row=0, column=1, padx=10, pady=10)
-        output_path_entry.insert(0, self.output_folder)
+        output_path_entry.insert(0, output_folder)
 
         tk.Label(pref_window, text="Background Image:").grid(row=1, column=0, padx=10, pady=10, sticky="w")
         background_entry = tk.Entry(pref_window, width=70)
@@ -707,7 +716,7 @@ class PresentationApp:
         m3u_start_path_entry.insert(0, m3u_start_path)
 
         def save_preferences():
-            self.output_folder = output_path_entry.get()
+            output_folder = output_path_entry.get()
             self.background_image_path = background_entry.get()
             m3u_start_path = m3u_start_path_entry.get()
             messagebox.showinfo("Preferences", "Preferences saved!")
@@ -765,7 +774,7 @@ class PresentationApp:
         run_orquesta.font.bold = True
 
 
-        self.orchestra_path = join(self.image_folder, "alfredo de angelis.png")
+        self.orchestra_path = join(image_folder, "alfredo de angelis.png")
 
         counter = 0
         for rows in self.canciones_tanda(tanda_number, ['title', 'ano', 'composer']):
@@ -821,7 +830,7 @@ class PresentationApp:
         self.apply_gradient_overlay()
 
         # Path to save the presentation
-        output_file = join(self.output_folder, "presentation.pptx")
+        output_file = join(output_folder, "presentation.pptx")
 
         # Create a new PowerPoint presentation
         prs = Presentation()
@@ -1355,7 +1364,6 @@ class Ventana:
         # Create a menu bar
         self.menubar = tk.Menu(root)
         self.root.config(menu=self.menubar)
-        self.music_file = archivo_tocar
 
         # Create a 'File' menu and add it to the menu bar
         self.file_menu = tk.Menu(self.menubar, tearoff=0)
