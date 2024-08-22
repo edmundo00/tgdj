@@ -7,6 +7,7 @@ from PIL import Image as PilImage, ImageTk
 from pptx.util import Cm, Pt
 from pptx import Presentation
 from pptx.dml.color import RGBColor
+from pptx.enum.shapes import MSO_CONNECTOR
 import os
 from os.path import join
 import re
@@ -54,7 +55,7 @@ icono_playlist = os.path.join(project_root, "icons", "playlist.png")
 
 data_folder = os.path.join(project_root, "data")
 csv_grabaciones = os.path.join(data_folder, 'todo.csv')
-mp3_dir = os.path.join(project_root, 'audio')
+mp3_dir = os.path.join(dropbox_path, "MUSICA", "MP3", "TANGO", "other_stuff", "tangolinkdatabase", "MP3")
 output_folder = os.path.join(project_root, "output")
 
 image_folder = os.path.join(project_root, "images")
@@ -857,6 +858,16 @@ class PresentationApp:
             run_tgdj.font.size = Pt(20)
             run_tgdj.font.color.rgb = RGBColor(255, 255, 255)  # Color blanco
             run_tgdj.font.bold = False
+
+           # Añadir una línea
+            left = Cm(14)  # posición horizontal
+            top = Cm(4)  # posición vertical
+            width = Cm(17)  # ancho de la línea
+            height = Cm(0)  # altura de la línea
+            line = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, left, top, left + width, top + height)
+            # Estilo de la línea
+            line.line.color.rgb = RGBColor(255, 255, 255)  # color blanco
+            line.line.width = Pt(10)  # ancho de la línea
 
             # TITULOS POSICION HORIZONTAL, POSICION VERTICAL, ANCHO, ALTURA, DISTANCIA ENTRE ELLOS
             post = [15, 5, 18, 3, 2.5]
