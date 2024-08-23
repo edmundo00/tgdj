@@ -39,19 +39,24 @@ m3u_start_path = join(dropbox_path, "MUSICA", "MP3", "TANGO", "other_stuff")
 
 archivotest = directorio_raiz + "pythontest.csv"
 
-
 # Define paths relative to the project root
-icono_archivo = os.path.join(project_root, "icons", "album.png")
-icono_directorio = os.path.join(project_root, "icons", "album-list.png")
-icono_correr = os.path.join(project_root, "icons", "search-window.png")
-icono_play = os.path.join(project_root, "icons", "play_resize.png")
-icono_stop = os.path.join(project_root, "icons", "pause_resize.png")
-icono_transfer = os.path.join(project_root, "icons", "transfer.png")
-icono_info = os.path.join(project_root, "icons", "info-circle_resize.png")
-icono_trash = os.path.join(project_root, "icons", "trash.png")
-icono_searchdb = os.path.join(project_root, "icons", "searchdb.png")
-icono_presentacion = os.path.join(project_root, "icons", "presentation.png")
-icono_playlist = os.path.join(project_root, "icons", "playlist.png")
+icons = {
+    "archivo": "album.png",
+    "directorio": "album-list.png",
+    "correr": "search-window.png",
+    "play": "play_resize.png",
+    "stop": "pause_resize.png",
+    "transfer": "transfer.png",
+    "info": "info-circle_resize.png",
+    "trash": "trash.png",
+    "searchdb": "searchdb.png",
+    "presentacion": "presentation.png",
+    "playlist": "playlist.png",
+    "convert_playlist": "convert_playlist.png"
+}
+
+# Combine with project root
+icon_paths = {name: os.path.join(project_root, "icons", filename) for name, filename in icons.items()}
 
 data_folder = os.path.join(project_root, "data")
 csv_grabaciones = os.path.join(data_folder, 'todo.csv')
@@ -959,9 +964,9 @@ class PresentationApp:
 class FILETOFIND:
 
     def __init__(self, framefiles, framedatabase, ruta_archivo, frame_number):
-        self.play_icon = tk.PhotoImage(file=icono_play)
-        self.stop_icon = tk.PhotoImage(file=icono_stop)
-        self.info_icon = tk.PhotoImage(file=icono_info)
+        self.play_icon = tk.PhotoImage(file=icon_paths['play'])
+        self.stop_icon = tk.PhotoImage(file=icon_paths['stop'])
+        self.info_icon = tk.PhotoImage(file=icon_paths['info'])
         self.ruta_archivo = ruta_archivo
         self.vars = []
         self.checkbuttons = []
@@ -1493,22 +1498,22 @@ class Ventana:
         self.icon_bar = tk.Frame(root, relief=tk.RAISED, bd=2)
         self.icon_bar.grid(row=0, column=0, columnspan=3, sticky="ew")
 
-        self.new_icon = tk.PhotoImage(file=icono_archivo)
-        self.open_icon = tk.PhotoImage(file=icono_directorio)
-        self.save_icon = tk.PhotoImage(file=icono_correr)
-        self.transfer_icon = tk.PhotoImage(file=icono_transfer)
-        self.trash_icon = tk.PhotoImage(file=icono_trash)
-        self.searchdb_icon = tk.PhotoImage(file=icono_searchdb)
-        self.presentation_icon = tk.PhotoImage(file=icono_presentacion)
-        self.playlist_icon = tk.PhotoImage(file=icono_playlist)
+        # Define a list of icon names corresponding to the keys in icon_paths
+        icon_names = ['archivo', 'directorio', 'correr', 'transfer', 'trash', 'searchdb', 'presentacion', 'playlist',
+                      'convert_playlist']
 
-        self.load_button_music_file = tk.Button(self.icon_bar, image=self.new_icon, relief=tk.FLAT,
+        # Dynamically create and assign PhotoImage objects to instance variables
+        for icon_name in icon_names:
+            setattr(self, f"{icon_name}_icon", tk.PhotoImage(file=icon_paths[icon_name]))
+
+
+        self.load_button_music_file = tk.Button(self.icon_bar, image=self.archivo_icon, relief=tk.FLAT,
                                                 command=self.load_music_file)
         self.load_button_music_file.grid(row=0, column=0, padx=2, pady=2)
-        self.load_button_music_folder = tk.Button(self.icon_bar, image=self.open_icon, relief=tk.FLAT,
+        self.load_button_music_folder = tk.Button(self.icon_bar, image=self.directorio_icon, relief=tk.FLAT,
                                                   command=self.load_music_folder)
         self.load_button_music_folder.grid(row=0, column=1, padx=2, pady=2)
-        self.save_button = tk.Button(self.icon_bar, image=self.save_icon, relief=tk.FLAT)
+        self.save_button = tk.Button(self.icon_bar, image=self.correr_icon, relief=tk.FLAT)
         self.save_button.grid(row=0, column=2, padx=2, pady=2)
         self.transfer_button = tk.Button(self.icon_bar, image=self.transfer_icon, relief=tk.FLAT,
                                          command=self.aplicartags)
@@ -1517,12 +1522,16 @@ class Ventana:
         self.trash_button.grid(row=0, column=4, padx=2, pady=2)
         self.trash_button = tk.Button(self.icon_bar, image=self.searchdb_icon, relief=tk.FLAT, command=self.searchdb)
         self.trash_button.grid(row=0, column=5, padx=2, pady=2)
-        self.presentation_button = tk.Button(self.icon_bar, image=self.presentation_icon, relief=tk.FLAT,
+        self.presentation_button = tk.Button(self.icon_bar, image=self.presentacion_icon, relief=tk.FLAT,
                                              command=self.open_presentation_popup)
         self.presentation_button.grid(row=0, column=6, padx=2, pady=2)
         self.playlist_button = tk.Button(self.icon_bar, image=self.playlist_icon, relief=tk.FLAT,
                                          command=self.open_playlist)
         self.playlist_button.grid(row=0, column=7, padx=2, pady=2)
+        self.convert_playlist_button = tk.Button(self.icon_bar, image=self.convert_playlist_icon, relief=tk.FLAT,
+                                                 command=self.convert_playlist)
+        self.convert_playlist_button.grid(row=0, column=8, padx=2, pady=2)
+
 
         # Create a main content area
         self.canvas_frame = tk.Frame(root)
@@ -1577,6 +1586,92 @@ class Ventana:
 
         # Start the Tkinter event loop
         self.root.mainloop()
+
+    def convert_playlist(self):
+        # Abrir el cuadro de diálogo para seleccionar un archivo M3U
+        m3u_file_path = filedialog.askopenfilename(
+            initialdir=m3u_start_path,
+            title="Select M3U Playlist",
+            filetypes=[("M3U files", "*.m3u"), ("All files", "*.*")]
+        )
+
+        # Si no se selecciona ningún archivo, salir de la función
+        if not m3u_file_path:
+            return
+
+        # Leer el contenido del archivo M3U y eliminar las líneas en blanco
+        with open(m3u_file_path, 'r', encoding='utf-8') as file:
+            m3u_lines = [line.strip() for line in file if line.strip()]
+
+        # Crear una ventana popup para mostrar el contenido del M3U
+        popup = tk.Toplevel(self.root)
+        popup.title("Playlist Preview")
+        popup.geometry("800x600")
+
+        # Crear un marco para la tabla
+        frame = tk.Frame(popup)
+        frame.pack(fill='both', expand=True)
+
+        # Crear una tabla Treeview para mostrar las líneas del M3U
+        columns = ('#', 'Path')
+        tree = ttk.Treeview(frame, columns=columns, show='headings')
+        tree.heading('#', text='#')
+        tree.heading('Path', text='Path')
+        tree.column('#', width=30, anchor='center')
+        tree.column('Path', anchor='w')
+
+        # Añadir un scrollbar a la tabla
+        scrollbar = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=scrollbar.set)
+        scrollbar.pack(side='right', fill='y')
+        tree.pack(fill='both', expand=True)
+
+        # Mostrar el contenido del M3U en la tabla
+        for index, line in enumerate(m3u_lines):
+            if 'Dropbox' in line:
+                # Cambiar el color del texto antes de "Dropbox"
+                tree.insert('', 'end', values=(index + 1, line), tags=('highlight',))
+                tree.tag_configure('highlight', foreground='blue')
+            else:
+                tree.insert('', 'end', values=(index + 1, line))
+
+        # Crear una función para convertir y guardar la playlist
+        def convert_and_save():
+            # Identificar a qué ordenador corresponde el path de cada línea
+            def get_computer_name_for_path(path):
+                for computer_name, dropbox_path in path_map.items():
+                    if path.startswith(dropbox_path):
+                        return computer_name
+                return None
+
+            # Crear los archivos M3U para cada ordenador
+            for computer_name, dropbox_path in path_map.items():
+                new_m3u_path = m3u_file_path.replace(".m3u", f'_{computer_name}.m3u')
+                with open(new_m3u_path, 'w', encoding='utf-8') as new_file:
+                    for line in m3u_lines:
+                        if 'Dropbox' in line:
+                            # Reemplazar la parte del string antes de "Dropbox" con el path correspondiente
+                            split_point = line.lower().find('dropbox')
+                            original_computer = get_computer_name_for_path(line)
+                            if original_computer == computer_name:
+                                new_line = line
+                            else:
+                                new_line = dropbox_path + line[split_point + len('Dropbox'):]
+                            new_file.write(new_line + '\n')
+                        else:
+                            new_file.write(line + '\n')
+
+            messagebox.showinfo("Success",
+                                f"Playlists converted and saved as:\n{', '.join([m3u_file_path.replace('.m3u', f'_{cn}.m3u') for cn in path_map.keys()])}")
+
+        # Crear el botón para convertir la playlist
+        convert_button = ttk.Button(popup, text="Convert Playlist", command=convert_and_save)
+        convert_button.pack(pady=10)
+
+        # Mostrar la ventana popup
+        popup.transient(self.root)
+        popup.grab_set()
+        self.root.wait_window(popup)
 
     def open_presentation_popup(self):
         if self.presentation_window is None or not tk.Toplevel.winfo_exists(self.presentation_window):
