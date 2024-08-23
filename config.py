@@ -45,9 +45,12 @@ mp3_dir = os.path.join(dropbox_path, "MUSICA", "MP3", "TANGO", "other_stuff", "t
 output_folder = os.path.join(project_root, "output")
 
 image_folder = os.path.join(project_root, "images")
-background_image_path = os.path.join(image_folder, "background_tango.png")
+orchestra_folder = os.path.join(project_root, "images", "orquestas")
 
-background_image_path = join(image_folder, "background_tango.png")
+background_image_folder = os.path.join(image_folder,"backgounds")
+background_image_path = os.path.join(image_folder,"backgounds" ,"background_tango.png")
+
+merged_images_folder = os.path.join(image_folder,"orquestas_con_fondo")
 
 filetofind_list = []
 numero_canciones = 0

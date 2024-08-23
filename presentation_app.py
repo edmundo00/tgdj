@@ -9,8 +9,11 @@ from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_CONNECTOR
 from unidecode import unidecode
-from config import *
 from utils import extract_year, separar_artistas
+import os
+from os.path import join
+from config import dropbox_path, image_folder, m3u_start_path, background_image_path, data_folder, output_folder, orchestra_folder, background_image_folder, merged_images_folder
+
 
 class PresentationApp:
     def __init__(self, root):
@@ -18,8 +21,8 @@ class PresentationApp:
         self.root.title("Presentation Creator")
         self.root.state('zoomed')
         # Set the window to be on top
-        self.root.attributes('-topmost', True)
-        self.root.after_idle(lambda: self.root.attributes('-topmost', False))  # Allow interaction with other windows
+        # self.root.attributes('-topmost', True)
+        # self.root.after_idle(lambda: self.root.attributes('-topmost', False))  # Allow interaction with other windows
 
         # Default paths
 
@@ -177,7 +180,7 @@ class PresentationApp:
 
     def open_m3u_file(self):
         # Temporarily make the window non-topmost to allow file dialog interaction
-        self.root.attributes('-topmost', False)
+        # self.root.attributes('-topmost', False)
 
         # Open file dialog
         self.m3u_file_path = filedialog.askopenfilename(
@@ -185,8 +188,8 @@ class PresentationApp:
             filetypes=[("M3U files", "*.m3u"), ("All files", "*.*")]
         )
 
-        # Return focus to the popup window
-        self.root.attributes('-topmost', True)
+        # # Return focus to the popup window
+        # self.root.attributes('-topmost', True)
 
         if self.m3u_file_path:
             # Clear previous data
@@ -394,18 +397,18 @@ class PresentationApp:
 
         combined.save(self.merged_image_path, "PNG")
 
-    def create_slide_for_tanda(self, prs, tanda_number):
+    def create_slide_for_tanda(self, prs, tanda_number, titulo, subtitulo, genero, lista_canciones):
         # NAME OF THE ORCHESTRA
-        orchestra_value = self.result.iloc[tanda_number - 1]['orchestra_value']
-        orchestra_value_min = unidecode(orchestra_value).lower()
-        self.tanda_gender = self.result.iloc[tanda_number - 1]['unique_value']
+        orchestra_value = titulo
+        orchestra_value_min =  unidecode(orchestra_value).lower()
+        self.tanda_gender = genero
+        lista_canciones = lista_canciones
+
         if 'tango' not in self.tanda_gender:
-            self.merged_image_path = join(self.merged_image_folder, "background_cortina.png")
+            self.merged_image_path = join(background_image_folder, "background_cortina.png")
         else:
-            # Create a merged image with gradient overlay
-            self.path_gradiente = join(self.merged_image_folder, "gradiente_background.png")
-            self.orchestra_path = os.path.join(image_folder, f'{orchestra_value_min}.png')
-            self.apply_gradient_overlay()
+            self.merged_image_path = join(merged_images_folder , f'{orchestra_value_min}_background.png')
+
 
         # Add a slide with a title and content layout
         slide_layout = prs.slide_layouts[5]  # Use a blank layout
@@ -415,8 +418,8 @@ class PresentationApp:
         slide.shapes.add_picture(self.merged_image_path, 0, 0, width=prs.slide_width, height=prs.slide_height)
 
         if 'tango' not in self.tanda_gender:
-            lista = self.canciones_tanda(tanda_number, ['title', 'ano', 'composer'])
-            title, year, composer = lista[0]
+
+            title, year, composer = lista_canciones[0]
 
             posc2 = [5, 5, 25, 5]
             # Use the existing paragraph instead of adding a new one
@@ -466,7 +469,9 @@ class PresentationApp:
             offset_cm = 0.1  # Por ejemplo, 0.1 cm
 
             # ORQUESTA POSICION HORIZONTAL, POSICION VERTICAL, ANCHO, ALTURA
-            poso = [2, 0.5, 32, 3]
+            poso = [1.6, 0, 32, 3]
+            # SUBTITULO POSICION HORIZONTAL, POSICION VERTICAL, ANCHO, ALTURA
+            poss = [3, 2.6, 30, 2]
 
             # Añadir los cuadros de texto para simular el borde negro
             for x_offset in [-offset_cm, offset_cm]:
@@ -494,6 +499,19 @@ class PresentationApp:
             run_orquesta.font.color.rgb = RGBColor(255, 255, 255)  # Color blanco
             run_orquesta.font.bold = True
 
+            # Añadir el cuadro de texto principal con el texto blanco
+            subtitle_box = slide.shapes.add_textbox(Cm(poss[0]), Cm(poss[1]), Cm(poss[2]), Cm(poss[3]))
+            subtitle_frame = subtitle_box.text_frame
+            subtitle_paragraph1 = subtitle_frame.paragraphs[0]
+            subtitle_paragraph1.level = 0
+            run_cantor = subtitle_paragraph1.add_run()
+            run_cantor.text = subtitulo
+            run_cantor.font.size = Pt(35)
+            run_cantor.font.color.rgb = RGBColor(255, 255, 255)  # Color blanco
+            run_cantor.font.bold = True
+
+
+
             # tgdj  POSICION HORIZONTAL, POSICION VERTICAL, ANCHO, ALTURA
             post = [25, 16, 8, 2.5]
 
@@ -510,19 +528,19 @@ class PresentationApp:
 
            # Añadir una línea
             left = Cm(14)  # posición horizontal
-            top = Cm(4)  # posición vertical
+            top = Cm(4.75)  # posición vertical
             width = Cm(17)  # ancho de la línea
             height = Cm(0)  # altura de la línea
             line = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, left, top, left + width, top + height)
             # Estilo de la línea
             line.line.color.rgb = RGBColor(255, 255, 255)  # color blanco
-            line.line.width = Pt(10)  # ancho de la línea
+            line.line.width = Pt(7)  # ancho de la línea
 
             # TITULOS POSICION HORIZONTAL, POSICION VERTICAL, ANCHO, ALTURA, DISTANCIA ENTRE ELLOS
             post = [15, 5, 18, 3, 2.5]
 
             counter = 0
-            for rows in self.canciones_tanda(tanda_number, ['title', 'ano', 'composer']):
+            for rows in lista_canciones:
                 title, year, composer = rows
 
                 # Añadir cuadros de texto para el título con borde negro
@@ -595,7 +613,12 @@ class PresentationApp:
         # Add slides for different tanda numbers
         for tanda_number in range(1, self.result.shape[0]+1):  # Adjust the range as needed
         # for tanda_number in range(1, 5):  # Adjust the range as needed
-            self.create_slide_for_tanda(prs, tanda_number)
+            titulo = orchestra_value = self.result.iloc[tanda_number - 1]['orchestra_value']
+            subtitulo = "Milongas con Fernando Fernandez y Julio Diaz"
+            genero = self.tanda_gender = self.result.iloc[tanda_number - 1]['unique_value']
+            canciones = self.canciones_tanda(tanda_number, ['title', 'ano', 'composer'])
+
+            self.create_slide_for_tanda(prs, tanda_number, titulo, subtitulo, genero, canciones)
 
         # Save the presentation
         try:
