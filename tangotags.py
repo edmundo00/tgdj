@@ -20,54 +20,27 @@ from mutagen.mp4 import MP4
 from mutagen.easyid3 import EasyID3
 from datetime import datetime
 from collections import Counter
+import src.enums as enums
+from src.enums import TagLabels
 
-# Define the path conversion based on the computer
-path_map = {
-    "WINDOW-COMPUTER": "E:\\Dropbox",
-    "CAD065": "D:\\Dropbox",
-    "LAPTOP-ABRSCER9": "C:\\Users\\diana\\Dropbox"
-}
-# Identify the current computer name
-computer_name = os.getenv('COMPUTERNAME')
-dropbox_path = path_map[computer_name]
+from src.config.config import MUSIC_PATH, ICON_FOLDER, IMAGE_FOLDER, OUTPUT_FOLDER, PROJECT_ROOT, DATA_FOLDER, load_resources_paths
 
 # Define the root path of the project
-project_root = os.path.dirname(os.path.abspath(__file__))
+project_root = PROJECT_ROOT
 
-directorio_raiz = dropbox_path + "\\MUSICA\\MP3\\TANGO\\other_stuff\\"
-m3u_start_path = join(dropbox_path, "MUSICA", "MP3", "TANGO", "other_stuff")
+#directorio_raiz = dropbox_path + "\\MUSICA\\MP3\\TANGO\\other_stuff\\"
+directorio_raiz = MUSIC_PATH
+dropbox_path=MUSIC_PATH
+# m3u_start_path = join(dropbox_path, "MUSICA", "MP3", "TANGO", "other_stuff")
 
-archivotest = directorio_raiz + "pythontest.csv"
-
-# Define paths relative to the project root
-icons = {
-    "archivo": "album.png",
-    "directorio": "album-list.png",
-    "correr": "search-window.png",
-    "play": "play_resize.png",
-    "stop": "pause_resize.png",
-    "transfer": "transfer.png",
-    "info": "info-circle_resize.png",
-    "trash": "trash.png",
-    "searchdb": "searchdb.png",
-    "presentacion": "presentation.png",
-    "playlist": "playlist.png",
-    "convert_playlist": "convert_playlist.png"
-}
-
-# Combine with project root
-icon_paths = {name: os.path.join(project_root, "icons", filename) for name, filename in icons.items()}
-
-data_folder = os.path.join(project_root, "data")
+data_folder = DATA_FOLDER
 csv_grabaciones = os.path.join(data_folder, 'todo.csv')
 mp3_dir = os.path.join(dropbox_path, "MUSICA", "MP3", "TANGO", "other_stuff", "tangolinkdatabase", "MP3")
 output_folder = os.path.join(project_root, "output")
 
-image_folder = os.path.join(project_root, "images")
-background_image_path = os.path.join(image_folder, "background_tango.png")
-
-background_image_path = join(image_folder, "background_tango.png")
-
+image_folder = IMAGE_FOLDER
+icon_paths, image_paths = load_resources_paths()
+background_image_path = image_paths['background']
 
 
 filetofind_list = []
@@ -82,12 +55,17 @@ palabras_comunes_artista = [
 
 
 def separar_artistas(artistas):
-    artists = artistas.split(" / ")
-    artists1 = artists[0]
-    if len(artists) > 1:
-        artists2 = artists[1]
-    else:
-        artists2 = ""
+    artistas = unidecode(convert_numbers_to_words(artistas))
+    # Define regex pattern to capture different cases
+    pattern = re.compile(r" / | feat\. | canta: ")
+    
+    # Split the input string using the defined pattern
+    artists = re.split(pattern, artistas)
+    
+    # Assign artists based on the length of the split result
+    artists1 = artists[0].lower().strip()  # Main artist
+    artists2 = artists[1].lower().strip() if len(artists) > 1 else ""  # Second artist, if any
+    
     return artists1, artists2
 
 
@@ -279,72 +257,57 @@ def contain_most_words(database, text, columna):
 
     return indices_mas_palabras
 
+def get_file_name_without_extension(file_path):
+    # Extract the file name with extension
+    file_name_with_ext = os.path.basename(file_path)
+    # Split the file name and extension, and return the file name
+    file_name, _ = os.path.splitext(file_name_with_ext)
+    return file_name
 
-def coincide(database, tag, que_coincide, talcual=False):
-    lista_de_booleanos = []
-
+def compare_tags(database, tag):
+    coincidencias = {}
     artista_original, cantor_original = separar_artistas(tag.artist)
-
+    if tag.title is None:
+        tag.title = get_file_name_without_extension(tag._file_name)
     tituloabuscar = unidecode(convert_numbers_to_words(tag.title)).lower().strip()
-    artistaabuscar = unidecode(convert_numbers_to_words(artista_original)).lower()
-    cantorabuscar = unidecode(convert_numbers_to_words(cantor_original)).lower()
 
-    if que_coincide == 'titulo':
-        valor_buscado = tag.title
-        if talcual:
-            lista_de_booleanos = database["titulo"] == tag.title
-        else:
-            lista_de_booleanos = database["titulo_min"].str.contains(tituloabuscar, case=False, na=False, regex=False)
+    #Check all the tags in the database
+    coincidencias[TagLabels.TITULO] = database["titulo_min"].str.contains(tituloabuscar, case=False, na=False, regex=False)
+    coincidencias[TagLabels.TITULO_EXACTO] = database["titulo_min"] == tituloabuscar
+    coincidencias[TagLabels.TITULO_PALABRAS] = contain_most_words(database, tag.title, "titulo_min")
 
-    if que_coincide == 'artista':
-        valor_buscado = artista_original
-        if talcual:
-            lista_de_booleanos = database["artista"] == artista_original
-        else:
-            lista_de_booleanos = database["artista_min"].str.contains(artistaabuscar, case=False, na=False,
-                                                                      regex=False)
-    if que_coincide == 'cantor':
-        valor_buscado = cantor_original
-        if talcual:
-            lista_de_booleanos = database["cantor"] == cantor_original
-        else:
-            lista_de_booleanos = database["cantor_min"].str.contains(cantorabuscar, case=False, na=False,
-                                                                     regex=False)
+    # Handle cases where artist or cantor might be None or empty
+    if artista_original:
+        coincidencias[TagLabels.ARTISTA] = database["artista_min"].str.contains(artista_original, case=False, na=False, regex=False)
+    else:
+        coincidencias[TagLabels.ARTISTA] = False
 
-    if tag.year == None:
+    if cantor_original:
+        coincidencias[TagLabels.CANTOR] = database["cantor_min"].str.contains(cantor_original, case=False, na=False, regex=False)
+    else:
+        coincidencias[TagLabels.CANTOR] = False
+
+    # Check year (fecha and ano)
+    if tag.year is None:
         tag.year = ""
-    if que_coincide == 'fecha':
-        valor_buscado = tag.year
-        lista_de_booleanos = database["fecha"] == tag.year
+    
+    coincidencias[TagLabels.FECHA] = database["fecha"] == tag.year
+    coincidencias[TagLabels.ANO] = database["fecha_ano"] == extraer_cuatro_numeros(tag.year)
+    
+    # Check genre (genero)
+    coincidencias[TagLabels.GENERO] = database.estilo.str.contains(tag.genre, case=False, na=False, regex=False) if tag.genre else False
 
-    if que_coincide == 'ano':
-        lista_de_booleanos = database["fecha_ano"] == extraer_cuatro_numeros(tag.year)
-        valor_buscado = extraer_cuatro_numeros(tag.year)
+    # Check composer/author (compositor_autor)
+    coincidencias[TagLabels.COMPOSITOR_AUTOR] = database["compositor_autor"] == tag.composer
 
-    if que_coincide == 'genero':
-        valor_buscado = tag.genre
-        if talcual:
-            lista_de_booleanos = database["estilo"] == tag.genre
-        else:
-            lista_de_booleanos = database.estilo.str.contains(artistaabuscar, case=False, na=False,
-                                                              regex=False)
-
-    if que_coincide == 'compositor_autor':
-        valor_buscado = tag.composer
-        lista_de_booleanos = database["compositor_autor"] == tag.composer
-
-    if que_coincide == 'todo':
-        ti = database["titulo"]
-        ar = database["artista"]
-        ca = database["cantor"]
-        fe = database["fecha"]
-        es = database["estilo"]
-        co = database["compositor_autor"]
-
-        lista_de_booleanos = (ti == tag.title) & (ar == artista_original) & (ca == cantor_original) & (
-                    fe == tag.year) & (es == tag.genre) & (co == tag.composer)
-
-    return lista_de_booleanos
+    # Check all fields (todo)
+    coincidencias[TagLabels.TODO] = coincidencias[TagLabels.TITULO]  & \
+                            (coincidencias[TagLabels.ARTISTA] == artista_original) & \
+                            (coincidencias[TagLabels.CANTOR] == cantor_original) & \
+                            (coincidencias[TagLabels.FECHA] | coincidencias[TagLabels.ANO]) & \
+                            (coincidencias[TagLabels.GENERO]) & \
+                            (coincidencias[TagLabels.COMPOSITOR_AUTOR])
+    return coincidencias
 
 
 def stop_music():
@@ -1113,67 +1076,69 @@ class FILETOFIND:
         self.hay_coincidencia_preferida = False
         self.tipo_de_coincidencia = 5
         artista_original, cantor_original = separar_artistas(tag.artist)
-        # coincide artista
-        if unidecode(convert_numbers_to_words(artista_original)).lower() in dic_art:
-            dbe = dic_art[unidecode(convert_numbers_to_words(artista_original)).lower()]
-            coincide_titulo = coincide(dbe, tag, 'titulo', False)
-            # si hay resultados de titulo
-            if not coincide_titulo.sum() == 0:
-                self.resultado = 'Titulo encontrado'
-                self.tipo_de_coincidencia = 0
-                dbet = dbe.loc[coincide_titulo]
-                coincide_titulo_talcual = coincide(dbe, tag, 'titulo', True)
-                # si hay resultados de titulo
-                if not coincide_titulo_talcual.sum() == 0:
-                    dbet = dbe.loc[coincide_titulo_talcual]
-                coincide_ano = coincide(dbet, tag, 'ano', False)
-                if not coincide_ano.sum() == 0:
-                    resultado = 'Año encontrado'
-                    self.tipo_de_coincidencia = 1
-                    self.coincidencia_preferida = next((index for index, value in enumerate(coincide_ano) if value),
-                                                       None)
-                    self.hay_coincidencia_preferida = True
-                else:
-                    self.resultado = 'Año no encontrado'
-
-            # si no hay resultados de titulo
-            else:
-                coinciden_palabras = contain_most_words(dbe, tag.title, "titulo_min")
-                # si hay coincidencia de palabras
-                if coinciden_palabras:
-                    resultado = 'Palabras del titulo encontrado'
-                    dbet = dbe.loc[coinciden_palabras]
-                    self.tipo_de_coincidencia = 3
-                    coincide_ano = coincide(dbet, tag, 'ano', False)
-                    if not coincide_ano.sum() == 0:
-                        resultado = 'Año encontrado'
-                        self.tipo_de_coincidencia = 4
-                        self.coincidencia_preferida = next((index for index, value in enumerate(coincide_ano) if value),
-                                                           None)
-                        self.hay_coincidencia_preferida = True
-                    else:
-                        self.resultado = 'Año no encontrado'
-                # si no hay coincidencia de palabras
-                else:
-                    self.resultado = 'Titulo o palabras del titulo no encontrado'
-                    self.tipo_de_coincidencia = 5
-                    dbet = db.iloc[0:0]
-        else:
+        
+        # Find a matching key in dic_art
+        artista_key = next((key for key in dic_art if artista_original in key), None)
+        
+        if not artista_key:
             self.resultado = 'Artista no encontrado'
-            self.tipo_de_coincidencia = 5
-            dbet = db.iloc[0:0]
+            self.coincidencias = db.iloc[0:0]
+            return
 
-        if self.tipo_de_coincidencia == 1:
-            if coincide(dbet, tag, 'todo', True).sum() == 1:
-                dbet = dbet.loc[coincide(dbet, tag, 'todo', True)]
+        artist_songs = dic_art[artista_key]
+        
+        # Get a dictionary of boolean matches for all tags
+        coincidencias = compare_tags(artist_songs, tag)
+
+        # Check for title match
+        if coincidencias[TagLabels.TITULO].any() == True:
+            self.resultado = 'Titulo encontrado'
+            self.tipo_de_coincidencia = 0
+            dbet = artist_songs[coincidencias[TagLabels.TITULO]]
+
+            # Check for year match
+            if coincidencias[TagLabels.ANO].any() == True:
+                self.resultado = 'Año encontrado'
+                self.tipo_de_coincidencia = 1
+                self.coincidencia_preferida = dbet.index[coincidencias[TagLabels.ANO]].min()
+                self.hay_coincidencia_preferida = True
+            else:
+                self.resultado = 'Año no encontrado'
+
+        # Check for partial title word matches
+        elif coincidencias[TagLabels.TITULO_PALABRAS].any() == True:
+            self.resultado = 'Palabras del titulo encontrado'
+            self.tipo_de_coincidencia = 3
+            dbet = artist_songs[coincidencias['titulo_palabras']]
+
+            # Check for year match in the filtered data
+            if coincidencias[TagLabels.ANO].any() == True:
+                self.resultado = 'Año encontrado'
+                self.tipo_de_coincidencia = 4
+                self.coincidencia_preferida = dbet.index[coincidencias[TagLabels.ANO]].min()
+                self.hay_coincidencia_preferida = True
+            else:
+                self.resultado = 'Año no encontrado'
+        else:
+            self.resultado = 'Titulo o palabras del titulo no encontrado'
+            self.coincidencias = db.iloc[0:0]
+            return
+
+        # If we found a year match and the whole tag matches exactly, update the coincidence type
+        if self.tipo_de_coincidencia == 1 and coincidencias[TagLabels.TODO].any() == True:
+            dbet = dbet[coincidencias[TagLabels.TODO]]
+            if len(dbet) == 1:
                 self.tipo_de_coincidencia = 2
                 self.hay_coincidencia_preferida = False
 
-        if (self.tipo_de_coincidencia == 0) & (len(dbet) == 1):
+        # If the title is the only match and there's exactly one match, set the preferred match
+        if self.tipo_de_coincidencia == 0 and len(dbet) == 1:
             self.hay_coincidencia_preferida = True
-            self.coincidencia_preferida = 0
+            self.coincidencia_preferida = dbet.index[0]
 
+        # Set the filtered matches as the final coincidences
         self.coincidencias = dbet
+        
 
     def show_popup_db(self, row):
 
@@ -1962,51 +1927,7 @@ if __name__ == "__main__":
     # try:
     db = pd.read_csv(os.path.join(data_folder, "db.csv"), encoding="utf-8", sep=";")
 
-    # db = pd.read_csv(csv_grabaciones, encoding="utf-8", sep=";")
-    # quitar los valores ' (2)', ' (3)', ' (4)', ' (5)', ' (b)', ' (c)' del titulo
-    # quitar_de_titulos = [' (2)', ' (3)', ' (4)', ' (5)', ' (b)', ' (c)']
-    # for palabra in quitar_de_titulos:
-    #     db['titulo'] = db['titulo'].str.replace(palabra, "", regex=False)
-    #
-    # # poner estilos Tango, Tango Milonga, Tango Vals.
-    # replacements = [
-    #     ('TANGO', 'tango'),
-    #     ('VALS', 'tango vals'),
-    #     ('MILONGA', 'tango milonga')
-    # ]
-    # replacement_dict = dict(replacements)
-    # db['estilo'] = db['estilo'].replace(replacement_dict)
-    # db['estilo'] = db['estilo'].apply(lambda x: x.lower())
-    #
-    # # reemplazar los nan con cadenas vacias
-    # db = db.fillna("")
-    #
-    # # crear una nueva columna con compositor y autor juntos
-    # db['compositor_autor'] = db.apply(
-    #     lambda row: concaternar_autores(row['compositor'], row['autor']), axis=1)
-    #
-    # # Cambiar el formato de fecha de DD/MM/YYYY a YYYY-MM-DD o YYYY-MM o YYYY
-    # db['fecha'] = db['fecha'].apply(convert_date_format)
-    #
-    # # crear una columna con solo el año
-    # db['fecha_ano'] = db['fecha'].apply(extract_year)
-    #
-    # # Quitar todo el apellido en mayusculas
-    # db['artista'] = db['artista'].apply(capitalize_uppercase_words)
-    #
-    # # CONVERTIR LOS NUMEROS A STRINGS Y QUITAR MAYUSCULAS Y ACENTOS
-    # db['titulo_min'] = db['titulo'].apply(lambda x: convert_numbers_to_words(x) if pd.notna(x) else x)
-    # db['artista_min'] = db['artista'].apply(lambda x: convert_numbers_to_words(x) if pd.notna(x) else x)
-    # db['cantor_min'] = db['cantor'].apply(lambda x: convert_numbers_to_words(x) if pd.notna(x) else x)
-    #
-    # # palabras_mas_comunes(db,'artista_min')
-    # db.to_csv(os.path.join(data_folder, "db.csv"),index=False,sep=';')
-
-    dic_art = {}
-    lista_artistas = db['artista_min'].unique()
-    for artista in lista_artistas:
-        filtered_df = db[db['artista_min'] == artista]
-        dic_art[artista] = filtered_df
+    dic_art = {artista: group for artista, group in db.groupby('artista_min')}
 
     # except Exception as e:
     #     messagebox.showerror("Error", f"Error al leer el archivo CSV:\n{e}")
