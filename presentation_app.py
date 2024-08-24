@@ -397,18 +397,18 @@ class PresentationApp:
 
         combined.save(self.merged_image_path, "PNG")
 
-    def create_slide_for_tanda(self, prs, tanda_number, titulo, subtitulo, genero, lista_canciones):
+    def create_slide_for_tanda(self, prs, tanda_number, titulo, subtitulo, genero, lista_canciones, positions_initial):
         # NAME OF THE ORCHESTRA
         orchestra_value = titulo
-        orchestra_value_min =  unidecode(orchestra_value).lower()
+        orchestra_value_min = unidecode(orchestra_value).lower()
         self.tanda_gender = genero
         lista_canciones = lista_canciones
 
+        # Determine the background image based on genre
         if 'tango' not in self.tanda_gender:
             self.merged_image_path = join(background_image_folder, "background_cortina.png")
         else:
-            self.merged_image_path = join(merged_images_folder , f'{orchestra_value_min}_background.png')
-
+            self.merged_image_path = join(merged_images_folder, f'{orchestra_value_min}_background.png')
 
         # Add a slide with a title and content layout
         slide_layout = prs.slide_layouts[5]  # Use a blank layout
@@ -417,176 +417,208 @@ class PresentationApp:
         # Set the merged background image with gradient
         slide.shapes.add_picture(self.merged_image_path, 0, 0, width=prs.slide_width, height=prs.slide_height)
 
-        if 'tango' not in self.tanda_gender:
+        # Define positions and sizes for various elements using distances from edges
 
+
+        positions_calculated = {
+            "cortina_title": [positions_initial["cortina_title"]["left"],
+                              positions_initial["cortina_title"]["top"],
+                              prs.slide_width - positions_initial["cortina_title"]["left"] -
+                              positions_initial["cortina_title"]["right"],
+                              positions_initial["cortina_title"]["height"]],
+
+            "cortina_subtitle": [positions_initial["cortina_subtitle"]["left"],
+                                 positions_initial["cortina_subtitle"]["top"],
+                                 prs.slide_width - positions_initial["cortina_subtitle"]["left"] -
+                                 positions_initial["cortina_subtitle"]["right"],
+                                 positions_initial["cortina_subtitle"]["height"]],
+
+            "tanda_orquesta_shadow": [positions_initial["tanda_orquesta_shadow"]["left"],
+                                      positions_initial["tanda_orquesta_shadow"]["top"],
+                                      prs.slide_width - positions_initial["tanda_orquesta_shadow"]["left"] -
+                                      positions_initial["tanda_orquesta_shadow"]["right"],
+                                      positions_initial["tanda_orquesta_shadow"]["height"]],
+
+            "tanda_cantor_shadow": [positions_initial["tanda_cantor_shadow"]["left"],
+                                    positions_initial["tanda_cantor_shadow"]["top"],
+                                    prs.slide_width - positions_initial["tanda_cantor_shadow"]["left"] -
+                                    positions_initial["tanda_cantor_shadow"]["right"],
+                                    positions_initial["tanda_cantor_shadow"]["height"]],
+
+            "firma_tgdj_box": [
+                positions_initial["firma_tgdj_box"]["left"],
+                positions_initial["firma_tgdj_box"]["top"],
+                prs.slide_width - positions_initial["firma_tgdj_box"]["left"] - positions_initial["firma_tgdj_box"][
+                    "right"],
+                positions_initial["firma_tgdj_box"]["height"]],
+
+            "linea_divisoria": [
+                positions_initial["linea_divisoria"]["left"],
+                positions_initial["linea_divisoria"]["top"],
+                prs.slide_width - positions_initial["linea_divisoria"]["left"] - positions_initial["linea_divisoria"][
+                    "right"],
+                positions_initial["linea_divisoria"]["height"]],
+
+            "canciones_start": [positions_initial["canciones_start"]["left"],
+                                positions_initial["canciones_start"]["top"],
+                                prs.slide_width - positions_initial["canciones_start"]["left"] -
+                                positions_initial["canciones_start"]["right"],
+                                positions_initial["canciones_start"]["height"],
+                                positions_initial["canciones_start"]["spacing"]],
+
+            "offset_shadow": positions_initial["offset_shadow"]
+        }
+
+        if 'tango' not in self.tanda_gender:
             title, year, composer = lista_canciones[0]
 
-            posc2 = [5, 5, 25, 5]
-            # Use the existing paragraph instead of adding a new one
-            title_box = slide.shapes.add_textbox(Cm(posc2[0]), Cm(posc2[1]), Cm(posc2[2]), Cm(posc2[3]))
-            title_frame = title_box.text_frame
-            title_frame.clear()  # Clear any existing text or paragraphs
+            cortina_title = slide.shapes.add_textbox(positions_calculated["cortina_title"][0],
+                                                     positions_calculated["cortina_title"][1],
+                                                     positions_calculated["cortina_title"][2],
+                                                     positions_calculated["cortina_title"][3])
+            title_frame = cortina_title.text_frame
+            title_frame.clear()
 
-            # Modify the first (and only) paragraph
             title_paragraph1 = title_frame.paragraphs[0]
-            title_paragraph1.level = 0
             run_orquesta = title_paragraph1.add_run()
 
             run_orquesta.text = f'{orchestra_value}'
             run_orquesta.font.size = Pt(100)
-            run_orquesta.font.color.rgb = RGBColor(255, 255, 255)  # White color
+            run_orquesta.font.color.rgb = RGBColor(255, 255, 255)
             run_orquesta.font.bold = True
 
-            posc2 = [8, 10, 22, 5]
-            # Modify the first (and only) paragraph for the next text box
-            text_box = slide.shapes.add_textbox(Cm(posc2[0]), Cm(posc2[1]), Cm(posc2[2]), Cm(posc2[3]))
-            text_frame = text_box.text_frame
-            text_frame.clear()  # Clear any existing text or paragraphs
+            cortina_subtitle = slide.shapes.add_textbox(positions_calculated["cortina_subtitle"][0],
+                                                        positions_calculated["cortina_subtitle"][1],
+                                                        positions_calculated["cortina_subtitle"][2],
+                                                        positions_calculated["cortina_subtitle"][3])
+            text_frame = cortina_subtitle.text_frame
+            text_frame.clear()
 
             paragraph1 = text_frame.paragraphs[0]
-            paragraph1.level = 0
             run_titulo = paragraph1.add_run()
             run_titulo.text = title
             run_titulo.font.size = Pt(50)
-            run_titulo.font.color.rgb = RGBColor(255, 255, 255)  # White color
+            run_titulo.font.color.rgb = RGBColor(255, 255, 255)
             run_titulo.font.bold = True
 
-            # Add bullet (if necessary)
-            paragraph1.space_before = Pt(12)
-            paragraph1.space_after = Pt(12)
-            paragraph1.font.shadow = True
-
-            # Append the year in parentheses to the same paragraph
             run_fecha = paragraph1.add_run()
             run_fecha.text = f'   ({year})'
             run_fecha.font.size = Pt(50)
-            run_fecha.font.color.rgb = RGBColor(255, 255, 255)  # White color
+            run_fecha.font.color.rgb = RGBColor(255, 255, 255)
 
         else:
             initial_text = '' if orchestra_value.startswith("Orquesta") else 'Orquesta de '
 
-            # Define el offset deseado en centímetros
-            offset_cm = 0.1  # Por ejemplo, 0.1 cm
-
-            # ORQUESTA POSICION HORIZONTAL, POSICION VERTICAL, ANCHO, ALTURA
-            poso = [1.6, 0, 32, 3]
-            # SUBTITULO POSICION HORIZONTAL, POSICION VERTICAL, ANCHO, ALTURA
-            poss = [3, 2.6, 30, 2]
-
-            # Añadir los cuadros de texto para simular el borde negro
-            for x_offset in [-offset_cm, offset_cm]:
-                for y_offset in [-offset_cm, offset_cm]:
-                    shadow_box = slide.shapes.add_textbox(Cm(poso[0]) + Cm(x_offset), Cm(poso[1]) + Cm(y_offset),
-                                                          Cm(poso[2]), Cm(poso[3]))
-                    shadow_frame = shadow_box.text_frame
+            for x_offset in [-positions_calculated["offset_shadow"], positions_calculated["offset_shadow"]]:
+                for y_offset in [-positions_calculated["offset_shadow"], positions_calculated["offset_shadow"]]:
+                    osquesta_shadow = slide.shapes.add_textbox(
+                        positions_calculated["tanda_orquesta_shadow"][0] + x_offset,
+                        positions_calculated["tanda_orquesta_shadow"][1] + y_offset,
+                        positions_calculated["tanda_orquesta_shadow"][2],
+                        positions_calculated["tanda_orquesta_shadow"][3])
+                    shadow_frame = osquesta_shadow.text_frame
                     shadow_paragraph = shadow_frame.paragraphs[0]
-                    shadow_paragraph.level = 0  # Primer nivel
                     shadow_run = shadow_paragraph.add_run()
 
                     shadow_run.text = f'{initial_text}{orchestra_value}'
                     shadow_run.font.size = Pt(65)
-                    shadow_run.font.color.rgb = RGBColor(0, 0, 0)  # Color negro
+                    shadow_run.font.color.rgb = RGBColor(0, 0, 0)
                     shadow_run.font.bold = True
 
-            # Añadir el cuadro de texto principal con el texto blanco
-            title_box = slide.shapes.add_textbox(Cm(poso[0]), Cm(poso[1]), Cm(poso[2]), Cm(poso[3]))
-            title_frame = title_box.text_frame
+            tanda_orquesta = slide.shapes.add_textbox(positions_calculated["tanda_orquesta_shadow"][0],
+                                                      positions_calculated["tanda_orquesta_shadow"][1],
+                                                      positions_calculated["tanda_orquesta_shadow"][2],
+                                                      positions_calculated["tanda_orquesta_shadow"][3])
+            title_frame = tanda_orquesta.text_frame
             title_paragraph1 = title_frame.paragraphs[0]
-            title_paragraph1.level = 0
             run_orquesta = title_paragraph1.add_run()
             run_orquesta.text = f'{initial_text}{orchestra_value}'
             run_orquesta.font.size = Pt(65)
-            run_orquesta.font.color.rgb = RGBColor(255, 255, 255)  # Color blanco
+            run_orquesta.font.color.rgb = RGBColor(255, 255, 255)
             run_orquesta.font.bold = True
 
-            # Añadir el cuadro de texto principal con el texto blanco
-            subtitle_box = slide.shapes.add_textbox(Cm(poss[0]), Cm(poss[1]), Cm(poss[2]), Cm(poss[3]))
-            subtitle_frame = subtitle_box.text_frame
+            tanda_cantor = slide.shapes.add_textbox(positions_calculated["tanda_cantor_shadow"][0],
+                                                    positions_calculated["tanda_cantor_shadow"][1],
+                                                    positions_calculated["tanda_cantor_shadow"][2],
+                                                    positions_calculated["tanda_cantor_shadow"][3])
+            subtitle_frame = tanda_cantor.text_frame
             subtitle_paragraph1 = subtitle_frame.paragraphs[0]
-            subtitle_paragraph1.level = 0
             run_cantor = subtitle_paragraph1.add_run()
             run_cantor.text = subtitulo
             run_cantor.font.size = Pt(35)
-            run_cantor.font.color.rgb = RGBColor(255, 255, 255)  # Color blanco
+            run_cantor.font.color.rgb = RGBColor(255, 255, 255)
             run_cantor.font.bold = True
 
-
-
-            # tgdj  POSICION HORIZONTAL, POSICION VERTICAL, ANCHO, ALTURA
-            post = [25, 16, 8, 2.5]
-
-            # Añadir el cuadro de texto principal con el texto blanco
-            tgdj_box = slide.shapes.add_textbox(Cm(post[0]), Cm(post[1]), Cm(post[2]), Cm(post[3]))
-            tgdj_frame = tgdj_box.text_frame
+            firma_tgdj = slide.shapes.add_textbox(positions_calculated["firma_tgdj_box"][0],
+                                                  positions_calculated["firma_tgdj_box"][1],
+                                                  positions_calculated["firma_tgdj_box"][2],
+                                                  positions_calculated["firma_tgdj_box"][3])
+            tgdj_frame = firma_tgdj.text_frame
             tgdj_paragraph1 = tgdj_frame.paragraphs[0]
-            tgdj_paragraph1.level = 0
             run_tgdj = tgdj_paragraph1.add_run()
             run_tgdj.text = f'© TDJ Edmundo Fraga\n{self.nombre_milonga_entry.get()}\n{self.fecha_entry.get()}'
             run_tgdj.font.size = Pt(20)
-            run_tgdj.font.color.rgb = RGBColor(255, 255, 255)  # Color blanco
+            run_tgdj.font.color.rgb = RGBColor(255, 255, 255)
             run_tgdj.font.bold = False
 
-           # Añadir una línea
-            left = Cm(14)  # posición horizontal
-            top = Cm(4.75)  # posición vertical
-            width = Cm(17)  # ancho de la línea
-            height = Cm(0)  # altura de la línea
-            line = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, left, top, left + width, top + height)
-            # Estilo de la línea
-            line.line.color.rgb = RGBColor(255, 255, 255)  # color blanco
-            line.line.width = Pt(7)  # ancho de la línea
-
-            # TITULOS POSICION HORIZONTAL, POSICION VERTICAL, ANCHO, ALTURA, DISTANCIA ENTRE ELLOS
-            post = [15, 5, 18, 3, 2.5]
+            linea_divisoria = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT,
+                                                         positions_calculated["linea_divisoria"][0],
+                                                         positions_calculated["linea_divisoria"][1],
+                                                         positions_calculated["linea_divisoria"][0] +
+                                                         positions_calculated["linea_divisoria"][2],
+                                                         positions_calculated["linea_divisoria"][1] +
+                                                         positions_calculated["linea_divisoria"][3])
+            linea_divisoria.line.color.rgb = RGBColor(255, 255, 255)
+            linea_divisoria.line.width = Pt(7)
 
             counter = 0
             for rows in lista_canciones:
                 title, year, composer = rows
 
-                # Añadir cuadros de texto para el título con borde negro
-                for x_offset in [-offset_cm, offset_cm]:
-                    for y_offset in [-offset_cm, offset_cm]:
-                        shadow_box = slide.shapes.add_textbox(Cm(post[0]) + Cm(x_offset),
-                                                              Cm(post[1] + counter * post[4]) + Cm(y_offset),
-                                                              Cm(post[2]), Cm(post[3]))
-                        shadow_frame = shadow_box.text_frame
+                for x_offset in [-positions_calculated["offset_shadow"], positions_calculated["offset_shadow"]]:
+                    for y_offset in [-positions_calculated["offset_shadow"], positions_calculated["offset_shadow"]]:
+                        osquesta_shadow = slide.shapes.add_textbox(
+                            positions_calculated["canciones_start"][0] + x_offset,
+                            positions_calculated["canciones_start"][1] + counter *
+                            positions_calculated["canciones_start"][4] + y_offset,
+                            positions_calculated["canciones_start"][2],
+                            positions_calculated["canciones_start"][3])
+                        shadow_frame = osquesta_shadow.text_frame
                         shadow_paragraph = shadow_frame.paragraphs[0]
-                        shadow_paragraph.level = 0
                         shadow_run_title = shadow_paragraph.add_run()
 
                         shadow_run_title.text = title
                         shadow_run_title.font.size = Pt(35)
-                        shadow_run_title.font.color.rgb = RGBColor(0, 0, 0)  # Color negro
+                        shadow_run_title.font.color.rgb = RGBColor(0, 0, 0)
                         shadow_run_title.font.bold = True
 
-                # Añadir el cuadro de texto principal con el título en blanco
-                text_box = slide.shapes.add_textbox(Cm(post[0]), Cm(post[1] + counter * post[4]),
-                                                    Cm(post[2]), Cm(post[3]))
-                text_frame = text_box.text_frame
+                canciones = slide.shapes.add_textbox(positions_calculated["canciones_start"][0],
+                                                     positions_calculated["canciones_start"][1] + counter *
+                                                     positions_calculated["canciones_start"][4],
+                                                     positions_calculated["canciones_start"][2],
+                                                     positions_calculated["canciones_start"][3])
+                text_frame = canciones.text_frame
                 paragraph1 = text_frame.paragraphs[0]
-                paragraph1.level = 0
 
                 run_titulo = paragraph1.add_run()
                 run_titulo.text = title
                 run_titulo.font.size = Pt(35)
-                run_titulo.font.color.rgb = RGBColor(255, 255, 255)  # Color blanco
+                run_titulo.font.color.rgb = RGBColor(255, 255, 255)
                 run_titulo.font.bold = True
 
                 run_fecha = paragraph1.add_run()
                 run_fecha.text = f'   ({year})'
                 run_fecha.font.size = Pt(30)
-                run_fecha.font.color.rgb = RGBColor(255, 255, 255)  # Color blanco
+                run_fecha.font.color.rgb = RGBColor(255, 255, 255)
 
-                paragraph2 = text_frame.add_paragraph()  # Create a new paragraph for the composer
+                paragraph2 = text_frame.add_paragraph()
                 run_compositor = paragraph2.add_run()
                 run_compositor.text = composer
                 run_compositor.font.size = Pt(18)
-                run_compositor.font.color.rgb = RGBColor(255, 255, 255)  # Color blanco
+                run_compositor.font.color.rgb = RGBColor(255, 255, 255)
                 run_compositor.font.italic = True
 
                 counter += 1
-
-
     def create_presentation(self):
 
         nombre_milonga = self.nombre_milonga_entry.get()
@@ -613,12 +645,23 @@ class PresentationApp:
         # Add slides for different tanda numbers
         for tanda_number in range(1, self.result.shape[0]+1):  # Adjust the range as needed
         # for tanda_number in range(1, 5):  # Adjust the range as needed
-            titulo = orchestra_value = self.result.iloc[tanda_number - 1]['orchestra_value']
+            titulo = self.result.iloc[tanda_number - 1]['orchestra_value']
             subtitulo = "Milongas con Fernando Fernandez y Julio Diaz"
             genero = self.tanda_gender = self.result.iloc[tanda_number - 1]['unique_value']
             canciones = self.canciones_tanda(tanda_number, ['title', 'ano', 'composer'])
 
-            self.create_slide_for_tanda(prs, tanda_number, titulo, subtitulo, genero, canciones)
+            positions_initial = {
+                "cortina_title": {"left": Cm(5), "top": Cm(5), "right": Cm(1), "height": Cm(5)},
+                "cortina_subtitle": {"left": Cm(8), "top": Cm(10), "right": Cm(1), "height": Cm(5)},
+                "tanda_orquesta_shadow": {"left": Cm(1.6), "top": Cm(0), "right": Cm(1), "height": Cm(3)},
+                "tanda_cantor_shadow": {"left": Cm(3), "top": Cm(2.6), "right": Cm(1), "height": Cm(2)},
+                "firma_tgdj_box": {"left": Cm(24), "top": Cm(16), "right": Cm(1), "height": Cm(2.5)},
+                "linea_divisoria": {"left": Cm(15), "top": Cm(4.75), "right": Cm(1), "height": Cm(0)},
+                "canciones_start": {"left": Cm(15), "top": Cm(5), "right": Cm(1), "height": Cm(3), "spacing": Cm(2.5)},
+                "offset_shadow": Cm(0.1)
+        }
+
+            self.create_slide_for_tanda(prs, tanda_number, titulo, subtitulo, genero, canciones, positions_initial)
 
         # Save the presentation
         try:
