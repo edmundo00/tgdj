@@ -1,6 +1,8 @@
 import re
 from unidecode import unidecode
 from config import *
+from pptx.util import Pt, Cm
+
 
 def separar_artistas(artistas):
     artists = artistas.split(" / ")
@@ -331,3 +333,34 @@ def concaternar_autores(compositor, autor):
 
     return concatenacion
 
+
+def adjust_text_size(text_frame, max_width_cm, max_font_size=100, min_font_size=10):
+    # Convertir las medidas de cm a puntos (pt)
+    max_width_pt = max_width_cm / 11500
+
+    font_size = max_font_size
+    text = ''.join(run.text for paragraph in text_frame.paragraphs for run in paragraph.runs)
+    text_length = len(text)
+
+    while font_size >= min_font_size:
+        # Aplicar el tamaño de la fuente
+        for paragraph in text_frame.paragraphs:
+            for run in paragraph.runs:
+                run.font.size = Pt(font_size)
+                run.font.name = DEFAULT_FONT_NAME
+
+        # Cálculo del ancho estimado del texto basado en el tamaño de la fuente y la longitud del texto
+        char_width = (DEFAULT_CHAR_WIDTH / 100) * font_size
+        estimated_text_width = char_width * text_length
+
+        # Si el ancho estimado del texto es menor o igual al ancho máximo permitido, se rompe el bucle
+        if estimated_text_width <= max_width_pt:
+            break
+
+        font_size -= 1
+
+    # Aplicar el tamaño de fuente final
+    for paragraph in text_frame.paragraphs:
+        for run in paragraph.runs:
+            run.font.size = Pt(font_size)
+            run.font.name = DEFAULT_FONT_NAME

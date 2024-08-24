@@ -9,11 +9,10 @@ from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_CONNECTOR
 from unidecode import unidecode
-from utils import extract_year, separar_artistas
+from utils import extract_year, separar_artistas, adjust_text_size
 import os
 from os.path import join
-from config import dropbox_path, image_folder, m3u_start_path, background_image_path, data_folder, output_folder, orchestra_folder, background_image_folder, merged_images_folder
-
+from config import dropbox_path, image_folder, m3u_start_path, background_image_path, data_folder, output_folder, orchestra_folder, background_image_folder, merged_images_folder, DEFAULT_FONT_NAME
 
 class PresentationApp:
     def __init__(self, root):
@@ -418,54 +417,45 @@ class PresentationApp:
         slide.shapes.add_picture(self.merged_image_path, 0, 0, width=prs.slide_width, height=prs.slide_height)
 
         # Define positions and sizes for various elements using distances from edges
-
-
         positions_calculated = {
             "cortina_title": [positions_initial["cortina_title"]["left"],
                               positions_initial["cortina_title"]["top"],
                               prs.slide_width - positions_initial["cortina_title"]["left"] -
                               positions_initial["cortina_title"]["right"],
                               positions_initial["cortina_title"]["height"]],
-
             "cortina_subtitle": [positions_initial["cortina_subtitle"]["left"],
                                  positions_initial["cortina_subtitle"]["top"],
                                  prs.slide_width - positions_initial["cortina_subtitle"]["left"] -
                                  positions_initial["cortina_subtitle"]["right"],
                                  positions_initial["cortina_subtitle"]["height"]],
-
             "tanda_orquesta_shadow": [positions_initial["tanda_orquesta_shadow"]["left"],
                                       positions_initial["tanda_orquesta_shadow"]["top"],
                                       prs.slide_width - positions_initial["tanda_orquesta_shadow"]["left"] -
                                       positions_initial["tanda_orquesta_shadow"]["right"],
                                       positions_initial["tanda_orquesta_shadow"]["height"]],
-
             "tanda_cantor_shadow": [positions_initial["tanda_cantor_shadow"]["left"],
                                     positions_initial["tanda_cantor_shadow"]["top"],
                                     prs.slide_width - positions_initial["tanda_cantor_shadow"]["left"] -
                                     positions_initial["tanda_cantor_shadow"]["right"],
                                     positions_initial["tanda_cantor_shadow"]["height"]],
-
             "firma_tgdj_box": [
                 positions_initial["firma_tgdj_box"]["left"],
                 positions_initial["firma_tgdj_box"]["top"],
                 prs.slide_width - positions_initial["firma_tgdj_box"]["left"] - positions_initial["firma_tgdj_box"][
                     "right"],
                 positions_initial["firma_tgdj_box"]["height"]],
-
             "linea_divisoria": [
                 positions_initial["linea_divisoria"]["left"],
                 positions_initial["linea_divisoria"]["top"],
                 prs.slide_width - positions_initial["linea_divisoria"]["left"] - positions_initial["linea_divisoria"][
                     "right"],
                 positions_initial["linea_divisoria"]["height"]],
-
             "canciones_start": [positions_initial["canciones_start"]["left"],
                                 positions_initial["canciones_start"]["top"],
                                 prs.slide_width - positions_initial["canciones_start"]["left"] -
                                 positions_initial["canciones_start"]["right"],
                                 positions_initial["canciones_start"]["height"],
                                 positions_initial["canciones_start"]["spacing"]],
-
             "offset_shadow": positions_initial["offset_shadow"]
         }
 
@@ -479,13 +469,20 @@ class PresentationApp:
             title_frame = cortina_title.text_frame
             title_frame.clear()
 
+            print(positions_calculated["cortina_title"][2])
+
             title_paragraph1 = title_frame.paragraphs[0]
             run_orquesta = title_paragraph1.add_run()
-
             run_orquesta.text = f'{orchestra_value}'
             run_orquesta.font.size = Pt(100)
             run_orquesta.font.color.rgb = RGBColor(255, 255, 255)
             run_orquesta.font.bold = True
+            run_orquesta.font.name = DEFAULT_FONT_NAME  # Aplicar la fuente desde config.py
+
+            # Ajustar el tamaño del texto según el ancho y altura disponibles
+            adjust_text_size(title_frame,
+                             max_width_cm=positions_calculated["cortina_title"][2],
+                             max_font_size=100)
 
             cortina_subtitle = slide.shapes.add_textbox(positions_calculated["cortina_subtitle"][0],
                                                         positions_calculated["cortina_subtitle"][1],
@@ -500,11 +497,17 @@ class PresentationApp:
             run_titulo.font.size = Pt(50)
             run_titulo.font.color.rgb = RGBColor(255, 255, 255)
             run_titulo.font.bold = True
+            run_titulo.font.name = DEFAULT_FONT_NAME  # Aplicar la fuente desde config.py
 
             run_fecha = paragraph1.add_run()
             run_fecha.text = f'   ({year})'
-            run_fecha.font.size = Pt(50)
             run_fecha.font.color.rgb = RGBColor(255, 255, 255)
+            run_fecha.font.name = DEFAULT_FONT_NAME  # Aplicar la fuente desde config.py
+
+            # Ajustar el tamaño del texto según el ancho y altura disponibles
+            adjust_text_size(text_frame,
+                             max_width_cm=positions_calculated["cortina_subtitle"][2],
+                             max_font_size=50)
 
         else:
             initial_text = '' if orchestra_value.startswith("Orquesta") else 'Orquesta de '
@@ -524,6 +527,10 @@ class PresentationApp:
                     shadow_run.font.size = Pt(65)
                     shadow_run.font.color.rgb = RGBColor(0, 0, 0)
                     shadow_run.font.bold = True
+                    shadow_run.font.name = DEFAULT_FONT_NAME  # Aplicar la fuente desde config.py
+
+
+
 
             tanda_orquesta = slide.shapes.add_textbox(positions_calculated["tanda_orquesta_shadow"][0],
                                                       positions_calculated["tanda_orquesta_shadow"][1],
@@ -536,6 +543,7 @@ class PresentationApp:
             run_orquesta.font.size = Pt(65)
             run_orquesta.font.color.rgb = RGBColor(255, 255, 255)
             run_orquesta.font.bold = True
+            run_orquesta.font.name = DEFAULT_FONT_NAME  # Aplicar la fuente desde config.py
 
             tanda_cantor = slide.shapes.add_textbox(positions_calculated["tanda_cantor_shadow"][0],
                                                     positions_calculated["tanda_cantor_shadow"][1],
@@ -548,6 +556,7 @@ class PresentationApp:
             run_cantor.font.size = Pt(35)
             run_cantor.font.color.rgb = RGBColor(255, 255, 255)
             run_cantor.font.bold = True
+            run_cantor.font.name = DEFAULT_FONT_NAME  # Aplicar la fuente desde config.py
 
             firma_tgdj = slide.shapes.add_textbox(positions_calculated["firma_tgdj_box"][0],
                                                   positions_calculated["firma_tgdj_box"][1],
@@ -561,6 +570,7 @@ class PresentationApp:
             run_tgdj.font.size = Pt(20)
             run_tgdj.font.color.rgb = RGBColor(255, 255, 255)
             run_tgdj.font.bold = False
+            run_tgdj.font.name = DEFAULT_FONT_NAME  # Aplicar la fuente desde config.py
 
             # Configuración del borde negro redondeado
             firma_tgdj.line.color.rgb = RGBColor(0, 0, 0)  # Color del borde: Negro
@@ -573,7 +583,6 @@ class PresentationApp:
             firma_tgdj.shadow.distance = Pt(2)  # Distancia de la sombra para el efecto de profundidad
             firma_tgdj.shadow.angle = 45  # Ángulo de la sombra
             firma_tgdj.shadow.transparency = 0.5  # Transparencia de la sombra (0 es opaco, 1 es transparente)
-
 
             linea_divisoria = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT,
                                                          positions_calculated["linea_divisoria"][0],
@@ -605,6 +614,7 @@ class PresentationApp:
                         shadow_run_title.font.size = Pt(35)
                         shadow_run_title.font.color.rgb = RGBColor(0, 0, 0)
                         shadow_run_title.font.bold = True
+                        shadow_run_title.font.name = DEFAULT_FONT_NAME  # Aplicar la fuente desde config.py
 
                 canciones = slide.shapes.add_textbox(positions_calculated["canciones_start"][0],
                                                      positions_calculated["canciones_start"][1] + counter *
@@ -619,11 +629,13 @@ class PresentationApp:
                 run_titulo.font.size = Pt(35)
                 run_titulo.font.color.rgb = RGBColor(255, 255, 255)
                 run_titulo.font.bold = True
+                run_titulo.font.name = DEFAULT_FONT_NAME  # Aplicar la fuente desde config.py
 
                 run_fecha = paragraph1.add_run()
                 run_fecha.text = f'   ({year})'
                 run_fecha.font.size = Pt(30)
                 run_fecha.font.color.rgb = RGBColor(255, 255, 255)
+                run_fecha.font.name = DEFAULT_FONT_NAME  # Aplicar la fuente desde config.py
 
                 paragraph2 = text_frame.add_paragraph()
                 run_compositor = paragraph2.add_run()
@@ -631,6 +643,7 @@ class PresentationApp:
                 run_compositor.font.size = Pt(18)
                 run_compositor.font.color.rgb = RGBColor(255, 255, 255)
                 run_compositor.font.italic = True
+                run_compositor.font.name = DEFAULT_FONT_NAME  # Aplicar
 
                 counter += 1
     def create_presentation(self):
@@ -654,6 +667,7 @@ class PresentationApp:
 
         # Set slide dimensions (7:4 aspect ratio)
         prs.slide_width = Cm(33.87)
+        print(prs.slide_width)
         prs.slide_height = Cm(19.05)
 
         # Add slides for different tanda numbers

@@ -1,5 +1,6 @@
 import os
 from os.path import join
+from PIL import ImageFont
 
 # Define the path conversion based on the computer
 path_map = {
@@ -45,6 +46,7 @@ mp3_dir = os.path.join(dropbox_path, "MUSICA", "MP3", "TANGO", "other_stuff", "t
 output_folder = os.path.join(project_root, "output")
 
 image_folder = os.path.join(project_root, "images")
+font_folder = os.path.join(project_root, "Fonts")
 orchestra_folder = os.path.join(project_root, "images", "orquestas")
 
 background_image_folder = os.path.join(image_folder,"backgounds")
@@ -65,3 +67,17 @@ palabras_comunes_artista = [
 db = None
 dic_art = {}
 
+DEFAULT_FONT_PATH = os.path.join(font_folder,"coopbl.ttf")
+DEFAULT_FONT_NAME = "Cooper Black"  # Cambia "Arial" por la fuente deseada
+
+# Especificar la ruta completa al archivo de la fuente
+
+
+def get_average_char_width(font_path, font_size):
+    # Cargar la fuente desde la ruta especificada
+    font = ImageFont.truetype(font_path, font_size)
+    sample_text = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    total_width = sum(font.getbbox(char)[2] - font.getbbox(char)[0] for char in sample_text)
+    return total_width / len(sample_text)
+
+DEFAULT_CHAR_WIDTH = get_average_char_width(DEFAULT_FONT_PATH, 100)
