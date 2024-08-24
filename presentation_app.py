@@ -49,12 +49,12 @@ class PresentationApp:
         tk.Label(root, text="Nombre de la Milonga:").grid(row=0, column=0, padx=10, pady=10, sticky="w")
         self.nombre_milonga_entry = tk.Entry(root, width=50)
         self.nombre_milonga_entry.grid(row=0, column=1, padx=10, pady=10)
-        self.nombre_milonga_entry.insert(0, "Arrabal")
+        self.nombre_milonga_entry.insert(0, "Milonga de la Fuente")
 
         tk.Label(root, text="Fecha:").grid(row=1, column=0, padx=10, pady=10, sticky="w")
         self.fecha_entry = tk.Entry(root, width=50)
         self.fecha_entry.grid(row=1, column=1, padx=10, pady=10)
-        self.fecha_entry.insert(0, "18 de Septiembre del 2024")
+        self.fecha_entry.insert(0, "24 de Agosto de 2024")
 
         self.update_background_thumbnail()
 
@@ -553,6 +553,7 @@ class PresentationApp:
                                                   positions_calculated["firma_tgdj_box"][1],
                                                   positions_calculated["firma_tgdj_box"][2],
                                                   positions_calculated["firma_tgdj_box"][3])
+            # Configuración del cuadro de texto
             tgdj_frame = firma_tgdj.text_frame
             tgdj_paragraph1 = tgdj_frame.paragraphs[0]
             run_tgdj = tgdj_paragraph1.add_run()
@@ -560,6 +561,19 @@ class PresentationApp:
             run_tgdj.font.size = Pt(20)
             run_tgdj.font.color.rgb = RGBColor(255, 255, 255)
             run_tgdj.font.bold = False
+
+            # Configuración del borde negro redondeado
+            firma_tgdj.line.color.rgb = RGBColor(0, 0, 0)  # Color del borde: Negro
+            firma_tgdj.line.width = Pt(2)  # Grosor del borde
+            firma_tgdj.line.join = 'round'  # Unión redondeada de las líneas del borde
+
+            # Configuración de la sombra (sin intentar establecer el color)
+            firma_tgdj.shadow.inherit = False  # Desactivar herencia de sombras
+            firma_tgdj.shadow.blur_radius = Pt(5)  # Radio de desenfoque para simular bisel
+            firma_tgdj.shadow.distance = Pt(2)  # Distancia de la sombra para el efecto de profundidad
+            firma_tgdj.shadow.angle = 45  # Ángulo de la sombra
+            firma_tgdj.shadow.transparency = 0.5  # Transparencia de la sombra (0 es opaco, 1 es transparente)
+
 
             linea_divisoria = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT,
                                                          positions_calculated["linea_divisoria"][0],
@@ -655,7 +669,7 @@ class PresentationApp:
                 "cortina_subtitle": {"left": Cm(8), "top": Cm(10), "right": Cm(1), "height": Cm(5)},
                 "tanda_orquesta_shadow": {"left": Cm(1.6), "top": Cm(0), "right": Cm(1), "height": Cm(3)},
                 "tanda_cantor_shadow": {"left": Cm(3), "top": Cm(2.6), "right": Cm(1), "height": Cm(2)},
-                "firma_tgdj_box": {"left": Cm(24), "top": Cm(16), "right": Cm(1), "height": Cm(2.5)},
+                "firma_tgdj_box": {"left": Cm(25.5), "top": Cm(15.5), "right": Cm(1), "height": Cm(2.8)},
                 "linea_divisoria": {"left": Cm(15), "top": Cm(4.75), "right": Cm(1), "height": Cm(0)},
                 "canciones_start": {"left": Cm(15), "top": Cm(5), "right": Cm(1), "height": Cm(3), "spacing": Cm(2.5)},
                 "offset_shadow": Cm(0.1)
