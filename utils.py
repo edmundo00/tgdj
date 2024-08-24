@@ -364,3 +364,36 @@ def adjust_text_size(text_frame, max_width_cm, max_font_size=100, min_font_size=
         for run in paragraph.runs:
             run.font.size = Pt(font_size)
             run.font.name = DEFAULT_FONT_NAME
+
+
+def obtener_autores(lista):
+    # Convertimos la lista en un conjunto para eliminar duplicados
+    autores = set()
+
+    for sublista in lista:
+        for item in sublista:
+            if isinstance(item, str) and item != 'nan':
+                # Dividimos el string por ' y ' y ', ' para manejar los casos de varios autores
+                partes = item.split(' y ')
+                for parte in partes:
+                    sub_partes = parte.split(', ')
+                    for sub_parte in sub_partes:
+                        autores.add(sub_parte.strip())
+
+    # Si no hay autores, devolvemos 'instrumental'
+    if not autores:
+        return 'instrumental'
+
+    # Convertimos el conjunto a lista para ordenarlos de manera consistente
+    autores = list(autores)
+
+    # Ordenamos para mantener consistencia
+    autores.sort()
+
+    # Según la cantidad de autores, retornamos la cadena deseada
+    if len(autores) == 1:
+        return autores[0]
+    elif len(autores) == 2:
+        return ' y '.join(autores)
+    else:
+        return ', '.join(autores[:-1]) + ' y ' + autores[-1]
