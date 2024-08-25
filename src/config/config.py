@@ -107,14 +107,13 @@ csv_grabaciones = os.path.join(data_folder, 'todo.csv')
 mp3_dir = os.path.join(dropbox_path, "MUSICA", "MP3", "TANGO", "other_stuff", "tangolinkdatabase", "MP3")
 output_folder = os.path.join(project_root, "output")
 
-image_folder = os.path.join(project_root, "images")
 font_folder = os.path.join(project_root, "Fonts")
-orchestra_folder = os.path.join(project_root, "images", "orquestas")
+orchestra_folder = os.path.join(IMAGE_FOLDER, "orquestas")
 
-background_image_folder = os.path.join(image_folder,"backgounds")
-background_image_path = os.path.join(image_folder,"backgounds" ,"background_tango.png")
+background_image_folder = os.path.join(IMAGE_FOLDER,"backgounds")
+background_image_path = os.path.join(IMAGE_FOLDER,"backgounds" ,"background_tango.png")
 
-merged_images_folder = os.path.join(image_folder,"orquestas_con_fondo")
+merged_images_folder = os.path.join(IMAGE_FOLDER,"orquestas_con_fondo")
 
 filetofind_list = []
 numero_canciones = 0
