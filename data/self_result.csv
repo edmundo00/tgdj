@@ -1,181 +1,181 @@
 unique_value,repetition_count,position,same_orchestra,orchestra_value,group_data
-tango,3,0,True,Carlos di Sarli,"         title          artist1       artist2  ... extension     bitrate   ano
-0  Chau Pinela  Carlos di Sarli  Ernesto Famá  ...      flac  379.037305  1930
-1  La estancia  Carlos di Sarli  Ernesto Famá  ...      flac  382.161265  1930
-2        Flora  Carlos di Sarli  Ernesto Famá  ...      flac  389.303820  1930
+tango,3,0,True,carlos di sarli,"         title          artist1       artist2  ... extension     bitrate   ano
+0  Chau Pinela  carlos di sarli  ernesto fama  ...      flac  379.037305  1930
+1  La estancia  carlos di sarli  ernesto fama  ...      flac  382.161265  1930
+2        Flora  carlos di sarli  ernesto fama  ...      flac   389.30382  1930
 
 [3 rows x 13 columns]"
-cortina entera,1,3,True,Em Beihold,"          title     artist1 artist2  ... extension     bitrate   ano
-0  Too Precious  Em Beihold     NaN  ...      flac  949.335394  2022
+cortina entera,1,3,True,em beihold,"          title     artist1 artist2  ... extension     bitrate   ano
+0  Too Precious  em beihold     NaN  ...      flac  949.335394  2022
 
 [1 rows x 13 columns]"
-tango,3,4,True,Juan D'Arienzo,"        title         artist1 artist2  ... extension      bitrate   ano
-0  El puntazo  Juan D'Arienzo     nan  ...      flac  1426.295150  1952
-1    El flete  Juan D'Arienzo     nan  ...      flac  1401.915126  1936
-2    Ataniche  Juan D'Arienzo     nan  ...      flac  1379.873878  1936
+tango,3,4,True,juan d'arienzo,"        title         artist1 artist2  ... extension      bitrate   ano
+0  El puntazo  juan d'arienzo     nan  ...      flac   1426.29515  1952
+1    El flete  juan d'arienzo     nan  ...      flac  1401.915126  1936
+2    Ataniche  juan d'arienzo     nan  ...      flac  1379.873878  1936
 
 [3 rows x 13 columns]"
-cortina entera,1,7,True,Stephen Sanchez,"               title          artist1 artist2  ... extension      bitrate   ano
-0  Until I Found You  Stephen Sanchez     NaN  ...      flac  2111.531185  2022
+cortina entera,1,7,True,stephen sanchez,"               title          artist1 artist2  ... extension      bitrate   ano
+0  Until I Found You  stephen sanchez     NaN  ...      flac  2111.531185  2022
 
 [1 rows x 13 columns]"
-tango milonga,3,8,True,Francisco Canaro,"                     title           artist1  ...      bitrate   ano
-0               Arrabalera  Francisco Canaro  ...   575.588158  1950
-1  Milonga del novecientos  Francisco Canaro  ...   714.546108  1933
-2          Silueta porteña  Francisco Canaro  ...  1353.767534  1936
+tango milonga,3,8,True,francisco canaro,"                     title           artist1  ...      bitrate   ano
+0               Arrabalera  francisco canaro  ...   575.588158  1950
+1  Milonga del novecientos  francisco canaro  ...   714.546108  1933
+2          Silueta porteña  francisco canaro  ...  1353.767534  1936
 
 [3 rows x 13 columns]"
-cortina entera,1,11,True,Fats Domino,"                      title      artist1 artist2  ... extension    bitrate   ano
-0  Jambalaya (On the Bayou)  Fats Domino     NaN  ...      flac  1009.4908  2006
+cortina entera,1,11,True,fats domino,"                      title      artist1 artist2  ... extension    bitrate   ano
+0  Jambalaya (On the Bayou)  fats domino     NaN  ...      flac  1009.4908  2006
 
 [1 rows x 13 columns]"
-tango,3,12,True,Edgardo Donato,"                   title         artist1  ...      bitrate   ano
-0              Yo te amo  Edgardo Donato  ...  1440.326140  1940
-1            Mi serenata  Edgardo Donato  ...   811.637209  1940
-2  Carnaval de mi barrio  Edgardo Donato  ...  1351.354717  1939
+tango,3,12,True,edgardo donato,"                   title         artist1  ...      bitrate   ano
+0              Yo te amo  edgardo donato  ...   1440.32614  1940
+1            Mi serenata  edgardo donato  ...   811.637209  1940
+2  Carnaval de mi barrio  edgardo donato  ...  1351.354717  1939
 
 [3 rows x 13 columns]"
-cortina entera,1,15,True,Monsieur Periné,"             title          artist1 artist2  ... extension     bitrate   ano
-0  Nuestra canción  Monsieur Periné     NaN  ...      flac  907.182621  2015
+cortina entera,1,15,True,monsieur perine,"             title          artist1 artist2  ... extension     bitrate   ano
+0  Nuestra canción  monsieur perine     NaN  ...      flac  907.182621  2015
 
 [1 rows x 13 columns]"
-tango,3,16,True,Donato Racciatti,"                title           artist1  ...     bitrate   ano
-0              Garufa  Donato Racciatti  ...  714.960370  1954
-1              Gloria  Donato Racciatti  ...  718.118910  1952
-2  Andate con la otra  Donato Racciatti  ...  670.771722  1953
+tango,3,16,True,donato racciatti,"                title           artist1  ...     bitrate   ano
+0              Garufa  donato racciatti  ...   714.96037  1954
+1              Gloria  donato racciatti  ...   718.11891  1952
+2  Andate con la otra  donato racciatti  ...  670.771722  1953
 
 [3 rows x 13 columns]"
-cortina entera,1,19,True,Giulia,"       title artist1        artist2  ... extension     bitrate   ano
-0  Barcelona  Giulia  Los Tellarini  ...      flac  889.919084  2010
+cortina entera,1,19,True,giulia,"       title artist1        artist2  ... extension     bitrate   ano
+0  Barcelona  giulia  los tellarini  ...      flac  889.919084  2010
 
 [1 rows x 13 columns]"
-tango,3,20,True,Adolfo Carabelli,"      title           artist1  ...     bitrate   ano
-0     Volvé  Adolfo Carabelli  ...  388.428425  1932
-1      Alma  Adolfo Carabelli  ...  385.981521  1932
-2  Cantando  Adolfo Carabelli  ...  464.344764  1931
+tango,3,20,True,adolfo carabelli,"      title           artist1  ...     bitrate   ano
+0     Volvé  adolfo carabelli  ...  388.428425  1932
+1      Alma  adolfo carabelli  ...  385.981521  1932
+2  Cantando  adolfo carabelli  ...  464.344764  1931
 
 [3 rows x 13 columns]"
-cortina entera,1,23,True,Habanot Nechama,"            title          artist1 artist2  ... extension     bitrate   ano
-0  So Far (להיות)  Habanot Nechama     NaN  ...      flac  836.318649  2007
+cortina entera,1,23,True,habanot nechama,"            title          artist1 artist2  ... extension     bitrate   ano
+0  So Far (להיות)  habanot nechama     NaN  ...      flac  836.318649  2007
 
 [1 rows x 13 columns]"
-tango vals,3,24,True,Ricardo Tanturi,"                   title          artist1  ...     bitrate   ano
-0             Mi romance  Ricardo Tanturi  ...  511.708757  1941
-1               Recuerdo  Ricardo Tanturi  ...  533.821084  1941
-2  La serenata (Mi amor)  Ricardo Tanturi  ...  541.232178  1941
+tango vals,3,24,True,ricardo tanturi,"                   title          artist1  ...     bitrate   ano
+0             Mi romance  ricardo tanturi  ...  511.708757  1941
+1               Recuerdo  ricardo tanturi  ...  533.821084  1941
+2  La serenata (Mi amor)  ricardo tanturi  ...  541.232178  1941
 
 [3 rows x 13 columns]"
-cortina entera,1,27,True,Joan Jett and the Blackhearts,"                 title                        artist1  ...     bitrate   ano
-0  I Love Rock 'N Roll  Joan Jett and the Blackhearts  ...  982.484975  2010
+cortina entera,1,27,True,joan jett and the blackhearts,"                 title                        artist1  ...     bitrate   ano
+0  I Love Rock 'N Roll  joan jett and the blackhearts  ...  982.484975  2010
 
 [1 rows x 13 columns]"
-tango,3,28,True,Miguel Caló,"                    title      artist1  ...     bitrate   ano
-0        Jamás retornarás  Miguel Caló  ...  629.698362  1942
-1      Margarita Gauthier  Miguel Caló  ...  693.772904  1942
-2  La noche que te fuiste  Miguel Caló  ...  563.353500  1945
+tango,3,28,True,miguel calo,"                    title      artist1  ...     bitrate   ano
+0        Jamás retornarás  miguel calo  ...  629.698362  1942
+1      Margarita Gauthier  miguel calo  ...  693.772904  1942
+2  La noche que te fuiste  miguel calo  ...    563.3535  1945
 
 [3 rows x 13 columns]"
-cortina entera,1,31,True,Louise Attaque,"                title         artist1 artist2  ... extension      bitrate   ano
-0  J'T'Emmène Au Vent  Louise Attaque     NaN  ...      flac  1007.365516  1997
+cortina entera,1,31,True,louise attaque,"                title         artist1 artist2  ... extension      bitrate   ano
+0  J'T'Emmène Au Vent  louise attaque     NaN  ...      flac  1007.365516  1997
 
 [1 rows x 13 columns]"
-tango,3,32,True,Rodolfo Biagi,"                      title        artist1  ...     bitrate   ano
-0                Yuyo verde  Rodolfo Biagi  ...  450.397238  1945
-1       Ahora no me conocés  Rodolfo Biagi  ...  553.883448  1941
-2  Quiero verte una vez más  Rodolfo Biagi  ...  517.508091  1940
+tango,3,32,True,rodolfo biagi,"                      title        artist1  ...     bitrate   ano
+0                Yuyo verde  rodolfo biagi  ...  450.397238  1945
+1       Ahora no me conocés  rodolfo biagi  ...  553.883448  1941
+2  Quiero verte una vez más  rodolfo biagi  ...  517.508091  1940
 
 [3 rows x 13 columns]"
-cortina entera,1,35,True,D4vd,"          title artist1 artist2  ... extension     bitrate   ano
-0  Here With Me    D4vd     NaN  ...      flac  803.936825  2023
+Unknown Genre,1,35,True,Unknown Artist,"           title         artist1  ...          bitrate ano
+0  Unknown Title  Unknown Artist  ...  Unknown Bitrate    
 
 [1 rows x 13 columns]"
-tango,3,36,True,Aníbal Troilo,"                        title        artist1  ...     bitrate   ano
-0                Toda mi vida  Aníbal Troilo  ...  364.886230  1941
-1                  Tinta roja  Aníbal Troilo  ...  590.723999  1941
-2  Te aconsejo que me olvides  Aníbal Troilo  ...  473.393391  1941
+tango,3,36,True,anibal troilo,"                        title        artist1  ...     bitrate   ano
+0                Toda mi vida  anibal troilo  ...   364.88623  1941
+1                  Tinta roja  anibal troilo  ...  590.723999  1941
+2  Te aconsejo que me olvides  anibal troilo  ...  473.393391  1941
 
 [3 rows x 13 columns]"
-cortina entera,1,39,True,BoyWithUke,"   title     artist1 artist2  album  ... duration extension     bitrate   ano
-0  Toxic  BoyWithUke     NaN  Toxic  ...   168.02      flac  789.762552  2021
+cortina entera,1,39,True,boywithuke,"   title     artist1 artist2  album  ... duration extension     bitrate   ano
+0  Toxic  boywithuke     NaN  Toxic  ...   168.02      flac  789.762552  2021
 
 [1 rows x 13 columns]"
-tango milonga,3,40,True,Francisco Lomuto,"                       title           artist1  ...     bitrate   ano
-0  No hay tierra como la mia  Francisco Lomuto  ...  285.644076  1939
-1           Parque Patricios  Francisco Lomuto  ...  290.076293  1941
-2           Que tiempo aquel  Francisco Lomuto  ...  294.677691  1938
+tango milonga,3,40,True,francisco lomuto,"                       title           artist1  ...     bitrate   ano
+0  No hay tierra como la mia  francisco lomuto  ...  285.644076  1939
+1           Parque Patricios  francisco lomuto  ...  290.076293  1941
+2           Que tiempo aquel  francisco lomuto  ...  294.677691  1938
 
 [3 rows x 13 columns]"
-cortina entera,1,43,True,Ska-P,"           title artist1 artist2  ... extension      bitrate   ano
-0  Señor Matanza   Ska-P     NaN  ...      flac  1011.593996  2001
+cortina entera,1,43,True,ska-p,"           title artist1 artist2  ... extension      bitrate   ano
+0  Señor Matanza   ska-p     NaN  ...      flac  1011.593996  2001
 
 [1 rows x 13 columns]"
-tango,3,44,True,Osvaldo Pugliese,"                    title           artist1  ...      bitrate   ano
-0       El sueño del pibe  Osvaldo Pugliese  ...   530.737223  1945
-1                   Farol  Osvaldo Pugliese  ...   576.782614  1943
-2  Corrientes y Esmeralda  Osvaldo Pugliese  ...  2312.558349  1944
+tango,3,44,True,osvaldo pugliese,"                    title           artist1  ...      bitrate   ano
+0       El sueño del pibe  osvaldo pugliese  ...   530.737223  1945
+1                   Farol  osvaldo pugliese  ...   576.782614  1943
+2  Corrientes y Esmeralda  osvaldo pugliese  ...  2312.558349  1944
 
 [3 rows x 13 columns]"
-cortina entera,1,47,True,Ismaël Lô,"      title    artist1 artist2  ... extension     bitrate   ano
-0  Tajabone  Ismaël Lô     NaN  ...      flac  790.614239  1996
+cortina entera,1,47,True,ismael lo,"      title    artist1 artist2  ... extension     bitrate   ano
+0  Tajabone  ismael lo     NaN  ...      flac  790.614239  1996
 
 [1 rows x 13 columns]"
-tango,3,48,True,Ricardo Tanturi,"                              title          artist1  ...     bitrate   ano
-0               Una noche de garufa  Ricardo Tanturi  ...  507.074323  1941
-1       Argañaraz (Aquellas farras)  Ricardo Tanturi  ...  525.034349  1940
-2  Comparsa criolla (Comme il faut)  Ricardo Tanturi  ...  526.452152  1941
+tango,3,48,True,ricardo tanturi,"                              title          artist1  ...     bitrate   ano
+0               Una noche de garufa  ricardo tanturi  ...  507.074323  1941
+1       Argañaraz (Aquellas farras)  ricardo tanturi  ...  525.034349  1940
+2  Comparsa criolla (Comme il faut)  ricardo tanturi  ...  526.452152  1941
 
 [3 rows x 13 columns]"
-cortina entera,1,51,True,Ashe,"                title artist1 artist2  ... extension    bitrate   ano
-0  Moral Of The Story    Ashe     NaN  ...      flac  858.48276  2020
+cortina entera,1,51,True,ashe,"                title artist1 artist2  ... extension    bitrate   ano
+0  Moral Of The Story    ashe     NaN  ...      flac  858.48276  2020
 
 [1 rows x 13 columns]"
-tango,3,52,True,José Garcia,"                 title      artist1        artist2  ... extension     bitrate   ano
-0      Calla bandoneon  José Garcia  Alfredo Rojas  ...      flac  563.440152  1944
-1     No estamos solos  José Garcia  Alfredo Rojas  ...      flac  509.157270  1944
-2  Adiós adiós corazón  José Garcia  Alfredo Rojas  ...      flac  470.759594  1942
+tango,3,52,True,jose garcia,"                 title      artist1        artist2  ... extension     bitrate   ano
+0      Calla bandoneon  jose garcia  alfredo rojas  ...      flac  563.440152  1944
+1     No estamos solos  jose garcia  alfredo rojas  ...      flac   509.15727  1944
+2  Adiós adiós corazón  jose garcia  alfredo rojas  ...      flac  470.759594  1942
 
 [3 rows x 13 columns]"
-cortina entera,1,55,True,Maria canta copla,"                      title            artist1  ...     bitrate   ano
-0  Que nadie sepa mi sufrir  Maria canta copla  ...  768.721377  2014
+cortina entera,1,55,True,maria canta copla,"                      title            artist1  ...     bitrate   ano
+0  Que nadie sepa mi sufrir  maria canta copla  ...  768.721377  2014
 
 [1 rows x 13 columns]"
-tango vals,3,56,True,Alfredo de Angelis,"                          title             artist1  ...     bitrate   ano
-0      Que nadie sepa mi sufrir  Alfredo de Angelis  ...  471.463603  1953
-1                  Ilusión azul  Alfredo de Angelis  ...  604.886207  1945
-2  Pobre flor (Primera ilusión)  Alfredo de Angelis  ...  724.799006  1946
+tango vals,3,56,True,alfredo de angelis,"                          title             artist1  ...     bitrate   ano
+0      Que nadie sepa mi sufrir  alfredo de angelis  ...  471.463603  1953
+1                  Ilusión azul  alfredo de angelis  ...  604.886207  1945
+2  Pobre flor (Primera ilusión)  alfredo de angelis  ...  724.799006  1946
 
 [3 rows x 13 columns]"
-cortina entera,1,59,True,Roy Orbison,"       title      artist1 artist2  ... extension      bitrate   ano
-0  In Dreams  Roy Orbison     NaN  ...      flac  1718.088407  1963
+cortina entera,1,59,True,roy orbison,"       title      artist1 artist2  ... extension      bitrate   ano
+0  In Dreams  roy orbison     NaN  ...      flac  1718.088407  1963
 
 [1 rows x 13 columns]"
-tango,3,60,True,Pedro Laurenz,"                     title        artist1  ...     bitrate   ano
-0             La madrugada  Pedro Laurenz  ...  643.575240  1944
-1  Nada más que un corazón  Pedro Laurenz  ...  682.905632  1944
-2          Llueve otra vez  Pedro Laurenz  ...  692.224373  1944
+tango,3,60,True,pedro laurenz,"                     title        artist1  ...     bitrate   ano
+0             La madrugada  pedro laurenz  ...   643.57524  1944
+1  Nada más que un corazón  pedro laurenz  ...  682.905632  1944
+2          Llueve otra vez  pedro laurenz  ...  692.224373  1944
 
 [3 rows x 13 columns]"
-cortina entera,1,63,True,Manu Chao,"                              title    artist1  ...      bitrate   ano
-0  Petite Blonde Du Boulevard Brune  Manu Chao  ...  1127.875989  2004
+cortina entera,1,63,True,manu chao,"                              title    artist1  ...      bitrate   ano
+0  Petite Blonde Du Boulevard Brune  manu chao  ...  1127.875989  2004
 
 [1 rows x 13 columns]"
-tango,3,64,True,Ricardo Malerba,"                     title          artist1  ...     bitrate   ano
-0              Gitana rusa  Ricardo Malerba  ...  441.531249  1942
-1  La piba de los jazmines  Ricardo Malerba  ...  430.889555  1943
-2            Embrujamiento  Ricardo Malerba  ...  433.448379  1943
+tango,3,64,True,ricardo malerba,"                     title          artist1  ...     bitrate   ano
+0              Gitana rusa  ricardo malerba  ...  441.531249  1942
+1  La piba de los jazmines  ricardo malerba  ...  430.889555  1943
+2            Embrujamiento  ricardo malerba  ...  433.448379  1943
 
 [3 rows x 13 columns]"
-cortina entera,1,67,True,Justin Wellington Feat. Small Jam,"     title                            artist1  ...     bitrate   ano
-0  Iko Iko  Justin Wellington Feat. Small Jam  ...  935.473589  2021
+cortina entera,1,67,True,justin wellington,"     title            artist1    artist2  ... extension     bitrate   ano
+0  Iko Iko  justin wellington  small jam  ...      flac  935.473589  2021
 
 [1 rows x 13 columns]"
-tango,3,68,True,Juan D'Arienzo,"      title         artist1       artist2  ... extension      bitrate   ano
-0   Amarras  Juan D'Arienzo  Héctor Mauré  ...      flac  1673.963501  1944
-1  El olivo  Juan D'Arienzo  Héctor Mauré  ...      flac   612.191146  1941
-2  Tierrita  Juan D'Arienzo  Héctor Mauré  ...      flac   726.753426  1941
+tango,3,68,True,juan d'arienzo,"      title         artist1       artist2  ... extension      bitrate   ano
+0   Amarras  juan d'arienzo  hector maure  ...      flac  1673.963501  1944
+1  El olivo  juan d'arienzo  hector maure  ...      flac   612.191146  1941
+2  Tierrita  juan d'arienzo  hector maure  ...      flac   726.753426  1941
 
 [3 rows x 13 columns]"
-cortina entera,1,71,True,Janis Joplin,"                title       artist1  ...     bitrate   ano
-0  Me And Bobby McGee  Janis Joplin  ...  864.799126  1999
+cortina entera,1,71,True,janis joplin,"                title       artist1  ...     bitrate   ano
+0  Me And Bobby McGee  janis joplin  ...  864.799126  1999
 
 [1 rows x 13 columns]"
