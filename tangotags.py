@@ -1,19 +1,16 @@
 import tkinter as tk
-from ventana import Ventana
 import pygame
-from config import dbpath
-from database import Database
+from src.config.config import DB_CSV_PATH
+from src.config.database import Database
+from src.ui.ventana import Ventana
+
 
 if __name__ == "__main__":
-    # Create an instance of the Database
+    # Load data from CSV Database
     data_store = Database()
-
-    # Load the data at the very start
-    data_store.load_data(dbpath)
-
+    data_store.load_data(DB_CSV_PATH)
+  
     pygame.mixer.init()
     root = tk.Tk()
     app = Ventana(root)
     root.mainloop()
-
-

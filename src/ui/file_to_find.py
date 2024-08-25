@@ -3,10 +3,8 @@ from tinytag import TinyTag
 import tkinter as tk
 from tkinter import ttk
 import pygame
-from utils import *
-from database import Database
-
-
+from src.utils.utils import *
+from src.config.database import Database
 
 
 class FILETOFIND:
@@ -166,67 +164,67 @@ class FILETOFIND:
         self.hay_coincidencia_preferida = False
         self.tipo_de_coincidencia = 5
         artista_original, cantor_original = separar_artistas(tag.artist)
-        # coincide artista
-        if unidecode(convert_numbers_to_words(artista_original)).lower() in self.dic_art:
-            dbe = self.dic_art[unidecode(convert_numbers_to_words(artista_original)).lower()]
-            coincide_titulo = coincide(dbe, tag, 'titulo', False)
-            # si hay resultados de titulo
-
-            if not coincide_titulo.sum() == 0:
-                self.resultado = 'Titulo encontrado'
-                self.tipo_de_coincidencia = 0
-                dbet = dbe.loc[coincide_titulo]
-                coincide_titulo_talcual = coincide(dbe, tag, 'titulo', True)
-                # si hay resultados de titulo
-                if not coincide_titulo_talcual.sum() == 0:
-                    dbet = dbe.loc[coincide_titulo_talcual]
-                coincide_ano = coincide(dbet, tag, 'ano', False)
-                if not coincide_ano.sum() == 0:
-                    resultado = 'Año encontrado'
-                    self.tipo_de_coincidencia = 1
-                    self.coincidencia_preferida = next((index for index, value in enumerate(coincide_ano) if value),
-                                                       None)
-                    self.hay_coincidencia_preferida = True
-                else:
-                    self.resultado = 'Año no encontrado'
-
-            # si no hay resultados de titulo
-            else:
-                coinciden_palabras = contain_most_words(dbe, tag.title, "titulo_min")
-                # si hay coincidencia de palabras
-                if coinciden_palabras:
-                    resultado = 'Palabras del titulo encontrado'
-                    dbet = dbe.loc[coinciden_palabras]
-                    self.tipo_de_coincidencia = 3
-                    coincide_ano = coincide(dbet, tag, 'ano', False)
-                    if not coincide_ano.sum() == 0:
-                        resultado = 'Año encontrado'
-                        self.tipo_de_coincidencia = 4
-                        self.coincidencia_preferida = next((index for index, value in enumerate(coincide_ano) if value),
-                                                           None)
-                        self.hay_coincidencia_preferida = True
-                    else:
-                        self.resultado = 'Año no encontrado'
-                # si no hay coincidencia de palabras
-                else:
-                    self.resultado = 'Titulo o palabras del titulo no encontrado'
-                    self.tipo_de_coincidencia = 5
-                    dbet = self.db.iloc[0:0]
-        else:
+        
+        # Find a matching key in dic_art
+        artista_key = next((key for key in self.dic_art if artista_original in key), None)
+        
+        if not artista_key:
             self.resultado = 'Artista no encontrado'
-            self.tipo_de_coincidencia = 5
-            dbet = self.db.iloc[0:0]
+            self.coincidencias = self.db.iloc[0:0]
+            return
 
-        if self.tipo_de_coincidencia == 1:
-            if coincide(dbet, tag, 'todo', True).sum() == 1:
-                dbet = dbet.loc[coincide(dbet, tag, 'todo', True)]
+        artist_songs = self.dic_art[artista_key]
+        
+        # Get a dictionary of boolean matches for all tags
+        coincidencias = compare_tags(artist_songs, tag)
+
+        # Check for title match
+        if coincidencias[TagLabels.TITULO].any() == True:
+            self.resultado = 'Titulo encontrado'
+            self.tipo_de_coincidencia = 0
+            dbet = artist_songs[coincidencias[TagLabels.TITULO]]
+
+            # Check for year match
+            if coincidencias[TagLabels.ANO].any() == True:
+                self.resultado = 'Año encontrado'
+                self.tipo_de_coincidencia = 1
+                self.coincidencia_preferida = dbet.index[coincidencias[TagLabels.ANO]].min()
+                self.hay_coincidencia_preferida = True
+            else:
+                self.resultado = 'Año no encontrado'
+
+        # Check for partial title word matches
+        elif coincidencias[TagLabels.TITULO_PALABRAS].any() == True:
+            self.resultado = 'Palabras del titulo encontrado'
+            self.tipo_de_coincidencia = 3
+            dbet = artist_songs[coincidencias['titulo_palabras']]
+
+            # Check for year match in the filtered data
+            if coincidencias[TagLabels.ANO].any() == True:
+                self.resultado = 'Año encontrado'
+                self.tipo_de_coincidencia = 4
+                self.coincidencia_preferida = dbet.index[coincidencias[TagLabels.ANO]].min()
+                self.hay_coincidencia_preferida = True
+            else:
+                self.resultado = 'Año no encontrado'
+        else:
+            self.resultado = 'Titulo o palabras del titulo no encontrado'
+            self.coincidencias = self.db.iloc[0:0]
+            return
+
+        # If we found a year match and the whole tag matches exactly, update the coincidence type
+        if self.tipo_de_coincidencia == 1 and coincidencias[TagLabels.TODO].any() == True:
+            dbet = dbet[coincidencias[TagLabels.TODO]]
+            if len(dbet) == 1:
                 self.tipo_de_coincidencia = 2
                 self.hay_coincidencia_preferida = False
 
-        if (self.tipo_de_coincidencia == 0) & (len(dbet) == 1):
+        # If the title is the only match and there's exactly one match, set the preferred match
+        if self.tipo_de_coincidencia == 0 and len(dbet) == 1:
             self.hay_coincidencia_preferida = True
-            self.coincidencia_preferida = 0
+            self.coincidencia_preferida = dbet.index[0]
 
+        # Set the filtered matches as the final coincidences
         self.coincidencias = dbet
 
     def show_popup_db(self, row):

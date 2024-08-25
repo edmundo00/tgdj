@@ -4,15 +4,14 @@ from tkinter import filedialog, messagebox
 from tkinter import ttk
 from datetime import datetime
 from presentation_app import PresentationApp
-from file_to_find import FILETOFIND
-from utils import *
-from database import Database
-import config
+from src.ui.file_to_find import FILETOFIND
+from src.utils.utils import *
+from src.config.database import Database
+import src.config.config as config
 
 class Ventana:
     def __init__(self, root):
         self.data_store = Database()
-        # load_data()
         self.root = root
         # Create the main window
         self.root.title("Tkinter Window with Menu, Icon, and Status Bar")

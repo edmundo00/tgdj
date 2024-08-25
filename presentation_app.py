@@ -9,10 +9,10 @@ from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_CONNECTOR
 from unidecode import unidecode
-from utils import extract_year, separar_artistas, adjust_text_size, obtener_autores
 import os
 from os.path import join
-from config import dropbox_path, image_folder, m3u_start_path, background_image_path, data_folder, output_folder, orchestra_folder, background_image_folder, merged_images_folder, DEFAULT_FONT_NAME
+from src.config.config import dropbox_path, image_folder, m3u_start_path, background_image_path, data_folder, output_folder, orchestra_folder, background_image_folder, merged_images_folder, DEFAULT_FONT_NAME
+from src.utils.utils import extract_year, separar_artistas, adjust_text_size, obtener_autores
 
 class PresentationApp:
     def __init__(self, root):

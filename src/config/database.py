@@ -16,15 +16,12 @@ class Database:
         if not os.path.exists(dbpath):
             print(f"Error: The database file at path '{dbpath}' does not exist.")
             return
-        else:
-            self.db = pd.read_csv(dbpath, encoding="utf-8", sep=";")
+        
+        self.db = pd.read_csv(dbpath, encoding="utf-8", sep=";")
+        if self.db is not None:
+            self.dic_art = {artista: group for artista, group in self.db.groupby('artista_min')}
             print("Data loaded successfully")
-            if self.db is not None:
-                lista_artistas = self.db['artista_min'].unique()
-                for artista in lista_artistas:
-                    filtered_df = self.db[self.db['artista_min'] == artista]
-                    self.dic_art[artista] = filtered_df
-
+            
     def get_db(self):
         return self.db
 

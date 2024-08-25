@@ -1,16 +1,23 @@
 import re
+import pygame
 from unidecode import unidecode
-from config import *
 from pptx.util import Pt, Cm
+from src.config.config import *
+from src.constants.enums import TagLabels
 
 
 def separar_artistas(artistas):
-    artists = artistas.split(" / ")
-    artists1 = artists[0]
-    if len(artists) > 1:
-        artists2 = artists[1]
-    else:
-        artists2 = ""
+    artistas = unidecode(convert_numbers_to_words(artistas))
+    # Define regex pattern to capture different cases
+    pattern = re.compile(r" / | feat\. | canta: ")
+    
+    # Split the input string using the defined pattern
+    artists = re.split(pattern, artistas)
+    
+    # Assign artists based on the length of the split result
+    artists1 = artists[0].lower().strip()  # Main artist
+    artists2 = artists[1].lower().strip() if len(artists) > 1 else ""  # Second artist, if any
+    
     return artists1, artists2
 
 
@@ -203,118 +210,61 @@ def contain_most_words(database, text, columna):
     return indices_mas_palabras
 
 
-def coincide(database, tag, que_coincide, talcual=False):
-    lista_de_booleanos = []
+def get_file_name_without_extension(file_path):
+    # Extract the file name with extension
+    file_name_with_ext = os.path.basename(file_path)
+    # Split the file name and extension, and return the file name
+    file_name, _ = os.path.splitext(file_name_with_ext)
+    return file_name
 
+def compare_tags(database, tag):
+    coincidencias = {}
     artista_original, cantor_original = separar_artistas(tag.artist)
-
+    if tag.title is None:
+        tag.title = get_file_name_without_extension(tag._file_name)
     tituloabuscar = unidecode(convert_numbers_to_words(tag.title)).lower().strip()
-    artistaabuscar = unidecode(convert_numbers_to_words(artista_original)).lower()
-    cantorabuscar = unidecode(convert_numbers_to_words(cantor_original)).lower()
 
-    if que_coincide == 'titulo':
-        valor_buscado = tag.title
-        if talcual:
-            lista_de_booleanos = database["titulo"] == tag.title
-        else:
-            lista_de_booleanos = database["titulo_min"].str.contains(tituloabuscar, case=False, na=False, regex=False)
+    #Check all the tags in the database
+    coincidencias[TagLabels.TITULO] = database["titulo_min"].str.contains(tituloabuscar, case=False, na=False, regex=False)
+    coincidencias[TagLabels.TITULO_EXACTO] = database["titulo_min"] == tituloabuscar
+    coincidencias[TagLabels.TITULO_PALABRAS] = contain_most_words(database, tag.title, "titulo_min")
 
-    if que_coincide == 'artista':
-        valor_buscado = artista_original
-        if talcual:
-            lista_de_booleanos = database["artista"] == artista_original
-        else:
-            lista_de_booleanos = database["artista_min"].str.contains(artistaabuscar, case=False, na=False,
-                                                                      regex=False)
-    if que_coincide == 'cantor':
-        valor_buscado = cantor_original
-        if talcual:
-            lista_de_booleanos = database["cantor"] == cantor_original
-        else:
-            lista_de_booleanos = database["cantor_min"].str.contains(cantorabuscar, case=False, na=False,
-                                                                     regex=False)
+    # Handle cases where artist or cantor might be None or empty
+    if artista_original:
+        coincidencias[TagLabels.ARTISTA] = database["artista_min"].str.contains(artista_original, case=False, na=False, regex=False)
+    else:
+        coincidencias[TagLabels.ARTISTA] = False
 
-    if tag.year == None:
+    if cantor_original:
+        coincidencias[TagLabels.CANTOR] = database["cantor_min"].str.contains(cantor_original, case=False, na=False, regex=False)
+    else:
+        coincidencias[TagLabels.CANTOR] = False
+
+    # Check year (fecha and ano)
+    if tag.year is None:
         tag.year = ""
-    if que_coincide == 'fecha':
-        valor_buscado = tag.year
-        lista_de_booleanos = database["fecha"] == tag.year
+    
+    coincidencias[TagLabels.FECHA] = database["fecha"] == tag.year
+    coincidencias[TagLabels.ANO] = database["fecha_ano"] == extraer_cuatro_numeros(tag.year)
+    
+    # Check genre (genero)
+    coincidencias[TagLabels.GENERO] = database.estilo.str.contains(tag.genre, case=False, na=False, regex=False) if tag.genre else False
 
-    if que_coincide == 'ano':
-        lista_de_booleanos = database["fecha_ano"] == extraer_cuatro_numeros(tag.year)
-        valor_buscado = extraer_cuatro_numeros(tag.year)
+    # Check composer/author (compositor_autor)
+    coincidencias[TagLabels.COMPOSITOR_AUTOR] = database["compositor_autor"] == tag.composer
 
-    if que_coincide == 'genero':
-        valor_buscado = tag.genre
-        if talcual:
-            lista_de_booleanos = database["estilo"] == tag.genre
-        else:
-            lista_de_booleanos = database.estilo.str.contains(artistaabuscar, case=False, na=False,
-                                                              regex=False)
-
-    if que_coincide == 'compositor_autor':
-        valor_buscado = tag.composer
-        lista_de_booleanos = database["compositor_autor"] == tag.composer
-
-    if que_coincide == 'todo':
-        ti = database["titulo"]
-        ar = database["artista"]
-        ca = database["cantor"]
-        fe = database["fecha"]
-        es = database["estilo"]
-        co = database["compositor_autor"]
-
-        lista_de_booleanos = (ti == tag.title) & (ar == artista_original) & (ca == cantor_original) & (
-                    fe == tag.year) & (es == tag.genre) & (co == tag.composer)
-
-    return lista_de_booleanos
+    # Check all fields (todo)
+    coincidencias[TagLabels.TODO] = coincidencias[TagLabels.TITULO]  & \
+                            (coincidencias[TagLabels.ARTISTA] == artista_original) & \
+                            (coincidencias[TagLabels.CANTOR] == cantor_original) & \
+                            (coincidencias[TagLabels.FECHA] | coincidencias[TagLabels.ANO]) & \
+                            (coincidencias[TagLabels.GENERO]) & \
+                            (coincidencias[TagLabels.COMPOSITOR_AUTOR])
+    return coincidencias
 
 
 def stop_music():
     pygame.mixer.music.stop()
-
-def limpiar_base_dato():
-
-    # db = pd.read_csv(csv_grabaciones, encoding="utf-8", sep=";")
-    # quitar los valores ' (2)', ' (3)', ' (4)', ' (5)', ' (b)', ' (c)' del titulo
-    # quitar_de_titulos = [' (2)', ' (3)', ' (4)', ' (5)', ' (b)', ' (c)']
-    # for palabra in quitar_de_titulos:
-    #     db['titulo'] = db['titulo'].str.replace(palabra, "", regex=False)
-    #
-    # # poner estilos Tango, Tango Milonga, Tango Vals.
-    # replacements = [
-    #     ('TANGO', 'tango'),
-    #     ('VALS', 'tango vals'),
-    #     ('MILONGA', 'tango milonga')
-    # ]
-    # replacement_dict = dict(replacements)
-    # db['estilo'] = db['estilo'].replace(replacement_dict)
-    # db['estilo'] = db['estilo'].apply(lambda x: x.lower())
-    #
-    # # reemplazar los nan con cadenas vacias
-    # db = db.fillna("")
-    #
-    # # crear una nueva columna con compositor y autor juntos
-    # db['compositor_autor'] = db.apply(
-    #     lambda row: concaternar_autores(row['compositor'], row['autor']), axis=1)
-    #
-    # # Cambiar el formato de fecha de DD/MM/YYYY a YYYY-MM-DD o YYYY-MM o YYYY
-    # db['fecha'] = db['fecha'].apply(convert_date_format)
-    #
-    # # crear una columna con solo el año
-    # db['fecha_ano'] = db['fecha'].apply(extract_year)
-    #
-    # # Quitar todo el apellido en mayusculas
-    # db['artista'] = db['artista'].apply(capitalize_uppercase_words)
-    #
-    # # CONVERTIR LOS NUMEROS A STRINGS Y QUITAR MAYUSCULAS Y ACENTOS
-    # db['titulo_min'] = db['titulo'].apply(lambda x: convert_numbers_to_words(x) if pd.notna(x) else x)
-    # db['artista_min'] = db['artista'].apply(lambda x: convert_numbers_to_words(x) if pd.notna(x) else x)
-    # db['cantor_min'] = db['cantor'].apply(lambda x: convert_numbers_to_words(x) if pd.notna(x) else x)
-    #
-    # # palabras_mas_comunes(db,'artista_min')
-    # db.to_csv(os.path.join(data_folder, "db.csv"),index=False,sep=';')
-    return None
 
 
 def concaternar_autores(compositor, autor):
