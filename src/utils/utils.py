@@ -226,7 +226,7 @@ def compare_tags(database, tag):
 
     #Check all the tags in the database
     coincidencias[TagLabels.TITULO] = database["titulo_min"].str.contains(tituloabuscar, case=False, na=False, regex=False)
-    coincidencias[TagLabels.TITULO_EXACTO] = database["titulo_min"] == tituloabuscar
+    coincidencias[TagLabels.TITULO_EXACTO] = database["titulo"] == tag.title
     coincidencias[TagLabels.TITULO_PALABRAS] = contain_most_words(database, tag.title, "titulo_min")
 
     # Handle cases where artist or cantor might be None or empty
@@ -235,10 +235,13 @@ def compare_tags(database, tag):
     else:
         coincidencias[TagLabels.ARTISTA] = False
 
+
     if cantor_original:
         coincidencias[TagLabels.CANTOR] = database["cantor_min"].str.contains(cantor_original, case=False, na=False, regex=False)
     else:
         coincidencias[TagLabels.CANTOR] = False
+
+    coincidencias[TagLabels.ARTISTA_EXACTO] = database["artista"] == tag.artist
 
     # Check year (fecha and ano)
     if tag.year is None:
