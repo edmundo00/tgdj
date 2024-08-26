@@ -464,12 +464,19 @@ class Ventana:
         for archivos in filetofind_list:
             for index, check in enumerate(archivos.vars):
                 if check.get():
-                    update_tags(archivos.ruta_archivo, title=archivos.coincidencias.titulo.iloc[index],
-                                artist=f'{archivos.coincidencias.artista.iloc[index]} / {archivos.coincidencias.cantor.iloc[index]}',
-                                year=archivos.coincidencias.fecha.iloc[index],
-                                genre=archivos.coincidencias.estilo.iloc[index],
-                                composer=archivos.coincidencias.compositor_autor.iloc[index])
+                    if archivos.coincidencias.cantor.iloc[index] != "":
+                        artist = f'{archivos.coincidencias.artista.iloc[index]} / {archivos.coincidencias.cantor.iloc[index]}'
+                    else:
+                        artist = f'{archivos.coincidencias.artista.iloc[index]}'
 
+                    update_tags(
+                        archivos.ruta_archivo,
+                        title=archivos.coincidencias.titulo.iloc[index],
+                        artist=artist,
+                        year=archivos.coincidencias.fecha.iloc[index],
+                        genre=archivos.coincidencias.estilo.iloc[index],
+                        composer=archivos.coincidencias.compositor_autor.iloc[index]
+                    )
                     reemplazo_tags_linea = {
                         'archivo': archivos.ruta_archivo,
                         'old_title': archivos.tags.title,
