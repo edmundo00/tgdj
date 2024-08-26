@@ -8,6 +8,7 @@ class TagLabels(Enum):
     ARTISTA = 'artista'
     ARTISTA_EXACTO = 'aritsta_exacto'
     CANTOR = 'cantor'
+    CANTOR_EXACTO = 'cantor_exacto'
     FECHA = 'fecha'
     ANO = 'fecha_ano'
     GENERO = 'genero'

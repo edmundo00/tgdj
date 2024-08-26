@@ -1,5 +1,8 @@
 import re
+import pandas as pd
 import pygame
+import ftfy
+import num2words as nw
 from unidecode import unidecode
 from pptx.util import Pt, Cm
 from src.config.config import *
@@ -7,7 +10,7 @@ from src.constants.enums import TagLabels
 
 
 def separar_artistas(artistas):
-    artistas = unidecode(convert_numbers_to_words(artistas))
+    artistas = ftfy.fix_text(convert_numbers_to_words(artistas))
     # Define regex pattern to capture different cases
     pattern = re.compile(r" / | feat\. | canta: ")
     
@@ -15,8 +18,8 @@ def separar_artistas(artistas):
     artists = re.split(pattern, artistas)
     
     # Assign artists based on the length of the split result
-    artists1 = artists[0].lower().strip()  # Main artist
-    artists2 = artists[1].lower().strip() if len(artists) > 1 else ""  # Second artist, if any
+    artists1 = artists[0].strip()  # Main artist
+    artists2 = artists[1].strip() if len(artists) > 1 else ""  # Second artist, if any
     
     return artists1, artists2
 
@@ -177,13 +180,11 @@ def convert_numbers_to_words(text):
     for number in numbers:
         text = text.replace(number, nw.num2words(number, lang='es'))
 
-    text = unidecode(text).lower()
-
     return text
 
 
 def contain_most_words(database, text, columna):
-    text = unidecode(convert_numbers_to_words(text)).lower()
+    text = unidecode(convert_numbers_to_words(text)).lower().strip()
     text = text.replace("(", "").replace(")", "")
     text_words = set(text.lower().split())
     lista_numero_palabras_comun = []
@@ -219,29 +220,35 @@ def get_file_name_without_extension(file_path):
 
 def compare_tags(database, tag):
     coincidencias = {}
+    
     artista_original, cantor_original = separar_artistas(tag.artist)
-    if tag.title is None:
-        tag.title = get_file_name_without_extension(tag._file_name)
-    tituloabuscar = unidecode(convert_numbers_to_words(tag.title)).lower().strip()
+    titulo_original = ftfy.fix_text(tag.title).strip()
+    if titulo_original is None:
+        titulo_original = get_file_name_without_extension(tag._file_name)
+    artista_buscar  = unidecode(artista_original).lower()
+    cantor_buscar = unidecode(cantor_original).lower()
+    titulo_buscar = unidecode(convert_numbers_to_words(titulo_original)).lower().strip()
 
     #Check all the tags in the database
-    coincidencias[TagLabels.TITULO] = database["titulo_min"].str.contains(tituloabuscar, case=False, na=False, regex=False)
-    coincidencias[TagLabels.TITULO_EXACTO] = database["titulo"] == tag.title
-    coincidencias[TagLabels.TITULO_PALABRAS] = contain_most_words(database, tag.title, "titulo_min")
+    coincidencias[TagLabels.TITULO] = database["titulo_min"].str.contains(titulo_buscar, case=False, na=False, regex=False)
+    coincidencias[TagLabels.TITULO_EXACTO] = database["titulo"] == titulo_original
+    coincidencias[TagLabels.TITULO_PALABRAS] = contain_most_words(database, titulo_buscar, "titulo_min")
 
     # Handle cases where artist or cantor might be None or empty
     if artista_original:
-        coincidencias[TagLabels.ARTISTA] = database["artista_min"].str.contains(artista_original, case=False, na=False, regex=False)
+        coincidencias[TagLabels.ARTISTA] = database["artista_min"].str.contains(artista_buscar, case=False, na=False, regex=False)
+        coincidencias[TagLabels.ARTISTA_EXACTO] = database["artista"] == artista_original
+        
     else:
         coincidencias[TagLabels.ARTISTA] = False
-
+        coincidencias[TagLabels.ARTISTA_EXACTO] = False
 
     if cantor_original:
-        coincidencias[TagLabels.CANTOR] = database["cantor_min"].str.contains(cantor_original, case=False, na=False, regex=False)
+        coincidencias[TagLabels.CANTOR] = database["cantor_min"].str.contains(cantor_buscar, case=False, na=False, regex=False)
+        coincidencias[TagLabels.CANTOR_EXACTO] = database["cantor"] == cantor_original
     else:
         coincidencias[TagLabels.CANTOR] = False
-
-    coincidencias[TagLabels.ARTISTA_EXACTO] = database["artista"] == tag.artist
+        coincidencias[TagLabels.CANTOR_EXACTO] = False
 
     # Check year (fecha and ano)
     if tag.year is None:
@@ -258,8 +265,8 @@ def compare_tags(database, tag):
 
     # Check all fields (todo)
     coincidencias[TagLabels.TODO] = coincidencias[TagLabels.TITULO]  & \
-                            (coincidencias[TagLabels.ARTISTA] == artista_original) & \
-                            (coincidencias[TagLabels.CANTOR] == cantor_original) & \
+                            (coincidencias[TagLabels.ARTISTA_EXACTO]) & \
+                            (coincidencias[TagLabels.CANTOR_EXACTO]) & \
                             (coincidencias[TagLabels.FECHA] | coincidencias[TagLabels.ANO]) & \
                             (coincidencias[TagLabels.GENERO]) & \
                             (coincidencias[TagLabels.COMPOSITOR_AUTOR])

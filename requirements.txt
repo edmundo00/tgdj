@@ -8,3 +8,4 @@ unidecode
 num2words
 pygame
 mutagen
+ftfy
