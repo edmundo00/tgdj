@@ -32,7 +32,6 @@ class FILETOFIND:
         self.representar_datos()
 
     def representar_datos(self):
-
         # Determine background color based on frame number
         color_de_fondo = 'whitesmoke' if es_par(self.frame_number) else 'lightgrey'
 
@@ -49,17 +48,14 @@ class FILETOFIND:
         # Determine the frame color based on the match type
         color_de_fondo = colores_por_coincidencia.get(self.tipo_de_coincidencia, color_de_fondo)
 
-        if self.tipo_de_coincidencia == 2:
+        if self.tipo_de_coincidencia == 2 or len(self.coincidencias) == 0:
             altura_frame = 27
         else:
-            if len(self.coincidencias) == 0:
-                altura_frame = 27
-            else:
-                altura_frame = 27 * len(self.coincidencias)
+            altura_frame = 27 * len(self.coincidencias)
 
-        # # Create frames for coincidencias and archivo
-
-        self.frame_coincidencias = tk.Frame(self.framedatabase, height=altura_frame, width=self.root.winfo_screenwidth() / 2,
+        # Create frames for coincidencias and archivo
+        self.frame_coincidencias = tk.Frame(self.framedatabase, height=altura_frame,
+                                            width=self.root.winfo_screenwidth() / 2,
                                             bd=2, relief="sunken", bg=color_de_fondo)
         self.frame_archivo = tk.Frame(self.framefiles, bd=2, relief="sunken", height=altura_frame,
                                       width=self.root.winfo_screenwidth() / 2, bg=color_de_fondo)
@@ -74,7 +70,22 @@ class FILETOFIND:
         fuente_10_bold = ('Arial', 12, "bold")
         fuente_10 = ('Arial', 12)
 
-        # If no matches are found
+        # Configurar columnas con tamaños fijos y proporcionales para ambos frames
+        columnas_config = [
+            (2, 4, 200),  # 40% Titulo, con un mínimo de 200 píxeles
+            (3, 3, 150),  # 30% Orquesta, con un mínimo de 150 píxeles
+            (4, 3, 150),  # 30% Cantor, con un mínimo de 150 píxeles
+            (5, 0, 50),  # Columna de 12 caracteres estilo
+            (6, 0, 50),  # Columna de 10 caracteres fecha
+            (7, 0, 10),  # Botón 1 (columna 7)
+            (8, 0, 10),  # Botón 2 (columna 8)
+            (9, 0, 10)  # Botón 3 (columna 9)
+        ]
+
+        for col, weight, minsize in columnas_config:
+            self.frame_coincidencias.grid_columnconfigure(col, weight=weight, minsize=minsize)
+            self.frame_archivo.grid_columnconfigure(col, weight=weight, minsize=minsize)
+
         if self.coincidencias.empty:
             self._crear_label(self.frame_coincidencias, text=self.frame_number, row=0, col=0, font=fuente_10,
                               bg=color_de_fondo)
@@ -83,19 +94,28 @@ class FILETOFIND:
         else:
             # Loop through each match and create the corresponding labels and buttons
             for counter, (_, row) in enumerate(self.coincidencias.iterrows()):
-                # Ensure row is a pandas Series and has the required columns
                 if isinstance(row, pd.Series) and 'audio30' in row and 'audio10' in row:
+                    # Crear Checkbutton
                     self._crear_checkbutton(self.frame_coincidencias, counter)
-                    self._crear_button(self.frame_coincidencias, image=self.info_icon,
-                                       command=lambda r=row: self.show_popup_db(r), row=counter, col=1,
-                                       bg=color_de_fondo)
-                    labels_data = [(row['titulo'], 2), (row['artista'], 3), (row['cantor'], 4), (row['estilo'], 5),
-                                   (row['fecha'], 6)]
 
-                    for text, col in labels_data:
+                    # Crear Labels con anchos fijos y proporcionales
+                    labels_data = [
+                        (row['titulo'], 2, None),  # Titulo con 40% del espacio
+                        (row['artista'], 3, None),  # Orquesta con 30% del espacio
+                        (row['cantor'], 4, None),  # Cantor con 30% del espacio
+                        (row['estilo'], 5, 11),  # Columna de 12 caracteres para estilo
+                        (row['fecha'], 6, 10)  # Columna de 10 caracteres para fecha
+                    ]
+
+                    for text, col, char_width in labels_data:
                         self._crear_label(self.frame_coincidencias, text=text, row=counter, col=col,
-                                          font=fuente_10_bold if col == 2 else fuente_10, bg=color_de_fondo)
+                                          font=fuente_10_bold if col == 2 else fuente_10,
+                                          bg=color_de_fondo, width=char_width)
 
+                    # Crear botones alineados a la derecha
+                    self._crear_button(self.frame_coincidencias, image=self.info_icon,
+                                       command=lambda r=row: self.show_popup_db(r), row=counter, col=7,
+                                       bg=color_de_fondo)
                     self._crear_play_buttons(self.frame_coincidencias, row, counter, bg=color_de_fondo)
                 else:
                     print(f"Unexpected row format or missing columns: {row}")
@@ -110,40 +130,48 @@ class FILETOFIND:
 
         for text, col in file_labels_data:
             self._crear_label(self.frame_archivo, text=text, row=0, col=col,
-                              font=fuente_10_bold if col == 2 else fuente_10, bg=color_de_fondo)
+                              font=fuente_10_bold if col == 1 else fuente_10, bg=color_de_fondo)
 
         self._crear_play_button_file(self.frame_archivo, self.tags._filename, len(file_labels_data) + 2,
                                      bg=color_de_fondo)
 
-    def _crear_label(self, parent, text, row, col, font, bg):
+    def _crear_label(self, parent, text, row, col, font, bg, width=None):
         label = tk.Label(parent, text=text, font=font, borderwidth=1, relief="solid", bg=bg)
-        label.grid(row=row, column=col, sticky="nw", padx=1, pady=1)
+        if width:
+            label.config(width=width)
+        label.grid(row=row, column=col, sticky="ew" if col in [2, 3, 4] else "w", padx=1, pady=1)
 
     def _crear_button(self, parent, image, command, row, col, bg):
         button = tk.Button(parent, image=image, relief=tk.FLAT, command=command, bg=bg)
-        button.grid(row=row, column=col, sticky="nw", padx=1, pady=1)
+        button.grid(row=row, column=col, sticky="e", padx=1, pady=1)
 
     def _crear_checkbutton(self, parent, counter):
-        self.var = tk.BooleanVar()
-        self.vars.append(self.var)
-        checkbutton = tk.Checkbutton(parent, variable=self.var, command=lambda i=counter: self.on_checkbox_toggle(i))
+        var = tk.BooleanVar()
+        self.vars.append(var)
+        checkbutton = tk.Checkbutton(parent, variable=var, command=lambda i=counter: self.on_checkbox_toggle(i))
         checkbutton.grid(row=counter, column=0, sticky="nw", padx=1, pady=1)
         self.checkbuttons.append(checkbutton)
 
     def _crear_play_buttons(self, parent, row, counter, bg):
         if isinstance(row, pd.Series):  # Ensure row is a pandas Series
             play_buttons = [
-                (link_to_music(row['audio30']), 7),
-                (link_to_music(row['audio10']), 8)
+                (link_to_music(row['audio30']), 8),
+                (link_to_music(row['audio10']), 9)
             ]
 
             for fp, col in play_buttons:
                 play_button = tk.Button(parent, image=self.play_icon, relief=tk.FLAT,
                                         command=lambda sp=fp: self.play_music(sp), bg=bg)
-                play_button.grid(row=counter, column=col, sticky="nw", padx=2, pady=2)
+                play_button.grid(row=counter, column=col, sticky="e", padx=1, pady=1)
 
             stop_button = tk.Button(parent, image=self.stop_icon, relief=tk.FLAT, command=stop_music, bg=bg)
-            stop_button.grid(row=counter, column=9, sticky="nw", padx=2, pady=2)
+            stop_button.grid(row=counter, column=10, sticky="e", padx=1, pady=1)
+
+    import tkinter as tk
+    from tkinter import PhotoImage
+
+
+
 
     def _crear_play_button_file(self, parent, archivo, counter, bg):
 
@@ -164,9 +192,14 @@ class FILETOFIND:
         self.hay_coincidencia_preferida = False
         self.tipo_de_coincidencia = 5
         artista_original, cantor_original = separar_artistas(tag.artist)
+        artista_buscar  = unidecode(artista_original).lower()
         
-        # Find a matching key in dic_art
-        artista_key = next((key for key in self.dic_art if artista_original in key), None)
+        # First, try to find an exact match
+        artista_key = next((key for key in self.dic_art if key == artista_buscar), None)
+
+        # If no exact match is found, try to find a partial match
+        if not artista_key:
+            artista_key = next((key for key in self.dic_art if artista_buscar in key), None)
         
         if not artista_key:
             self.resultado = 'Artista no encontrado'
@@ -193,14 +226,14 @@ class FILETOFIND:
             else:
                 self.resultado = 'Año no encontrado'
 
-        # Check for partial title word matches
-        elif coincidencias[TagLabels.TITULO_PALABRAS].any() == True:
+        # Check for partial title word matches (is a list with the index of rows with common words)
+        elif coincidencias[TagLabels.TITULO_PALABRAS]:
             self.resultado = 'Palabras del titulo encontrado'
             self.tipo_de_coincidencia = 3
-            dbet = artist_songs[coincidencias['titulo_palabras']]
+            dbet = artist_songs.loc[coincidencias[TagLabels.TITULO_PALABRAS]]
 
             # Check for year match in the filtered data
-            if coincidencias[TagLabels.ANO].any() == True:
+            if coincidencias[TagLabels.ANO].any():
                 self.resultado = 'Año encontrado'
                 self.tipo_de_coincidencia = 4
                 self.coincidencia_preferida = dbet.index[coincidencias[TagLabels.ANO]].min()
