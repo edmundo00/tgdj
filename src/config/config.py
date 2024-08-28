@@ -115,6 +115,8 @@ background_image_path = os.path.join(IMAGE_FOLDER,"backgounds" ,"background_tang
 
 merged_images_folder = os.path.join(IMAGE_FOLDER,"orquestas_con_fondo")
 
+archivotest = os.path.join(output_folder, "pythontest.csv")
+
 filetofind_list = []
 numero_canciones = 0
 articulos_preposiciones_comunes = [

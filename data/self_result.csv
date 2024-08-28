@@ -1,191 +1,191 @@
 unique_value,repetition_count,position,same_orchestra,orchestra_value,group_data
-tango,4,0,True,orquesta tipica victor,"                         title                 artist1  ...   ano artist2
-0  Viento norte (Bronca negra)  orquesta tipica victor  ...  1929     NaN
-1                   Filo misho  orquesta tipica victor  ...  1930     NaN
-2                       Chorra  orquesta tipica victor  ...  1928     NaN
-3                      Coqueta  orquesta tipica victor  ...  1929     NaN
+tango,4,0,True,Orquesta Típica Victor,"                         title                 artist1  ...   ano artist2
+0  Viento norte (Bronca negra)  Orquesta Típica Victor  ...  1929     NaN
+1                   Filo misho  Orquesta Típica Victor  ...  1930     NaN
+2                       Chorra  Orquesta Típica Victor  ...  1928     NaN
+3                      Coqueta  Orquesta Típica Victor  ...  1929     NaN
 
 [4 rows x 13 columns]"
-cortina entera,1,4,True,zaz,"                   title artist1  album  ...      bitrate   ano artist2
-0  Sous le ciel de Paris     zaz  Paris  ...  1599.317148  2014     NaN
+cortina entera,1,4,True,Zaz,"                   title artist1  album  ...      bitrate   ano artist2
+0  Sous le ciel de Paris     Zaz  Paris  ...  1599.317148  2014     NaN
 
 [1 rows x 13 columns]"
-tango,4,5,True,pedro laurenz,"                      title        artist1  ...   ano            artist2
-0             De puro guapo  pedro laurenz  ...  1940  juan carlos casas
-1             No Me Extraña  pedro laurenz  ...  1940  juan carlos casas
-2  A mí dejame en mi barrio  pedro laurenz  ...        juan carlos casas
-3                   Amurado  pedro laurenz  ...  2004  juan carlos casas
+tango,4,5,True,Pedro Laurenz,"                      title        artist1  ...   ano            artist2
+0             De puro guapo  Pedro Laurenz  ...  1940  Juan Carlos Casas
+1             No Me Extraña  Pedro Laurenz  ...  1940  Juan Carlos Casas
+2  A mí dejame en mi barrio  Pedro Laurenz  ...        Juan Carlos Casas
+3                   Amurado  Pedro Laurenz  ...  2004  Juan Carlos Casas
 
 [4 rows x 13 columns]"
-cortina entera,1,9,True,black eyed peas (feat. justin timberlake),"               title                                    artist1  ...   ano artist2
-0  Where Is The Love  black eyed peas (feat. justin timberlake)  ...  2003     NaN
+cortina entera,1,9,True,Black Eyed Peas (feat. Justin Timberlake),"               title                                    artist1  ...   ano artist2
+0  Where Is The Love  Black Eyed Peas (feat. Justin Timberlake)  ...  2003     NaN
 
 [1 rows x 13 columns]"
-tango milonga,3,10,True,francisco lomuto,"                       title           artist1  ...   ano        artist2
-0  No hay tierra como la mia  francisco lomuto  ...  1939  fernando diaz
-1           Parque Patricios  francisco lomuto  ...  1941  fernando diaz
-2           Que tiempo aquel  francisco lomuto  ...  1938     jorge omar
+tango milonga,3,10,True,Francisco Lomuto,"                       title           artist1  ...   ano        artist2
+0  No hay tierra como la mia  Francisco Lomuto  ...  1939  Fernando Díaz
+1           Parque Patricios  Francisco Lomuto  ...  1941  Fernando Díaz
+2           Que tiempo aquel  Francisco Lomuto  ...  1938     Jorge Omar
 
 [3 rows x 13 columns]"
-cortina entera,1,13,True,amy winehouse,"                  title        artist1          album  ...    bitrate   ano artist2
-0  You Know I’m No Good  amy winehouse  Back to Black  ...  733.75331  2007     NaN
+cortina entera,1,13,True,Amy Winehouse,"                  title        artist1          album  ...    bitrate   ano artist2
+0  You Know I’m No Good  Amy Winehouse  Back to Black  ...  733.75331  2007     NaN
 
 [1 rows x 13 columns]"
-tango,4,14,True,ricardo tanturi,"         title          artist1  ...   ano         artist2
-0  Una emoción  ricardo tanturi  ...  1943  enrique campos
-1       Malvón  ricardo tanturi  ...  1943  enrique campos
-2       Recién  ricardo tanturi  ...  1944  enrique campos
-3  Oigo tu voz  ricardo tanturi  ...  1943  enrique campos
+tango,4,14,True,Ricardo Tanturi,"         title          artist1  ...   ano         artist2
+0  Una emoción  Ricardo Tanturi  ...  1943  Enrique Campos
+1       Malvón  Ricardo Tanturi  ...  1943  Enrique Campos
+2       Recién  Ricardo Tanturi  ...  1944  Enrique Campos
+3  Oigo tu voz  Ricardo Tanturi  ...  1943  Enrique Campos
 
 [4 rows x 13 columns]"
-cortina entera,1,18,True,tones and i,"          title      artist1  ...   ano artist2
-0  Dance Monkey  tones and i  ...  2021     NaN
+cortina entera,1,18,True,Tones and I,"          title      artist1  ...   ano artist2
+0  Dance Monkey  Tones and I  ...  2021     NaN
 
 [1 rows x 13 columns]"
-tango,4,19,True,anibal troilo,"                         title        artist1  ...   ano artist2
-0  Milongueando En El Cuarenta  anibal troilo  ...  1941     NaN
-1                Cordón de oro  anibal troilo  ...  1941     NaN
-2                    Guapeando  anibal troilo  ...  1941     NaN
-3                    Cachirulo  anibal troilo  ...  1941     NaN
+tango,4,19,True,Aníbal Troilo,"                         title        artist1  ...   ano artist2
+0  Milongueando En El Cuarenta  Aníbal Troilo  ...  1941     NaN
+1                Cordón de oro  Aníbal Troilo  ...  1941     NaN
+2                    Guapeando  Aníbal Troilo  ...  1941     NaN
+3                    Cachirulo  Aníbal Troilo  ...  1941     NaN
 
 [4 rows x 13 columns]"
-cortina entera,1,23,True,pulp,"      title artist1                             album  ...     bitrate   ano artist2
-0  Mile End    pulp  Different Class (Deluxe Edition)  ...  859.807888  2006     NaN
+cortina entera,1,23,True,Pulp,"      title artist1                             album  ...     bitrate   ano artist2
+0  Mile End    Pulp  Different Class (Deluxe Edition)  ...  859.807888  2006     NaN
 
 [1 rows x 13 columns]"
-tango,4,24,True,miguel calo,"                    title      artist1  ...   ano       artist2
-0      Margarita Gauthier  miguel calo  ...  1942    raul beron
-1        Jamás retornarás  miguel calo  ...  1942    raul beron
-2            La Vi Llegar  miguel calo  ...  1944  raul iriarte
-3  La noche que te fuiste  miguel calo  ...  1945  raul iriarte
+tango,4,24,True,Miguel Caló,"                    title      artist1  ...   ano       artist2
+0      Margarita Gauthier  Miguel Caló  ...  1942    Raúl Berón
+1        Jamás retornarás  Miguel Caló  ...  1942    Raúl Berón
+2            La Vi Llegar  Miguel Caló  ...  1944  Raúl Iriarte
+3  La noche que te fuiste  Miguel Caló  ...  1945  Raul Iriarte
 
 [4 rows x 13 columns]"
-cortina entera,1,28,True,maria canta copla,"                      title            artist1  ...   ano artist2
-0  Que nadie sepa mi sufrir  maria canta copla  ...  2014     NaN
+cortina entera,1,28,True,Maria canta copla,"                      title            artist1  ...   ano artist2
+0  Que nadie sepa mi sufrir  Maria canta copla  ...  2014     NaN
 
 [1 rows x 13 columns]"
-tango vals,3,29,True,alfredo de angelis,"                          title  ...                      artist2
-0      Que nadie sepa mi sufrir  ...                 carlos dante
-1                  Ilusión azul  ...                 carlos dante
-2  Pobre flor (Primera ilusión)  ...  carlos dante y julio martel
+tango vals,3,29,True,Alfredo de Angelis,"                          title  ...                      artist2
+0      Que nadie sepa mi sufrir  ...                 Carlos Dante
+1                  Ilusión azul  ...                 Carlos Dante
+2  Pobre flor (Primera ilusión)  ...  Carlos Dante y Julio Martel
 
 [3 rows x 13 columns]"
-cortina entera,1,32,True,stephen sanchez,"               title          artist1  ...   ano artist2
-0  Until I Found You  stephen sanchez  ...  2022     NaN
+cortina entera,1,32,True,Stephen Sanchez,"               title          artist1  ...   ano artist2
+0  Until I Found You  Stephen Sanchez  ...  2022     NaN
 
 [1 rows x 13 columns]"
-tango,4,33,True,carlos di sarli,"                                     title  ...          artist2
-0                       Junto a tu corazón  ...  alberto podesta
-1                                     Nada  ...  alberto podesta
-2  Al compás del corazón (Late un corazón)  ...  alberto podesta
-3                        Tú, el cielo y tú  ...  alberto podesta
+tango,4,33,False,,"                                     title  ...          artist2
+0                       Junto a tu corazón  ...  Alberto Podestá
+1                                     Nada  ...  Alberto Podestá
+2  Al compás del corazón (Late un corazón)  ...  Alberto Podestá
+3                        Tú, el cielo y tú  ...  Alberto Podestá
 
 [4 rows x 13 columns]"
-cortina entera,1,37,True,adele,"                              title artist1  ...   ano artist2
-0  Someone Like You (Live Acoustic)   adele  ...  2011     NaN
+cortina entera,1,37,True,Adele,"                              title artist1  ...   ano artist2
+0  Someone Like You (Live Acoustic)   Adele  ...  2011     NaN
 
 [1 rows x 13 columns]"
-tango,4,38,True,juan d'arienzo,"          title         artist1  ...   ano          artist2
-0   Qué importa  juan d'arienzo  ...  1939  alberto echague
-1    No Mientas  juan d'arienzo  ...  1938  alberto echague
-2  Trago amargo  juan d'arienzo  ...  1939  alberto echague
-3      Amarroto  juan d'arienzo  ...  1951  alberto echague
+tango,4,38,True,Juan D'Arienzo,"          title         artist1  ...   ano          artist2
+0   Qué importa  Juan D'Arienzo  ...  1939  Alberto Echagüe
+1    No Mientas  Juan D'Arienzo  ...  1938  Alberto Echagüe
+2  Trago amargo  Juan D'Arienzo  ...  1939  Alberto Echagüe
+3      Amarroto  Juan D'Arienzo  ...  1951  Alberto Echagüe
 
 [4 rows x 13 columns]"
-cortina entera,1,42,True,roberta flack,"                             title        artist1  ...   ano artist2
-0  Killing Me Softly With His Song  roberta flack  ...  1973     NaN
+cortina entera,1,42,True,Roberta Flack,"                             title        artist1  ...   ano artist2
+0  Killing Me Softly With His Song  Roberta Flack  ...  1973     NaN
 
 [1 rows x 13 columns]"
-tango,4,43,True,osvaldo fresedo,"                  title          artist1  ...   ano      artist2
-0           Cordobesita  osvaldo fresedo  ...  1933  roberto ray
-1         Isla de Capri  osvaldo fresedo  ...  1935  roberto ray
-2         Canto de amor  osvaldo fresedo  ...  1934  roberto ray
-3  Niebla del riachuelo  osvaldo fresedo  ...  1937  roberto ray
+tango,4,43,True,Osvaldo Fresedo,"                  title          artist1  ...   ano      artist2
+0           Cordobesita  Osvaldo Fresedo  ...  1933  Roberto Ray
+1         Isla de Capri  Osvaldo Fresedo  ...  1935  Roberto Ray
+2         Canto de amor  Osvaldo Fresedo  ...  1934  Roberto Ray
+3  Niebla del riachuelo  Osvaldo Fresedo  ...  1937  Roberto Ray
 
 [4 rows x 13 columns]"
-cortina entera,1,47,True,"el canto del loco, natalia lafourcade","                                title  ... artist2
+cortina entera,1,47,True,"El Canto del Loco, Natalia Lafourcade","                                title  ... artist2
 0  Contigo (feat. Natalia Lafourcade)  ...     NaN
 
 [1 rows x 13 columns]"
-tango milonga,3,48,True,francisco canaro,"                     title           artist1  ...   ano        artist2
-0               Arrabalera  francisco canaro  ...  1950            nan
-1  Milonga del novecientos  francisco canaro  ...  1933   ernesto fama
-2          Silueta porteña  francisco canaro  ...  1936  roberto maida
+tango milonga,3,48,True,Francisco Canaro,"                     title           artist1  ...   ano        artist2
+0               Arrabalera  Francisco Canaro  ...  1950            nan
+1  Milonga del novecientos  Francisco Canaro  ...  1933   Ernesto Famá
+2          Silueta porteña  Francisco Canaro  ...  1936  Roberto Maida
 
 [3 rows x 13 columns]"
-cortina entera,1,51,True,felix jaehn,"                            title      artist1  ...   ano          artist2
-0  Ain't Nobody (Loves Me Better)  felix jaehn  ...  2015  jasime thompson
+cortina entera,1,51,True,Felix Jaehn Feat. Jasime Thompson,"                            title  ... artist2
+0  Ain't Nobody (Loves Me Better)  ...     NaN
 
 [1 rows x 13 columns]"
-tango,4,52,True,osvaldo pugliese,"                     title           artist1  ...   ano         artist2
-0   Corrientes y Esmeralda  osvaldo pugliese  ...  1944  roberto chanel
-1        El sueño del pibe  osvaldo pugliese  ...  1945  roberto chanel
-2                    Farol  osvaldo pugliese  ...  1943  roberto chanel
-3  Nada más que un corazón  osvaldo pugliese  ...  1944  roberto chanel
+tango,4,52,True,Osvaldo Pugliese,"                     title           artist1  ...   ano         artist2
+0   Corrientes y Esmeralda  Osvaldo Pugliese  ...  1944  Roberto Chanel
+1        El sueño del pibe  Osvaldo Pugliese  ...  1945  Roberto Chanel
+2                    Farol  Osvaldo Pugliese  ...  1943  Roberto Chanel
+3  Nada más que un corazón  Osvaldo Pugliese  ...  1944  Roberto Chanel
 
 [4 rows x 13 columns]"
-cortina entera,1,56,True,cake,"            title artist1  ...   ano artist2
-0  I Will Survive    cake  ...  1997     NaN
+cortina entera,1,56,True,Cake,"            title artist1  ...   ano artist2
+0  I Will Survive    Cake  ...  1997     NaN
 
 [1 rows x 13 columns]"
-tango,4,57,True,edgardo donato,"                   title         artist1  ...   ano                       artist2
-0  Carnaval de mi barrio  edgardo donato  ...  1939  lita morales y horacio lagos
-1              Yo te amo  edgardo donato  ...  1940  romeo gavioli y lita morales
-2   Sin sabor (Sinsabor)  edgardo donato  ...  1939  lita morales y horacio lagos
-3            Mi serenata  edgardo donato  ...  1940                 romeo gavioli
+tango,4,57,True,Edgardo Donato,"                   title         artist1  ...   ano                       artist2
+0  Carnaval de mi barrio  Edgardo Donato  ...  1939  Lita Morales y Horacio Lagos
+1              Yo te amo  Edgardo Donato  ...  1940  Romeo Gavioli y Lita Morales
+2   Sin sabor (Sinsabor)  Edgardo Donato  ...  1939  Lita Morales y Horacio Lagos
+3            Mi serenata  Edgardo Donato  ...  1940                 Romeo Gavioli
 
 [4 rows x 13 columns]"
-cortina entera,1,61,True,rosa linn,"  title    artist1  ...   ano artist2
-0  Snap  rosa linn  ...  2022     NaN
+cortina entera,1,61,True,Rosa Linn,"  title    artist1  ...   ano artist2
+0  Snap  Rosa Linn  ...  2022     NaN
 
 [1 rows x 13 columns]"
-tango,4,62,True,rodolfo biagi,"         title        artist1  ...   ano artist2
-0    El Recodo  rodolfo biagi  ...  1952     NaN
-1  El Yaguarón  rodolfo biagi  ...  1940     NaN
-2      Bélgica  rodolfo biagi  ...  2006     NaN
-3         Didí  rodolfo biagi  ...  1941     NaN
+tango,4,62,True,Rodolfo Biagi,"         title        artist1  ...   ano artist2
+0    El Recodo  Rodolfo Biagi  ...  1952     NaN
+1  El Yaguarón  Rodolfo Biagi  ...  1940     NaN
+2      Bélgica  Rodolfo Biagi  ...  2006     NaN
+3         Didí  Rodolfo Biagi  ...  1941     NaN
 
 [4 rows x 13 columns]"
-cortina entera,1,66,True,benson boone,"              title       artist1  ...   ano artist2
-0  Beautiful Things  benson boone  ...  2024     NaN
+cortina entera,1,66,True,Benson Boone,"              title       artist1  ...   ano artist2
+0  Beautiful Things  Benson Boone  ...  2024     NaN
 
 [1 rows x 13 columns]"
-tango vals,3,67,True,ricardo tanturi,"                   title          artist1  ...   ano           artist2
-0             Mi romance  ricardo tanturi  ...  1941  alberto castillo
-1               Recuerdo  ricardo tanturi  ...  1941  alberto castillo
-2  La serenata (Mi amor)  ricardo tanturi  ...  1941  alberto castillo
+tango vals,3,67,True,Ricardo Tanturi,"                   title          artist1  ...   ano           artist2
+0             Mi romance  Ricardo Tanturi  ...  1941  Alberto Castillo
+1               Recuerdo  Ricardo Tanturi  ...  1941  Alberto Castillo
+2  La serenata (Mi amor)  Ricardo Tanturi  ...  1941  Alberto Castillo
 
 [3 rows x 13 columns]"
-cortina entera,1,70,True,marcela morelo,"               title         artist1    album  ...     bitrate   ano artist2
-0  Para Toda la Vida  marcela morelo  Eclipse  ...  965.174659  1999     NaN
+cortina entera,1,70,True,Marcela Morelo,"               title         artist1    album  ...     bitrate   ano artist2
+0  Para Toda la Vida  Marcela Morelo  Eclipse  ...  965.174659  1999     NaN
 
 [1 rows x 13 columns]"
-tango,4,71,True,enrique rodriguez,"                       title            artist1  ...   ano         artist2
-0  Yo también tuve un cariño  enrique rodriguez  ...  1942  armando moreno
-1   En la buena y en la mala  enrique rodriguez  ...  1940  armando moreno
-2                     Iré...  enrique rodriguez  ...  2002  armando moreno
-3     Cómo se pianta la vida  enrique rodriguez  ...  1940  armando moreno
+tango,4,71,True,Enrique Rodríguez,"                       title            artist1  ...   ano         artist2
+0  Yo también tuve un cariño  Enrique Rodríguez  ...  1942  Armando Moreno
+1   En la buena y en la mala  Enrique Rodríguez  ...  1940  Armando Moreno
+2                     Iré...  Enrique Rodríguez  ...  2002  Armando Moreno
+3     Cómo se pianta la vida  Enrique Rodríguez  ...  1940  Armando Moreno
 
 [4 rows x 13 columns]"
-cortina entera,1,75,True,olivia rodrigo,"     title         artist1 album  ...     bitrate   ano artist2
-0  Vampire  olivia rodrigo  GUTS  ...  962.454105  2023     NaN
+cortina entera,1,75,True,Olivia Rodrigo,"     title         artist1 album  ...     bitrate   ano artist2
+0  Vampire  Olivia Rodrigo  GUTS  ...  962.454105  2023     NaN
 
 [1 rows x 13 columns]"
-tango,4,76,True,ricardo malerba,"                     title          artist1  ...   ano         artist2
-0              Gitana rusa  ricardo malerba  ...  1942  orlando medina
-1  La piba de los jazmines  ricardo malerba  ...  1943  orlando medina
-2            Embrujamiento  ricardo malerba  ...  1943  orlando medina
-3                  Ninguna  ricardo malerba  ...  1942  orlando medina
+tango,4,76,True,Ricardo Malerba,"                     title          artist1  ...   ano         artist2
+0              Gitana rusa  Ricardo Malerba  ...  1942  Orlando Medina
+1  La piba de los jazmines  Ricardo Malerba  ...  1943  Orlando Medina
+2            Embrujamiento  Ricardo Malerba  ...  1943  Orlando Medina
+3                  Ninguna  Ricardo Malerba  ...  1942  Orlando Medina
 
 [4 rows x 13 columns]"
-cortina entera,1,80,True,tonina,"                          title artist1  ...   ano artist2
-0  While My Guitar Gently Weeps  tonina  ...  2018     NaN
+cortina entera,1,80,True,Tonina,"                          title artist1  ...   ano artist2
+0  While My Guitar Gently Weeps  Tonina  ...  2018     NaN
 
 [1 rows x 13 columns]"
-tango,4,81,True,juan d'arienzo,"                  title         artist1  ...   ano       artist2
-0              El olivo  juan d'arienzo  ...  1941  hector maure
-1  Si la llegaran a ver  juan d'arienzo  ...  1943  hector maure
-2           Humillación  juan d'arienzo  ...  1941  hector maure
-3               Amarras  juan d'arienzo  ...  1944  hector maure
+tango,4,81,True,Juan D'Arienzo,"                  title         artist1  ...   ano       artist2
+0              El olivo  Juan D'Arienzo  ...  1941  Héctor Mauré
+1  Si la llegaran a ver  Juan D'Arienzo  ...  1943  Héctor Mauré
+2           Humillación  Juan D'Arienzo  ...  1941  Héctor Mauré
+3               Amarras  Juan D'Arienzo  ...  1944  Héctor Mauré
 
 [4 rows x 13 columns]"

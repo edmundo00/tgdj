@@ -7,6 +7,10 @@ from unidecode import unidecode
 from pptx.util import Pt, Cm
 from src.config.config import *
 from src.constants.enums import TagLabels
+from mutagen.flac import FLAC
+from mutagen.mp4 import MP4
+from mutagen.mp3 import MP3
+from mutagen.easyid3 import EasyID3
 
 
 def separar_artistas(artistas):
