@@ -1,181 +1,191 @@
 unique_value,repetition_count,position,same_orchestra,orchestra_value,group_data
-tango,3,0,True,carlos di sarli,"         title          artist1       artist2  ... extension     bitrate   ano
-0  Chau Pinela  carlos di sarli  ernesto fama  ...      flac  379.037305  1930
-1  La estancia  carlos di sarli  ernesto fama  ...      flac  382.161265  1930
-2        Flora  carlos di sarli  ernesto fama  ...      flac   389.30382  1930
+tango,4,0,True,orquesta tipica victor,"                         title                 artist1  ...   ano artist2
+0  Viento norte (Bronca negra)  orquesta tipica victor  ...  1929     NaN
+1                   Filo misho  orquesta tipica victor  ...  1930     NaN
+2                       Chorra  orquesta tipica victor  ...  1928     NaN
+3                      Coqueta  orquesta tipica victor  ...  1929     NaN
 
-[3 rows x 13 columns]"
-cortina entera,1,3,True,em beihold,"          title     artist1 artist2  ... extension     bitrate   ano
-0  Too Precious  em beihold     NaN  ...      flac  949.335394  2022
-
-[1 rows x 13 columns]"
-tango,3,4,True,juan d'arienzo,"        title         artist1 artist2  ... extension      bitrate   ano
-0  El puntazo  juan d'arienzo     nan  ...      flac   1426.29515  1952
-1    El flete  juan d'arienzo     nan  ...      flac  1401.915126  1936
-2    Ataniche  juan d'arienzo     nan  ...      flac  1379.873878  1936
-
-[3 rows x 13 columns]"
-cortina entera,1,7,True,stephen sanchez,"               title          artist1 artist2  ... extension      bitrate   ano
-0  Until I Found You  stephen sanchez     NaN  ...      flac  2111.531185  2022
+[4 rows x 13 columns]"
+cortina entera,1,4,True,zaz,"                   title artist1  album  ...      bitrate   ano artist2
+0  Sous le ciel de Paris     zaz  Paris  ...  1599.317148  2014     NaN
 
 [1 rows x 13 columns]"
-tango milonga,3,8,True,francisco canaro,"                     title           artist1  ...      bitrate   ano
-0               Arrabalera  francisco canaro  ...   575.588158  1950
-1  Milonga del novecientos  francisco canaro  ...   714.546108  1933
-2          Silueta porteña  francisco canaro  ...  1353.767534  1936
+tango,4,5,True,pedro laurenz,"                      title        artist1  ...   ano            artist2
+0             De puro guapo  pedro laurenz  ...  1940  juan carlos casas
+1             No Me Extraña  pedro laurenz  ...  1940  juan carlos casas
+2  A mí dejame en mi barrio  pedro laurenz  ...        juan carlos casas
+3                   Amurado  pedro laurenz  ...  2004  juan carlos casas
 
-[3 rows x 13 columns]"
-cortina entera,1,11,True,fats domino,"                      title      artist1 artist2  ... extension    bitrate   ano
-0  Jambalaya (On the Bayou)  fats domino     NaN  ...      flac  1009.4908  2006
-
-[1 rows x 13 columns]"
-tango,3,12,True,edgardo donato,"                   title         artist1  ...      bitrate   ano
-0              Yo te amo  edgardo donato  ...   1440.32614  1940
-1            Mi serenata  edgardo donato  ...   811.637209  1940
-2  Carnaval de mi barrio  edgardo donato  ...  1351.354717  1939
-
-[3 rows x 13 columns]"
-cortina entera,1,15,True,monsieur perine,"             title          artist1 artist2  ... extension     bitrate   ano
-0  Nuestra canción  monsieur perine     NaN  ...      flac  907.182621  2015
+[4 rows x 13 columns]"
+cortina entera,1,9,True,black eyed peas (feat. justin timberlake),"               title                                    artist1  ...   ano artist2
+0  Where Is The Love  black eyed peas (feat. justin timberlake)  ...  2003     NaN
 
 [1 rows x 13 columns]"
-tango,3,16,True,donato racciatti,"                title           artist1  ...     bitrate   ano
-0              Garufa  donato racciatti  ...   714.96037  1954
-1              Gloria  donato racciatti  ...   718.11891  1952
-2  Andate con la otra  donato racciatti  ...  670.771722  1953
+tango milonga,3,10,True,francisco lomuto,"                       title           artist1  ...   ano        artist2
+0  No hay tierra como la mia  francisco lomuto  ...  1939  fernando diaz
+1           Parque Patricios  francisco lomuto  ...  1941  fernando diaz
+2           Que tiempo aquel  francisco lomuto  ...  1938     jorge omar
 
 [3 rows x 13 columns]"
-cortina entera,1,19,True,giulia,"       title artist1        artist2  ... extension     bitrate   ano
-0  Barcelona  giulia  los tellarini  ...      flac  889.919084  2010
+cortina entera,1,13,True,amy winehouse,"                  title        artist1          album  ...    bitrate   ano artist2
+0  You Know I’m No Good  amy winehouse  Back to Black  ...  733.75331  2007     NaN
 
 [1 rows x 13 columns]"
-tango,3,20,True,adolfo carabelli,"      title           artist1  ...     bitrate   ano
-0     Volvé  adolfo carabelli  ...  388.428425  1932
-1      Alma  adolfo carabelli  ...  385.981521  1932
-2  Cantando  adolfo carabelli  ...  464.344764  1931
+tango,4,14,True,ricardo tanturi,"         title          artist1  ...   ano         artist2
+0  Una emoción  ricardo tanturi  ...  1943  enrique campos
+1       Malvón  ricardo tanturi  ...  1943  enrique campos
+2       Recién  ricardo tanturi  ...  1944  enrique campos
+3  Oigo tu voz  ricardo tanturi  ...  1943  enrique campos
+
+[4 rows x 13 columns]"
+cortina entera,1,18,True,tones and i,"          title      artist1  ...   ano artist2
+0  Dance Monkey  tones and i  ...  2021     NaN
+
+[1 rows x 13 columns]"
+tango,4,19,True,anibal troilo,"                         title        artist1  ...   ano artist2
+0  Milongueando En El Cuarenta  anibal troilo  ...  1941     NaN
+1                Cordón de oro  anibal troilo  ...  1941     NaN
+2                    Guapeando  anibal troilo  ...  1941     NaN
+3                    Cachirulo  anibal troilo  ...  1941     NaN
+
+[4 rows x 13 columns]"
+cortina entera,1,23,True,pulp,"      title artist1                             album  ...     bitrate   ano artist2
+0  Mile End    pulp  Different Class (Deluxe Edition)  ...  859.807888  2006     NaN
+
+[1 rows x 13 columns]"
+tango,4,24,True,miguel calo,"                    title      artist1  ...   ano       artist2
+0      Margarita Gauthier  miguel calo  ...  1942    raul beron
+1        Jamás retornarás  miguel calo  ...  1942    raul beron
+2            La Vi Llegar  miguel calo  ...  1944  raul iriarte
+3  La noche que te fuiste  miguel calo  ...  1945  raul iriarte
+
+[4 rows x 13 columns]"
+cortina entera,1,28,True,maria canta copla,"                      title            artist1  ...   ano artist2
+0  Que nadie sepa mi sufrir  maria canta copla  ...  2014     NaN
+
+[1 rows x 13 columns]"
+tango vals,3,29,True,alfredo de angelis,"                          title  ...                      artist2
+0      Que nadie sepa mi sufrir  ...                 carlos dante
+1                  Ilusión azul  ...                 carlos dante
+2  Pobre flor (Primera ilusión)  ...  carlos dante y julio martel
 
 [3 rows x 13 columns]"
-cortina entera,1,23,True,habanot nechama,"            title          artist1 artist2  ... extension     bitrate   ano
-0  So Far (להיות)  habanot nechama     NaN  ...      flac  836.318649  2007
+cortina entera,1,32,True,stephen sanchez,"               title          artist1  ...   ano artist2
+0  Until I Found You  stephen sanchez  ...  2022     NaN
 
 [1 rows x 13 columns]"
-tango vals,3,24,True,ricardo tanturi,"                   title          artist1  ...     bitrate   ano
-0             Mi romance  ricardo tanturi  ...  511.708757  1941
-1               Recuerdo  ricardo tanturi  ...  533.821084  1941
-2  La serenata (Mi amor)  ricardo tanturi  ...  541.232178  1941
+tango,4,33,True,carlos di sarli,"                                     title  ...          artist2
+0                       Junto a tu corazón  ...  alberto podesta
+1                                     Nada  ...  alberto podesta
+2  Al compás del corazón (Late un corazón)  ...  alberto podesta
+3                        Tú, el cielo y tú  ...  alberto podesta
+
+[4 rows x 13 columns]"
+cortina entera,1,37,True,adele,"                              title artist1  ...   ano artist2
+0  Someone Like You (Live Acoustic)   adele  ...  2011     NaN
+
+[1 rows x 13 columns]"
+tango,4,38,True,juan d'arienzo,"          title         artist1  ...   ano          artist2
+0   Qué importa  juan d'arienzo  ...  1939  alberto echague
+1    No Mientas  juan d'arienzo  ...  1938  alberto echague
+2  Trago amargo  juan d'arienzo  ...  1939  alberto echague
+3      Amarroto  juan d'arienzo  ...  1951  alberto echague
+
+[4 rows x 13 columns]"
+cortina entera,1,42,True,roberta flack,"                             title        artist1  ...   ano artist2
+0  Killing Me Softly With His Song  roberta flack  ...  1973     NaN
+
+[1 rows x 13 columns]"
+tango,4,43,True,osvaldo fresedo,"                  title          artist1  ...   ano      artist2
+0           Cordobesita  osvaldo fresedo  ...  1933  roberto ray
+1         Isla de Capri  osvaldo fresedo  ...  1935  roberto ray
+2         Canto de amor  osvaldo fresedo  ...  1934  roberto ray
+3  Niebla del riachuelo  osvaldo fresedo  ...  1937  roberto ray
+
+[4 rows x 13 columns]"
+cortina entera,1,47,True,"el canto del loco, natalia lafourcade","                                title  ... artist2
+0  Contigo (feat. Natalia Lafourcade)  ...     NaN
+
+[1 rows x 13 columns]"
+tango milonga,3,48,True,francisco canaro,"                     title           artist1  ...   ano        artist2
+0               Arrabalera  francisco canaro  ...  1950            nan
+1  Milonga del novecientos  francisco canaro  ...  1933   ernesto fama
+2          Silueta porteña  francisco canaro  ...  1936  roberto maida
 
 [3 rows x 13 columns]"
-cortina entera,1,27,True,joan jett and the blackhearts,"                 title                        artist1  ...     bitrate   ano
-0  I Love Rock 'N Roll  joan jett and the blackhearts  ...  982.484975  2010
+cortina entera,1,51,True,felix jaehn,"                            title      artist1  ...   ano          artist2
+0  Ain't Nobody (Loves Me Better)  felix jaehn  ...  2015  jasime thompson
 
 [1 rows x 13 columns]"
-tango,3,28,True,miguel calo,"                    title      artist1  ...     bitrate   ano
-0        Jamás retornarás  miguel calo  ...  629.698362  1942
-1      Margarita Gauthier  miguel calo  ...  693.772904  1942
-2  La noche que te fuiste  miguel calo  ...    563.3535  1945
+tango,4,52,True,osvaldo pugliese,"                     title           artist1  ...   ano         artist2
+0   Corrientes y Esmeralda  osvaldo pugliese  ...  1944  roberto chanel
+1        El sueño del pibe  osvaldo pugliese  ...  1945  roberto chanel
+2                    Farol  osvaldo pugliese  ...  1943  roberto chanel
+3  Nada más que un corazón  osvaldo pugliese  ...  1944  roberto chanel
+
+[4 rows x 13 columns]"
+cortina entera,1,56,True,cake,"            title artist1  ...   ano artist2
+0  I Will Survive    cake  ...  1997     NaN
+
+[1 rows x 13 columns]"
+tango,4,57,True,edgardo donato,"                   title         artist1  ...   ano                       artist2
+0  Carnaval de mi barrio  edgardo donato  ...  1939  lita morales y horacio lagos
+1              Yo te amo  edgardo donato  ...  1940  romeo gavioli y lita morales
+2   Sin sabor (Sinsabor)  edgardo donato  ...  1939  lita morales y horacio lagos
+3            Mi serenata  edgardo donato  ...  1940                 romeo gavioli
+
+[4 rows x 13 columns]"
+cortina entera,1,61,True,rosa linn,"  title    artist1  ...   ano artist2
+0  Snap  rosa linn  ...  2022     NaN
+
+[1 rows x 13 columns]"
+tango,4,62,True,rodolfo biagi,"         title        artist1  ...   ano artist2
+0    El Recodo  rodolfo biagi  ...  1952     NaN
+1  El Yaguarón  rodolfo biagi  ...  1940     NaN
+2      Bélgica  rodolfo biagi  ...  2006     NaN
+3         Didí  rodolfo biagi  ...  1941     NaN
+
+[4 rows x 13 columns]"
+cortina entera,1,66,True,benson boone,"              title       artist1  ...   ano artist2
+0  Beautiful Things  benson boone  ...  2024     NaN
+
+[1 rows x 13 columns]"
+tango vals,3,67,True,ricardo tanturi,"                   title          artist1  ...   ano           artist2
+0             Mi romance  ricardo tanturi  ...  1941  alberto castillo
+1               Recuerdo  ricardo tanturi  ...  1941  alberto castillo
+2  La serenata (Mi amor)  ricardo tanturi  ...  1941  alberto castillo
 
 [3 rows x 13 columns]"
-cortina entera,1,31,True,louise attaque,"                title         artist1 artist2  ... extension      bitrate   ano
-0  J'T'Emmène Au Vent  louise attaque     NaN  ...      flac  1007.365516  1997
+cortina entera,1,70,True,marcela morelo,"               title         artist1    album  ...     bitrate   ano artist2
+0  Para Toda la Vida  marcela morelo  Eclipse  ...  965.174659  1999     NaN
 
 [1 rows x 13 columns]"
-tango,3,32,True,rodolfo biagi,"                      title        artist1  ...     bitrate   ano
-0                Yuyo verde  rodolfo biagi  ...  450.397238  1945
-1       Ahora no me conocés  rodolfo biagi  ...  553.883448  1941
-2  Quiero verte una vez más  rodolfo biagi  ...  517.508091  1940
+tango,4,71,True,enrique rodriguez,"                       title            artist1  ...   ano         artist2
+0  Yo también tuve un cariño  enrique rodriguez  ...  1942  armando moreno
+1   En la buena y en la mala  enrique rodriguez  ...  1940  armando moreno
+2                     Iré...  enrique rodriguez  ...  2002  armando moreno
+3     Cómo se pianta la vida  enrique rodriguez  ...  1940  armando moreno
 
-[3 rows x 13 columns]"
-Unknown Genre,1,35,True,Unknown Artist,"           title         artist1  ...          bitrate ano
-0  Unknown Title  Unknown Artist  ...  Unknown Bitrate    
-
-[1 rows x 13 columns]"
-tango,3,36,True,anibal troilo,"                        title        artist1  ...     bitrate   ano
-0                Toda mi vida  anibal troilo  ...   364.88623  1941
-1                  Tinta roja  anibal troilo  ...  590.723999  1941
-2  Te aconsejo que me olvides  anibal troilo  ...  473.393391  1941
-
-[3 rows x 13 columns]"
-cortina entera,1,39,True,boywithuke,"   title     artist1 artist2  album  ... duration extension     bitrate   ano
-0  Toxic  boywithuke     NaN  Toxic  ...   168.02      flac  789.762552  2021
+[4 rows x 13 columns]"
+cortina entera,1,75,True,olivia rodrigo,"     title         artist1 album  ...     bitrate   ano artist2
+0  Vampire  olivia rodrigo  GUTS  ...  962.454105  2023     NaN
 
 [1 rows x 13 columns]"
-tango milonga,3,40,True,francisco lomuto,"                       title           artist1  ...     bitrate   ano
-0  No hay tierra como la mia  francisco lomuto  ...  285.644076  1939
-1           Parque Patricios  francisco lomuto  ...  290.076293  1941
-2           Que tiempo aquel  francisco lomuto  ...  294.677691  1938
+tango,4,76,True,ricardo malerba,"                     title          artist1  ...   ano         artist2
+0              Gitana rusa  ricardo malerba  ...  1942  orlando medina
+1  La piba de los jazmines  ricardo malerba  ...  1943  orlando medina
+2            Embrujamiento  ricardo malerba  ...  1943  orlando medina
+3                  Ninguna  ricardo malerba  ...  1942  orlando medina
 
-[3 rows x 13 columns]"
-cortina entera,1,43,True,ska-p,"           title artist1 artist2  ... extension      bitrate   ano
-0  Señor Matanza   ska-p     NaN  ...      flac  1011.593996  2001
-
-[1 rows x 13 columns]"
-tango,3,44,True,osvaldo pugliese,"                    title           artist1  ...      bitrate   ano
-0       El sueño del pibe  osvaldo pugliese  ...   530.737223  1945
-1                   Farol  osvaldo pugliese  ...   576.782614  1943
-2  Corrientes y Esmeralda  osvaldo pugliese  ...  2312.558349  1944
-
-[3 rows x 13 columns]"
-cortina entera,1,47,True,ismael lo,"      title    artist1 artist2  ... extension     bitrate   ano
-0  Tajabone  ismael lo     NaN  ...      flac  790.614239  1996
+[4 rows x 13 columns]"
+cortina entera,1,80,True,tonina,"                          title artist1  ...   ano artist2
+0  While My Guitar Gently Weeps  tonina  ...  2018     NaN
 
 [1 rows x 13 columns]"
-tango,3,48,True,ricardo tanturi,"                              title          artist1  ...     bitrate   ano
-0               Una noche de garufa  ricardo tanturi  ...  507.074323  1941
-1       Argañaraz (Aquellas farras)  ricardo tanturi  ...  525.034349  1940
-2  Comparsa criolla (Comme il faut)  ricardo tanturi  ...  526.452152  1941
+tango,4,81,True,juan d'arienzo,"                  title         artist1  ...   ano       artist2
+0              El olivo  juan d'arienzo  ...  1941  hector maure
+1  Si la llegaran a ver  juan d'arienzo  ...  1943  hector maure
+2           Humillación  juan d'arienzo  ...  1941  hector maure
+3               Amarras  juan d'arienzo  ...  1944  hector maure
 
-[3 rows x 13 columns]"
-cortina entera,1,51,True,ashe,"                title artist1 artist2  ... extension    bitrate   ano
-0  Moral Of The Story    ashe     NaN  ...      flac  858.48276  2020
-
-[1 rows x 13 columns]"
-tango,3,52,True,jose garcia,"                 title      artist1        artist2  ... extension     bitrate   ano
-0      Calla bandoneon  jose garcia  alfredo rojas  ...      flac  563.440152  1944
-1     No estamos solos  jose garcia  alfredo rojas  ...      flac   509.15727  1944
-2  Adiós adiós corazón  jose garcia  alfredo rojas  ...      flac  470.759594  1942
-
-[3 rows x 13 columns]"
-cortina entera,1,55,True,maria canta copla,"                      title            artist1  ...     bitrate   ano
-0  Que nadie sepa mi sufrir  maria canta copla  ...  768.721377  2014
-
-[1 rows x 13 columns]"
-tango vals,3,56,True,alfredo de angelis,"                          title             artist1  ...     bitrate   ano
-0      Que nadie sepa mi sufrir  alfredo de angelis  ...  471.463603  1953
-1                  Ilusión azul  alfredo de angelis  ...  604.886207  1945
-2  Pobre flor (Primera ilusión)  alfredo de angelis  ...  724.799006  1946
-
-[3 rows x 13 columns]"
-cortina entera,1,59,True,roy orbison,"       title      artist1 artist2  ... extension      bitrate   ano
-0  In Dreams  roy orbison     NaN  ...      flac  1718.088407  1963
-
-[1 rows x 13 columns]"
-tango,3,60,True,pedro laurenz,"                     title        artist1  ...     bitrate   ano
-0             La madrugada  pedro laurenz  ...   643.57524  1944
-1  Nada más que un corazón  pedro laurenz  ...  682.905632  1944
-2          Llueve otra vez  pedro laurenz  ...  692.224373  1944
-
-[3 rows x 13 columns]"
-cortina entera,1,63,True,manu chao,"                              title    artist1  ...      bitrate   ano
-0  Petite Blonde Du Boulevard Brune  manu chao  ...  1127.875989  2004
-
-[1 rows x 13 columns]"
-tango,3,64,True,ricardo malerba,"                     title          artist1  ...     bitrate   ano
-0              Gitana rusa  ricardo malerba  ...  441.531249  1942
-1  La piba de los jazmines  ricardo malerba  ...  430.889555  1943
-2            Embrujamiento  ricardo malerba  ...  433.448379  1943
-
-[3 rows x 13 columns]"
-cortina entera,1,67,True,justin wellington,"     title            artist1    artist2  ... extension     bitrate   ano
-0  Iko Iko  justin wellington  small jam  ...      flac  935.473589  2021
-
-[1 rows x 13 columns]"
-tango,3,68,True,juan d'arienzo,"      title         artist1       artist2  ... extension      bitrate   ano
-0   Amarras  juan d'arienzo  hector maure  ...      flac  1673.963501  1944
-1  El olivo  juan d'arienzo  hector maure  ...      flac   612.191146  1941
-2  Tierrita  juan d'arienzo  hector maure  ...      flac   726.753426  1941
-
-[3 rows x 13 columns]"
-cortina entera,1,71,True,janis joplin,"                title       artist1  ...     bitrate   ano
-0  Me And Bobby McGee  janis joplin  ...  864.799126  1999
-
-[1 rows x 13 columns]"
+[4 rows x 13 columns]"
