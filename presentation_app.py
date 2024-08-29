@@ -143,7 +143,7 @@ class PresentationApp:
         self.hora_fin_entry.insert(0, "00:00")  # Hora por defecto
 
         tk.Label(root, text="Duración:").grid(row=2, column=4, padx=10, pady=10, sticky="w")
-        self.duracion_label = tk.Label(root, text="", width=20)
+        self.duracion_label = tk.Label(root, text="", width=20, bg="white", relief="sunken", anchor='w', padx=2, pady=2)
         self.duracion_label.grid(row=2, column=5, padx=10, pady=10)
 
         # Vincular eventos de cambio para actualizar la duración automáticamente
@@ -579,7 +579,7 @@ class PresentationApp:
         if os.path.exists(img_path):
             add_resized_image_to_slide(slide,img_path, positions_initial["maxima_anchura_image"], prs)
 
-        positions_calculated = calculate_positions(prs, positions_initial)
+        positions_calculated = transformar_posiciones(prs, positions_initial)
 
 
         if 'tango' not in self.tanda_gender:
@@ -595,15 +595,15 @@ class PresentationApp:
             title_paragraph1 = title_frame.paragraphs[0]
             run_orquesta = title_paragraph1.add_run()
             run_orquesta.text = f'{orchestra_value}'
-            run_orquesta.font.size = Pt(positions_initial["fuentes"]["cortina_titulo"])
+            run_orquesta.font.size = Pt(positions_initial["fuentes"]["cortina_titulo"]['tamaño'])
             run_orquesta.font.color.rgb = RGBColor(255, 255, 255)
             run_orquesta.font.bold = True
-            run_orquesta.font.name = DEFAULT_FONT_NAME  # Aplicar la fuente desde config.py
+            run_orquesta.font.name = positions_initial["fuentes"]["cortina_titulo"]['tipo_fuente']  # Aplicar la fuente desde config.py
 
             # Ajustar el tamaño del texto según el ancho y altura disponibles
             adjust_text_size(title_frame,
                              max_width_cm=positions_calculated["cortina_title"][2],
-                             max_font_size=positions_initial["fuentes"]["cortina_titulo"], fuente=DEFAULT_FONT_NAME)
+                             max_font_size=positions_initial["fuentes"]["cortina_titulo"]['tamaño'], fuente=positions_initial["fuentes"]["cortina_titulo"]['tipo_fuente'])
 
             cortina_subtitle = slide.shapes.add_textbox(positions_calculated["cortina_subtitle"][0],
                                                         positions_calculated["cortina_subtitle"][1],
@@ -615,10 +615,10 @@ class PresentationApp:
             paragraph1 = text_frame.paragraphs[0]
             run_titulo = paragraph1.add_run()
             run_titulo.text = title
-            run_titulo.font.size = Pt(positions_initial["fuentes"]["cortina_artista"])
+            run_titulo.font.size = Pt(positions_initial["fuentes"]["cortina_artista"]['tamaño'])
             run_titulo.font.color.rgb = RGBColor(255, 255, 255)
             run_titulo.font.bold = True
-            run_titulo.font.name = DEFAULT_FONT_NAME  # Aplicar la fuente desde config.py
+            run_titulo.font.name = positions_initial["fuentes"]["cortina_artista"]['tipo_fuente']  # Aplicar la fuente desde config.py
 
             run_fecha = paragraph1.add_run()
             run_fecha.text = f'   ({year})'
@@ -628,7 +628,7 @@ class PresentationApp:
             # Ajustar el tamaño del texto según el ancho y altura disponibles
             adjust_text_size(text_frame,
                              max_width_cm=positions_calculated["cortina_subtitle"][2],
-                             max_font_size=positions_initial["fuentes"]["cortina_artista"], fuente=DEFAULT_FONT_NAME)
+                             max_font_size=positions_initial["fuentes"]["cortina_artista"]['tamaño'], fuente=positions_initial["fuentes"]["cortina_artista"]['tipo_fuente'])
 
         else:
 
@@ -637,8 +637,8 @@ class PresentationApp:
                 titulo_orquesta,
                 positions_calculated["tanda_orquesta_shadow"],
                 positions_calculated["offset_shadow"]*2.5,
-                positions_initial["fuentes"]["orquesta"],
-                DEFAULT_FONT_NAME,
+                positions_initial["fuentes"]["orquesta"]['tamaño'],
+                positions_initial["fuentes"]["orquesta"]['tipo_fuente'],
                 (255, 255, 255),  # Color blanco
                 True,  # Negrita activada
                 True  # Sombra activada
@@ -649,8 +649,8 @@ class PresentationApp:
                 subtitulo,
                 positions_calculated["tanda_cantor_shadow"],
                 positions_calculated["offset_shadow"],
-                positions_initial["fuentes"]["estilo"],
-                DEFAULT_FONT_NAME,
+                positions_initial["fuentes"]["estilo"]['tamaño'],
+                positions_initial["fuentes"]["estilo"]['tipo_fuente'],
                 (255, 255, 255),  # Color blanco
                 True,  # Negrita activada
                 True  # Sombra activada
@@ -661,8 +661,8 @@ class PresentationApp:
                 f'© TDJ Edmundo Fraga\n{self.nombre_milonga_entry.get()}\n{self.fecha_entry.get()}',
                 positions_calculated["firma_tgdj_box"],
                 positions_calculated["offset_shadow"],
-                positions_initial["fuentes"]["firma"],
-                DEFAULT_FONT_NAME,
+                positions_initial["fuentes"]["firma"]['tamaño'],
+                positions_initial["fuentes"]["firma"]['tipo_fuente'],
                 (255, 255, 255),  # Color blanco
                 False,  # Negrita activada
                 True,  # Sombra activada
@@ -688,21 +688,46 @@ class PresentationApp:
                     title,
                     positions_calculated["canciones_start"],
                     positions_calculated["offset_shadow"],
-                    positions_initial["fuentes"]["canciones"],
-                    'Bernard MT Condensed',
+                    positions_initial["fuentes"]["canciones"]['tamaño'],
+                    positions_initial["fuentes"]["canciones"]['tipo_fuente'],
                     (255, 255, 255),  # Color blanco
                     False,  # Negrita activada
                     True,  # Sombra activada
                     extra_paragraph_text = composer,
                     extra_run_text = f'   ({year})',
-                    extra_paragraph_settings ={'font_name':DEFAULT_FONT_NAME, 'tamano_fuente':positions_initial["fuentes"]["autores"], 'font_color_rgb':RGBColor(255, 255, 255), 'is_bold':False, 'is_italic':True},
-                    extra_run_settings = {'font_name':DEFAULT_FONT_NAME, 'tamano_fuente':positions_initial["fuentes"]["anos"], 'font_color_rgb':RGBColor(255, 255, 255), 'is_bold':False, 'is_italic':False},
+                    extra_paragraph_settings ={'font_name':positions_initial["fuentes"]["autores"]['tipo_fuente'], 'tamano_fuente':positions_initial["fuentes"]["autores"]['tamaño'], 'font_color_rgb':RGBColor(255, 255, 255), 'is_bold':False, 'is_italic':True},
+                    extra_run_settings = {'font_name':positions_initial["fuentes"]["anos"]['tipo_fuente'], 'tamano_fuente':positions_initial["fuentes"]["anos"]['tamaño'], 'font_color_rgb':RGBColor(255, 255, 255), 'is_bold':False, 'is_italic':False},
                 )
 
-                positions_calculated["canciones_start"][1] = positions_calculated["canciones_start"][1] + positions_calculated["canciones_start"][4]
+                positions_calculated["canciones_start"][1] = positions_calculated["canciones_start"][1] + positions_calculated["canciones_spacing"]
 
     def create_first_slide(self, prs, posiciones, datos):
-
+        # "Milonga": {"left": Cm(1.6), "top": Cm(0), "right": Cm(1), "height": Cm(3)},
+        # "Fecha_Milonga": {"left": Cm(3), "top": Cm(2.3), "right": Cm(1), "height": Cm(2)},
+        # "Duracion_Milonga": {"left": Cm(3), "top": Cm(2.3), "right": Cm(1), "height": Cm(2)},
+        # "firma": {"left": Cm(1), "top": Cm(15.5), "right": Cm(24), "height": Cm(2.8)},
+        # "linea_divisoria": {"left": Cm(13.5), "top": Cm(4.5), "right": Cm(1), "height": Cm(0)},
+        # "tandas_start": {"left": Cm(4), "top": Cm(4), "right": Cm(1), "height": Cm(15)},
+        # "tandas_spacing": Cm(0.8),
+        # "offset_shadow": Cm(0.06),
+        # "maxima_anchura_image": 1,
+        # "fuentes": {
+        #     "Milonga": {"tamaño": 100, "tipo_fuente": "Arial"},
+        #     "Fecha_Milonga": {"tamaño": 50, "tipo_fuente": "Arial"},
+        #     "Duracion_Milonga": {"tamaño": 55, "tipo_fuente": "Arial"},
+        #     "tandas": {"tamaño": 20, "tipo_fuente": "Bernard MT Condensed"},
+        #     "duracion_estimada": {"tamaño": 20, "tipo_fuente": "Arial"},
+        #     "firma": {"tamaño": 20, "tipo_fuente": "Arial"}
+        # datos = {'dj': 'Edmundo Fraga',
+        #          'milonga': self.nombre_milonga_entry.get(),
+        #          'fecha': self.fecha_entry.get(),
+        #          'inicio':self.hora_inicio_entry.get(),
+        #          'finalizacion':self.hora_fin_entry.get(),
+        #          'duracion': self.duracion_label.cget("text"),
+        #          'tandas': lista_texto,
+        #          'duracion_total_sin_cortina' : tx_duracion_total_sin_cortina,
+        #          'duracion_total_estimada': tx_duracion_total_estimado
+        #          }
 
         # Add a slide with a title and content layout
         slide_layout = prs.slide_layouts[5]  # Use a blank layout
@@ -711,22 +736,58 @@ class PresentationApp:
         # Set the merged background image with gradient
         slide.shapes.add_picture(background_tango_degradado, 0, 0, width=prs.slide_width, height=prs.slide_height)
 
-        pos = calculate_positions(prs, posiciones)
+        pos = transformar_posiciones(prs, posiciones)
+
+        add_text_to_slide(
+            slide,
+            datos["milonga"],
+            pos["Milonga"],
+            pos["offset_shadow"],
+            pos['fuentes']['Milonga']['tamaño'],
+            pos['fuentes']['Milonga']['tipo_fuente'],
+            (255, 255, 255),  # Color blanco
+            False,  # Negrita activada
+            True,  # Sombra activada
+        )
+
+        add_text_to_slide(
+            slide,
+            datos["fecha"] + " de " + datos["inicio"] +" a "+  datos["finalizacion"] + " duracion: " + datos["duracion"],
+            pos["Fecha_Milonga"],
+            pos["offset_shadow"],
+            pos['fuentes']['Fecha_Milonga']['tamaño'],
+            pos['fuentes']['Fecha_Milonga']['tipo_fuente'],
+            (255, 255, 255),  # Color blanco
+            False,  # Negrita activada
+            True,  # Sombra activada
+        )
+
+        add_text_to_slide(
+            slide,
+            datos['duracion_total_sin_cortina'] + ", " + datos['duracion_total_estimada'],
+            pos["Duracion_Milonga"],
+            pos["offset_shadow"],
+            pos['fuentes']['Duracion_Milonga']['tamaño'],
+            pos['fuentes']['Duracion_Milonga']['tipo_fuente'],
+            (255, 255, 255),  # Color blanco
+            False,  # Negrita activada
+            True,  # Sombra activada
+        )
+
         for row in datos['tandas']:
             add_text_to_slide(
                 slide,
                 row,
-                pos["canciones_start"],
+                pos["tandas_start"],
                 pos["offset_shadow"],
-                15,
-                'Bernard MT Condensed',
+                pos['fuentes']['tandas']['tamaño'],
+                pos['fuentes']['tandas']['tipo_fuente'],
                 (255, 255, 255),  # Color blanco
                 False,  # Negrita activada
                 True,  # Sombra activada
             )
 
-            pos["canciones_start"][1] = pos["canciones_start"][1] + \
-                                                         pos["canciones_start"][4]
+            pos["tandas_start"][1] = pos["tandas_start"][1] + pos["tandas_spacing"]
 
     def preparar_datos_first_slide(self):
 
@@ -734,11 +795,13 @@ class PresentationApp:
         tc=tandas_sin_cortinas
         lista_texto = []
         duracion_total_sin_cortina = 0
+        counter = 1
         for index, row in tc.iterrows():
             duracion = convertir_segundos(row['duracion_total'], "x minutos y x segundos")
-            columna =(f"{row['titulo_orquesta']} {row['genero_autores']}, {row['repetition_count']} temas con una duración de {duracion}")
+            columna =(f"{counter} - {row['titulo_orquesta']} {row['genero_autores']}, {row['repetition_count']} temas con una duración de {duracion}")
             lista_texto.append(columna)
             duracion_total_sin_cortina += row['duracion_total']
+            counter+=1
 
         duracion_cortinas_extimado = (len(tc)-1)*60
         duracion_total_estimado = duracion_cortinas_extimado + duracion_total_sin_cortina
@@ -749,6 +812,9 @@ class PresentationApp:
         datos = {'dj': 'Edmundo Fraga',
                  'milonga': self.nombre_milonga_entry.get(),
                  'fecha': self.fecha_entry.get(),
+                 'inicio':self.hora_inicio_entry.get(),
+                 'finalizacion':self.hora_fin_entry.get(),
+                 'duracion': self.duracion_label.cget("text"),
                  'tandas': lista_texto,
                  'duracion_total_sin_cortina' : tx_duracion_total_sin_cortina,
                  'duracion_total_estimada': tx_duracion_total_estimado
@@ -804,15 +870,23 @@ class PresentationApp:
         prs.slide_height = Cm(19.05)
 
         posiciones_first_slide = {
-                "cortina_title": {"left": Cm(5), "top": Cm(5), "right": Cm(1), "height": Cm(5)},
-                "cortina_subtitle": {"left": Cm(8), "top": Cm(10), "right": Cm(1), "height": Cm(5)},
-                "tanda_orquesta_shadow": {"left": Cm(1.6), "top": Cm(0), "right": Cm(1), "height": Cm(3)},
-                "tanda_cantor_shadow": {"left": Cm(3), "top": Cm(2.3), "right": Cm(1), "height": Cm(2)},
-                "firma_tgdj_box": {"left": Cm(1), "top": Cm(15.5), "right": Cm(24), "height": Cm(2.8)},
+                "Milonga": {"left": Cm(1), "top": Cm(0), "right": Cm(1), "height": Cm(3)},
+                "Fecha_Milonga": {"left": Cm(1.75), "top": Cm(2.5), "right": Cm(1), "height": Cm(2)},
+                "Duracion_Milonga": {"left": Cm(1), "top": Cm(17.25), "right": Cm(1), "height": Cm(2)},
+                "firma": {"left": Cm(1), "top": Cm(15.5), "right": Cm(24), "height": Cm(2.8)},
                 "linea_divisoria": {"left": Cm(13.5), "top": Cm(4.5), "right": Cm(1), "height": Cm(0)},
-                "canciones_start": {"left": Cm(4), "top": Cm(4), "right": Cm(1), "height": Cm(15), "spacing": Cm(0.8)},
+                "tandas_start": {"left": Cm(3), "top": Cm(4), "right": Cm(1), "height": Cm(15)},
+                "tandas_spacing" : Cm(0.7),
                 "offset_shadow": Cm(0.06),
-                "maxima_anchura_image": 1
+                "maxima_anchura_image": 1,
+                "fuentes": {
+                    "Milonga": {"tamaño": 60, "tipo_fuente": "Arial"},
+                    "Fecha_Milonga": {"tamaño": 20, "tipo_fuente": "Arial"},
+                    "Duracion_Milonga": {"tamaño": 16, "tipo_fuente": "Arial"},
+                    "tandas": {"tamaño": 15, "tipo_fuente": "Bernard MT Condensed"},
+                    "duracion_estimada": {"tamaño": 16, "tipo_fuente": "Arial"},
+                    "firma": {"tamaño": 20, "tipo_fuente": "Arial"}
+                }
         }
 
         datos_first_slide = self.preparar_datos_first_slide()
@@ -837,10 +911,20 @@ class PresentationApp:
                 "tanda_cantor_shadow": {"left": Cm(3), "top": Cm(2.3), "right": Cm(1), "height": Cm(2)},
                 "firma_tgdj_box": {"left": Cm(1), "top": Cm(15.5), "right": Cm(24), "height": Cm(2.8)},
                 "linea_divisoria": {"left": Cm(13.5), "top": Cm(4.5), "right": Cm(1), "height": Cm(0)},
-                "canciones_start": {"left": Cm(13.5), "top": Cm(4.5), "right": Cm(1), "height": Cm(3), "spacing": Cm(2.5)},
+                "canciones_start": {"left": Cm(13.5), "top": Cm(4.5), "right": Cm(1), "height": Cm(3)},
+                "canciones_spacing": Cm(3.5),
                 "offset_shadow": Cm(0.05),
                 "maxima_anchura_image": 1,
-                "fuentes" : {"cortina_titulo": 100,"cortina_artista": 50,"orquesta": 55, "estilo": 35, "canciones": 50, "anos": 20, "autores": 20, "firma": 20}
+                "fuentes": {
+                "cortina_titulo": {"tamaño": 100, "tipo_fuente": DEFAULT_FONT_NAME},
+                "cortina_artista": {"tamaño": 50, "tipo_fuente": DEFAULT_FONT_NAME},
+                "orquesta": {"tamaño": 55, "tipo_fuente": DEFAULT_FONT_NAME},
+                "estilo": {"tamaño": 35, "tipo_fuente": DEFAULT_FONT_NAME},
+                "canciones": {"tamaño": 50, "tipo_fuente": 'Bernard MT Condensed'},
+                "anos": {"tamaño": 20, "tipo_fuente": "Arial"},
+                "autores": {"tamaño": 20, "tipo_fuente": 'Bernard MT Condensed'},
+                "firma": {"tamaño": 20, "tipo_fuente": DEFAULT_FONT_NAME}
+            }
         }
 
             self.create_slide_for_tanda(prs, tanda_number, titulo, titulo_orquesta, subtitulo, genero, canciones, positions_initial)

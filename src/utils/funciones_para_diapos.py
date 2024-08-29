@@ -263,65 +263,49 @@ def add_text_to_slide(slide, full_text, posicion, offset, tamano_fuente, font_na
         text.line.color.rgb = RGBColor(*border_color_rgb)  # Color del borde
         text.line.width = Pt(border_width_pt)  # Grosor del borde
 
-def calculate_positions(prs, positions_initial):
-    """
-    Calcula las posiciones y tamaños para varios elementos utilizando distancias desde los bordes.
 
-    :param prs: Objeto Presentation de python-pptx que contiene las dimensiones de la diapositiva.
-    :param positions_initial: Diccionario con las posiciones iniciales (left, top, right, height, spacing, etc.).
-    :return: Diccionario con las posiciones calculadas para varios elementos.
-    """
-    positions_calculated = {
-        "cortina_title": [
-            positions_initial["cortina_title"]["left"],
-            positions_initial["cortina_title"]["top"],
-            prs.slide_width - positions_initial["cortina_title"]["left"] - positions_initial["cortina_title"]["right"],
-            positions_initial["cortina_title"]["height"]
-        ],
-        "cortina_subtitle": [
-            positions_initial["cortina_subtitle"]["left"],
-            positions_initial["cortina_subtitle"]["top"],
-            prs.slide_width - positions_initial["cortina_subtitle"]["left"] - positions_initial["cortina_subtitle"][
-                "right"],
-            positions_initial["cortina_subtitle"]["height"]
-        ],
-        "tanda_orquesta_shadow": [
-            positions_initial["tanda_orquesta_shadow"]["left"],
-            positions_initial["tanda_orquesta_shadow"]["top"],
-            prs.slide_width - positions_initial["tanda_orquesta_shadow"]["left"] -
-            positions_initial["tanda_orquesta_shadow"]["right"],
-            positions_initial["tanda_orquesta_shadow"]["height"]
-        ],
-        "tanda_cantor_shadow": [
-            positions_initial["tanda_cantor_shadow"]["left"],
-            positions_initial["tanda_cantor_shadow"]["top"],
-            prs.slide_width - positions_initial["tanda_cantor_shadow"]["left"] -
-            positions_initial["tanda_cantor_shadow"]["right"],
-            positions_initial["tanda_cantor_shadow"]["height"]
-        ],
-        "firma_tgdj_box": [
-            positions_initial["firma_tgdj_box"]["left"],
-            positions_initial["firma_tgdj_box"]["top"],
-            prs.slide_width - positions_initial["firma_tgdj_box"]["left"] - positions_initial["firma_tgdj_box"][
-                "right"],
-            positions_initial["firma_tgdj_box"]["height"]
-        ],
-        "linea_divisoria": [
-            positions_initial["linea_divisoria"]["left"],
-            positions_initial["linea_divisoria"]["top"],
-            prs.slide_width - positions_initial["linea_divisoria"]["left"] - positions_initial["linea_divisoria"][
-                "right"],
-            positions_initial["linea_divisoria"]["height"]
-        ],
-        "canciones_start": [
-            positions_initial["canciones_start"]["left"],
-            positions_initial["canciones_start"]["top"],
-            prs.slide_width - positions_initial["canciones_start"]["left"] - positions_initial["canciones_start"][
-                "right"],
-            positions_initial["canciones_start"]["height"],
-            positions_initial["canciones_start"]["spacing"]
-        ],
-        "offset_shadow": positions_initial["offset_shadow"]
-    }
+def transformar_posiciones(diaspo, posiciones_dic):
+    # Obtén las dimensiones de la diapositiva
+    ancho_diapositiva = diaspo.slide_width
+    alto_diapositiva = diaspo.slide_height
 
-    return positions_calculated
+    pos_transformada = {}
+
+    for clave, valores in posiciones_dic.items():
+        if isinstance(valores, dict):
+            # Calcular distancia al borde izquierdo
+            distancia_borde_izquierdo = valores.get("left")
+            if distancia_borde_izquierdo is None and "right" in valores and "width" in valores:
+                distancia_borde_izquierdo = ancho_diapositiva - valores["right"] - valores["width"]
+
+            # Calcular distancia al borde superior
+            distancia_borde_superior = valores.get("top")
+            if distancia_borde_superior is None and "bottom" in valores and "height" in valores:
+                distancia_borde_superior = alto_diapositiva - valores["bottom"] - valores["height"]
+
+            # Calcular ancho
+            ancho = valores.get("width")
+            if ancho is None and "left" in valores and "right" in valores:
+                ancho = ancho_diapositiva - valores["left"] - valores["right"]
+
+            # Calcular altura
+            altura = valores.get("height")
+            if altura is None and "top" in valores and "bottom" in valores:
+                altura = alto_diapositiva - valores["top"] - valores["bottom"]
+
+            # Solo almacena la transformación si todos los valores son válidos
+            if None not in (distancia_borde_izquierdo, distancia_borde_superior, ancho, altura):
+                pos_transformada[clave] = [
+                    distancia_borde_izquierdo,
+                    distancia_borde_superior,
+                    ancho,
+                    altura
+                ]
+            else:
+                # Si no se cumplen los valores, deja la entrada tal cual
+                pos_transformada[clave] = valores
+        else:
+            # Para valores que no son diccionarios o que no contienen las claves necesarias, se mantienen igual
+            pos_transformada[clave] = valores
+
+    return pos_transformada
