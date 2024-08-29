@@ -12,9 +12,78 @@ from unidecode import unidecode
 import os
 from os.path import join
 from src.config.config import dropbox_path, image_folder, m3u_start_path, background_image_path, data_folder, output_folder, orchestra_folder, background_image_folder, merged_images_folder, DEFAULT_FONT_NAME
-from src.utils.utils import extract_year, separar_artistas, obtener_autores
+from src.utils.utils import extract_year, separar_artistas, obtener_autores, convertir_segundos
 from src.utils.funciones_para_diapos import *
 # add_text_to_slide, calculate_positions, adjust_text_size
+
+# Estructura de self.result:
+# --------------------------
+# La variable `self.result` es un DataFrame de Pandas que almacena la estructura de la lista de reproducción
+# agrupada por género y orquesta. Esta variable se construye en la función `create_structure()` y contiene
+# las siguientes columnas:
+#
+# 1. `unique_value`: El valor único del género de cada grupo.
+# 2. `repetition_count`: La cantidad de canciones que pertenecen al mismo grupo de género.
+# 3. `position`: La posición del primer elemento del grupo en la lista original.
+# 4. `same_orchestra`: Un valor booleano que indica si todas las canciones en el grupo tienen la misma orquesta.
+# 5. `orchestra_value`: El nombre de la orquesta si todas las canciones en el grupo son de la misma orquesta;
+#    de lo contrario, queda vacío.
+# 6. `group_data`: Una lista de DataFrames, donde cada DataFrame contiene las filas de canciones que pertenecen
+#    al mismo grupo, manteniendo la estructura original de la lista de reproducción.
+
+# Ejemplo de self.result:
+# ------------------------
+# unique_value   repetition_count   position   same_orchestra   orchestra_value   group_data
+# tango          5                  0          True             Orquesta XYZ      DataFrame (5 filas)
+# tango vals     3                  5          True             Orquesta ABC      DataFrame (3 filas)
+# tango milonga  4                  8          False                              DataFrame (4 filas)
+
+# Ejemplo de groupdata
+
+# [1 rows x 13 columns],                   title         artist1  ...   ano       artist2
+# 0              El olivo  Juan D'Arienzo  ...  1941  Héctor Mauré
+# 1  Si la llegaran a ver  Juan D'Arienzo  ...  1943  Héctor Mauré
+# 2           Humillación  Juan D'Arienzo  ...  1941  Héctor Mauré
+# 3               Amarras  Juan D'Arienzo  ...  1944  Héctor Mauré
+
+# Las columnas estan definidas en read_audio_tags
+# columns = ['title', 'artist1', 'artist2', 'album', 'year', 'genre', 'composer', 'lyrics', 'bpm', 'duration',
+#                        'extension', 'bitrate']
+
+# Descripción de la función canciones_tanda:
+# -------------------------------------------
+# La función `canciones_tanda(tanda, tags)` toma como argumentos el número de tanda (`tanda`) y una lista
+# de etiquetas (`tags`) que especifican los metadatos que se desean extraer. La función devuelve una lista
+# de listas, donde cada sublista contiene los valores de las etiquetas especificadas para una canción en
+# la tanda seleccionada.
+#
+# Funcionamiento:
+# - La función verifica si la tanda solicitada existe en `self.result`.
+# - Si la tanda existe, extrae el DataFrame correspondiente desde la columna `group_data` de `self.result`.
+# - Luego, recorre cada fila del DataFrame y extrae los valores de las etiquetas especificadas.
+# - Devuelve una lista de listas, donde cada sublista contiene los valores de las etiquetas para una canción.
+
+# Ejemplo de uso de canciones_tanda:
+# -----------------------------------
+# Si se llama `canciones_tanda(1, ['title', 'ano', 'composer'])` para obtener los títulos, años y compositores
+# de las canciones en la primera tanda:
+#
+# Entrada:
+# tanda = 1
+# tags = ['title', 'ano', 'composer']
+#
+# Salida:
+# [
+#   ['La Cumparsita', '1916', 'Gerardo Matos Rodríguez'],
+#   ['El Choclo', '1903', 'Ángel Villoldo'],
+#   ['A Media Luz', '1925', 'Edgardo Donato'],
+#   ...
+# ]
+#
+# Cada sublista contiene los valores de 'title', 'ano' y 'composer' para una canción en la tanda especificada.
+
+
+
 class PresentationApp:
     def __init__(self, root):
         self.root = root
@@ -120,8 +189,31 @@ class PresentationApp:
             orchestra_value=('artist1', lambda x: x.iloc[0] if x.nunique() == 1 else "")
         ).reset_index(drop=True)
 
+
         # Attach the group DataFrames to the result DataFrame
         self.result['group_data'] = group_data_list
+
+        # Lista de excepciones donde no se debe añadir "Orquesta de"
+        excepciones = ["Orquesta", "Quinteto", "Sexteto", "Hugo Diaz"]
+
+        # Añadir la columna 'titulo_orquesta' según las condiciones dadas
+        self.result['titulo_orquesta'] = self.result['orchestra_value'].apply(
+            lambda orchestra_value: orchestra_value
+            if any(orchestra_value.startswith(excepcion) for excepcion in excepciones)
+            else f"Orquesta de {orchestra_value}"
+        )
+        self.result['genero_autores'] = [
+            self.obtener_genero_autores(
+                row['unique_value'],
+                obtener_autores(self.canciones_tanda(tanda_number + 1, ['artist2']))
+            )
+            for tanda_number, row in self.result.iterrows()
+        ]
+
+        # Añadir la columna 'total_duration' con la suma de 'duration' en cada group_data
+        self.result['duracion_total'] = self.result['group_data'].apply(
+            lambda group_df: group_df['duration'].sum() if 'duration' in group_df.columns else 0
+        )
 
         # Clear the current content of the estructura_tree
         for i in self.estructura_tree.get_children():
@@ -145,14 +237,14 @@ class PresentationApp:
                 row['unique_value'], row['orchestra_value'], '', row['repetition_count'], row['same_orchestra']),
                                         tags=(row_style,))
 
-        # Save the result DataFrame to an CSV file
-        save_csv_path = os.path.join(data_folder, "self_result.csv")
-        self.result.to_csv(save_csv_path, index=False)
 
-        # Load the CSV file into a DataFrame
-        # load_path = os.path.join(dropbox_path, "MUSICA", "MP3", "TANGO", "other_stuff", "PYTHON",
-        #                          "tgdj", "data", "self_result.csv")
-        # self.result = pd.read_csv(load_path)
+
+
+        #
+        # # Save the result DataFrame to an CSV file
+        # save_csv_path = os.path.join(data_folder, "self_result.csv")
+        # self.result.to_csv(save_csv_path, index=False)
+
 
     def canciones_tanda(self, tanda, tags):
         # Check if the result has at least 'tanda' rows
@@ -399,7 +491,7 @@ class PresentationApp:
 
         combined.save(self.merged_image_path, "PNG")
 
-    def create_slide_for_tanda(self, prs, tanda_number, titulo, subtitulo, genero, lista_canciones, positions_initial):
+    def create_slide_for_tanda(self, prs, tanda_number, titulo, titulo_orquesta, subtitulo, genero, lista_canciones, positions_initial):
 
         # self.apply_gradient_overlay()
 
@@ -484,12 +576,10 @@ class PresentationApp:
                              max_font_size=fuentes[1], fuente=DEFAULT_FONT_NAME)
 
         else:
-            initial_text = '' if orchestra_value.startswith("Orquesta") else 'Orquesta de '
-            full_text = f'{initial_text}{orchestra_value}'
 
             add_text_to_slide(
                 slide,
-                full_text,
+                titulo_orquesta,
                 positions_calculated["tanda_orquesta_shadow"],
                 positions_calculated["offset_shadow"],
                 fuentes[2],
@@ -556,6 +646,69 @@ class PresentationApp:
 
                 positions_calculated["canciones_start"][1] = positions_calculated["canciones_start"][1] + positions_calculated["canciones_start"][4]
 
+    def create_first_slide(self, prs, posiciones, datos):
+
+
+        # Add a slide with a title and content layout
+        slide_layout = prs.slide_layouts[5]  # Use a blank layout
+        slide = prs.slides.add_slide(slide_layout)
+
+        # Set the merged background image with gradient
+        slide.shapes.add_picture(background_image_path, 0, 0, width=prs.slide_width, height=prs.slide_height)
+
+    def preparar_datos_first_slide(self):
+
+        tandas_sin_cortinas = self.result[self.result['unique_value'].str.contains('tango', case=False, na=False)].copy()
+        tc=tandas_sin_cortinas
+        lista_texto = []
+        duracion_total_sin_cortina = 0
+        for index, row in tc.iterrows():
+            duracion = convertir_segundos(row['duracion_total'], "x minutos y x segundos")
+            columna =(f"{row['titulo_orquesta']} {row['genero_autores']}, {row['repetition_count']} temas con una duración de {duracion}")
+            lista_texto.append(columna)
+            duracion_total_sin_cortina += row['duracion_total']
+
+        duracion_cortinas_extimado = (len(tc)-1)*60
+        duracion_total_estimado = duracion_cortinas_extimado + duracion_total_sin_cortina
+        tx_duracion_total_sin_cortina = f'Duración total sin cortinas: {convertir_segundos(duracion_total_sin_cortina, "x minutos y x segundos")}'
+        tx_duracion_cortinas_extimado = convertir_segundos(duracion_cortinas_extimado, "x minutos y x segundos")
+        tx_duracion_total_estimado = f'Duración total estimada: {convertir_segundos(duracion_total_estimado, "x minutos y x segundos")}'
+
+        datos = {'dj': 'Edmundo Fraga',
+                 'milonga': self.nombre_milonga_entry.get(),
+                 'fecha': self.fecha_entry.get(),
+                 'tandas': lista_texto,
+                 'duracion_total_sin_cortina' : tx_duracion_total_sin_cortina,
+                 'duracion_total_estimada': tx_duracion_total_estimado
+                 }
+
+        print(datos)
+
+        return  datos
+
+
+    def obtener_genero_autores(self, genero, autores):
+        if 'vals' in genero:
+            subtitulo = "Vals "
+            if autores == 'instrumental':
+                subtitulo = subtitulo + 'instrumental'
+            else:
+                subtitulo = subtitulo + 'con ' + autores
+        elif 'milonga' in genero:
+            subtitulo = "Milonga "
+            if autores == 'instrumental':
+                subtitulo = subtitulo + 'instrumental'
+            else:
+                subtitulo = subtitulo + 'con ' + autores
+        elif genero == 'tango':
+            if autores == 'instrumental':
+                subtitulo = 'Instrumental'
+            else:
+                subtitulo = 'Con ' + autores
+        else:
+            subtitulo = ''
+        return subtitulo
+
 
     def create_presentation(self):
 
@@ -580,30 +733,30 @@ class PresentationApp:
         prs.slide_width = Cm(33.87)
         prs.slide_height = Cm(19.05)
 
+        posiciones_first_slide = {
+            "cortina_title": {"left": Cm(5), "top": Cm(5), "right": Cm(1), "height": Cm(5)},
+            "cortina_subtitle": {"left": Cm(8), "top": Cm(10), "right": Cm(1), "height": Cm(5)},
+            "tanda_orquesta_shadow": {"left": Cm(1.6), "top": Cm(0), "right": Cm(1), "height": Cm(3)},
+            "tanda_cantor_shadow": {"left": Cm(3), "top": Cm(2.3), "right": Cm(1), "height": Cm(2)},
+            "firma_tgdj_box": {"left": Cm(1), "top": Cm(15.5), "right": Cm(24), "height": Cm(2.8)},
+            "linea_divisoria": {"left": Cm(13.5), "top": Cm(4.5), "right": Cm(1), "height": Cm(0)},
+            "canciones_start": {"left": Cm(13.5), "top": Cm(4.5), "right": Cm(1), "height": Cm(3), "spacing": Cm(2.5)},
+            "offset_shadow": Cm(0.05),
+            "maxima_anchura_image": 1
+        }
+
+        datos_first_slide = self.preparar_datos_first_slide()
+
+        self.create_first_slide(prs, posiciones_first_slide, datos_first_slide)
+
         # Add slides for different tanda numbers
         for tanda_number in range(1, self.result.shape[0]+1):  # Adjust the range as needed
         # for tanda_number in range(1, 5):  # Adjust the range as needed
             titulo = self.result.iloc[tanda_number - 1]['orchestra_value']
-            subtitulo = ''
+            titulo_orquesta = self.result.iloc[tanda_number - 1]['titulo_orquesta']
             genero = self.tanda_gender = self.result.iloc[tanda_number - 1]['unique_value']
-            autores = obtener_autores(self.canciones_tanda(tanda_number, ['artist2']))
-            if 'vals' in genero:
-                subtitulo = "Vals "
-                if autores == 'instrumental':
-                    subtitulo = subtitulo + 'instrumental'
-                else:
-                    subtitulo = subtitulo + 'con ' + autores
-            elif 'milonga' in genero:
-                subtitulo = "Milonga "
-                if autores == 'instrumental':
-                    subtitulo = subtitulo + 'instrumental'
-                else:
-                    subtitulo = subtitulo + 'con ' + autores
-            else:
-                if autores == 'instrumental':
-                    subtitulo = 'Instrumental'
-                else:
-                    subtitulo = subtitulo + 'Con ' + autores
+
+            subtitulo = self.result.iloc[tanda_number - 1]['genero_autores']
 
             canciones = self.canciones_tanda(tanda_number, ['title', 'ano', 'composer'])
 
@@ -619,7 +772,7 @@ class PresentationApp:
                 "maxima_anchura_image": 1
         }
 
-            self.create_slide_for_tanda(prs, tanda_number, titulo, subtitulo, genero, canciones, positions_initial)
+            self.create_slide_for_tanda(prs, tanda_number, titulo, titulo_orquesta, subtitulo, genero, canciones, positions_initial)
 
         # Save the presentation
         try:

@@ -12,6 +12,61 @@ from mutagen.mp4 import MP4
 from mutagen.mp3 import MP3
 from mutagen.easyid3 import EasyID3
 
+def convertir_segundos(segundos, formato='x\'x\'\''):
+    """
+    Convierte segundos con decimales a un formato de tiempo especificado.
+
+    Args:
+        segundos (float): Tiempo en segundos.
+        formato (str): Formato de salida. Puede ser:
+                       - "x'x''": Formato de minutos y segundos (ej. 2'6'').
+                       - "x minutos y x segundos": Texto completo (ej. 2 minutos y 6 segundos).
+                       - "x min x sec": Abreviado (ej. 2 min 6 sec).
+                       - "h:m:s": Formato reloj (ej. 1:02:06).
+
+    Returns:
+        str: Tiempo formateado según el estilo especificado.
+    """
+    horas = int(segundos // 3600)  # División entera para obtener las horas
+    minutos = int((segundos % 3600) // 60)  # Minutos restantes
+    segundos_restantes = round(segundos % 60)  # Segundos restantes redondeados
+
+    if formato == "x'x''":
+        if horas > 0:
+            return f"{horas}h {minutos}'{segundos_restantes}''"
+        else:
+            return f"{minutos}'{segundos_restantes}''"
+    elif formato == "x minutos y x segundos":
+        if horas > 0:
+            return f"{horas} horas, {minutos} minutos y {segundos_restantes} segundos"
+        else:
+            return f"{minutos} minutos y {segundos_restantes} segundos"
+    elif formato == "x min x sec":
+        if horas > 0:
+            return f"{horas} h {minutos} min {segundos_restantes} sec"
+        else:
+            return f"{minutos} min {segundos_restantes} sec"
+    elif formato == "h:m:s":
+        return f"{horas}:{minutos:02}:{segundos_restantes:02}"
+    else:
+        raise ValueError("Formato no reconocido. Usa uno de: 'x'x''', 'x minutos y x segundos', 'x min x sec', 'h:m:s'.")
+
+# # Ejemplos de uso
+# segundos_con_decimales = 3725.8  # 1 hora, 2 minutos y 5.8 segundos
+#
+# # Estilo x'x''
+# print(convertir_segundos(segundos_con_decimales, "x'x''"))  # Salida: "1h 2'6''"
+#
+# # Estilo x minutos y x segundos
+# print(convertir_segundos(segundos_con_decimales, "x minutos y x segundos"))  # Salida: "1 horas, 2 minutos y 6 segundos"
+#
+# # Estilo x min x sec
+# print(convertir_segundos(segundos_con_decimales, "x min x sec"))  # Salida: "1 h 2 min 6 sec"
+#
+# # Estilo reloj h:m:s
+# print(convertir_segundos(segundos_con_decimales, "h:m:s"))  # Salida: "1:02:06"
+
+
 
 def separar_artistas(artistas):
     artistas = ftfy.fix_text(convert_numbers_to_words(artistas))
