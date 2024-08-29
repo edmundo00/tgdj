@@ -11,10 +11,11 @@ from pptx.enum.shapes import MSO_CONNECTOR
 from unidecode import unidecode
 import os
 from os.path import join
-from src.config.config import dropbox_path, image_folder, m3u_start_path, background_image_path, data_folder, output_folder, orchestra_folder, background_image_folder, merged_images_folder, DEFAULT_FONT_NAME
+from src.config.config import dropbox_path, image_folder, m3u_start_path, background_image_path, data_folder, output_folder, orchestra_folder, background_image_folder, merged_images_folder, DEFAULT_FONT_NAME, background_tango_degradado
 from src.utils.utils import extract_year, separar_artistas, obtener_autores, convertir_segundos
 from src.utils.funciones_para_diapos import *
 # add_text_to_slide, calculate_positions, adjust_text_size
+from datetime import datetime, timedelta
 
 # Estructura de self.result:
 # --------------------------
@@ -88,7 +89,8 @@ class PresentationApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Presentation Creator")
-        self.root.state('zoomed')
+        self.root.geometry('1500x800')  # Define el tamaño inicial de la ventana
+        # self.root.state('zoomed')
         # Set the window to be on top
         # self.root.attributes('-topmost', True)
         # self.root.after_idle(lambda: self.root.attributes('-topmost', False))  # Allow interaction with other windows
@@ -115,45 +117,101 @@ class PresentationApp:
         preferences_menu.add_command(label="Preferences", command=self.open_preferences)
         menubar.add_cascade(label="Preferences", menu=preferences_menu)
 
+
+
+        # Entrada del Nombre de la Milonga
         tk.Label(root, text="Nombre de la Milonga:").grid(row=0, column=0, padx=10, pady=10, sticky="w")
         self.nombre_milonga_entry = tk.Entry(root, width=50)
-        self.nombre_milonga_entry.grid(row=0, column=1, padx=10, pady=10)
+        self.nombre_milonga_entry.grid(row=0, column=1, columnspan=3, padx=10, pady=10, sticky="ew")
         self.nombre_milonga_entry.insert(0, "Milonga de la Fuente")
 
+        # Entrada de la Fecha
         tk.Label(root, text="Fecha:").grid(row=1, column=0, padx=10, pady=10, sticky="w")
         self.fecha_entry = tk.Entry(root, width=50)
-        self.fecha_entry.grid(row=1, column=1, padx=10, pady=10)
+        self.fecha_entry.grid(row=1, column=1, columnspan=3, padx=10, pady=10, sticky="ew")
         self.fecha_entry.insert(0, "24 de Agosto de 2024")
 
+        # Entradas de Hora de Inicio, Finalización y Duración en la misma fila
+        tk.Label(root, text="Inicio:").grid(row=2, column=0, padx=10, pady=10, sticky="w")
+        self.hora_inicio_entry = tk.Entry(root, width=10)
+        self.hora_inicio_entry.grid(row=2, column=1, padx=10, pady=10)
+        self.hora_inicio_entry.insert(0, "21:00")  # Hora por defecto
+
+        tk.Label(root, text="Final:").grid(row=2, column=2, padx=10, pady=10, sticky="w")
+        self.hora_fin_entry = tk.Entry(root, width=10)
+        self.hora_fin_entry.grid(row=2, column=3, padx=10, pady=10)
+        self.hora_fin_entry.insert(0, "00:00")  # Hora por defecto
+
+        tk.Label(root, text="Duración:").grid(row=2, column=4, padx=10, pady=10, sticky="w")
+        self.duracion_label = tk.Label(root, text="", width=20)
+        self.duracion_label.grid(row=2, column=5, padx=10, pady=10)
+
+        # Vincular eventos de cambio para actualizar la duración automáticamente
+        self.hora_inicio_entry.bind("<KeyRelease>", self.calcular_duracion)
+        self.hora_fin_entry.bind("<KeyRelease>", self.calcular_duracion)
+
+        # Mostrar la duración inicial basada en los valores por defecto
+        self.calcular_duracion()
+
+
+        # Thumbnail de fondo
         self.update_background_thumbnail()
 
+        # Botón para cargar el archivo M3U
         load_m3u_button = ttk.Button(root, text="Load M3U File", command=self.open_m3u_file)
-        load_m3u_button.grid(row=3, column=0, columnspan=2, pady=10)
+        load_m3u_button.grid(row=3, column=0, columnspan=6, pady=10, sticky="ew")
 
+        # Botón para crear la presentación
         self.create_button = ttk.Button(root, text="Crear Presentación", command=self.create_presentation,
                                         state=tk.DISABLED)
-        self.create_button.grid(row=5, column=0, columnspan=2, pady=20)
+        self.create_button.grid(row=5, column=0, columnspan=6, pady=20, sticky="nsew")
 
+        # Configuración del árbol de vista de títulos, artistas y géneros
         self.tree = ttk.Treeview(root, columns=("Title", "Artist", "Genre"), show='headings')
         self.tree.heading("Title", text="Title")
         self.tree.heading("Artist", text="Artist")
         self.tree.heading("Genre", text="Genre")
-        self.tree.grid(row=4, column=0, columnspan=2, padx=10, pady=10, sticky="nsew")
+        self.tree.grid(row=4, column=0, columnspan=6, padx=10, pady=10, sticky="nsew")
 
+        # Configuración del frame de la estructura
         self.estructura_frame = ttk.LabelFrame(root, text="Estructura")
-        self.estructura_frame.grid(row=0, column=2, rowspan=6, padx=10, pady=10, sticky="nsew")
+        self.estructura_frame.grid(row=0, column=6, rowspan=6, padx=10, pady=10, sticky="nsew")
 
         self.estructura_tree = ttk.Treeview(self.estructura_frame, columns=("Col1", "Col2", "Col3", "Col4"),
                                             show='headings')
         self.estructura_tree.heading("Col1", text="Genero")
         self.estructura_tree.heading("Col2", text="Orquesta")
         self.estructura_tree.heading("Col3", text="Columna 3")
-        self.estructura_tree.heading("Col4", text="Numero de canciones")  # New column heading
+        self.estructura_tree.heading("Col4", text="Numero de canciones")
         self.estructura_tree.pack(expand=True, fill='both', padx=10, pady=10)
 
+        # Configuración de las filas y columnas
         root.grid_rowconfigure(4, weight=1)
         root.grid_columnconfigure(1, weight=1)
         root.grid_columnconfigure(2, weight=1)
+
+    def calcular_duracion(self, event=None):
+        formato_hora = "%H:%M"
+        try:
+            hora_inicio = datetime.strptime(self.hora_inicio_entry.get(), formato_hora)
+            hora_fin = datetime.strptime(self.hora_fin_entry.get(), formato_hora)
+
+            # Si la hora de fin es menor o igual que la de inicio, se considera al día siguiente
+            if hora_fin <= hora_inicio:
+                hora_fin += timedelta(days=1)
+
+            duracion = hora_fin - hora_inicio
+            horas, minutos = divmod(duracion.seconds, 3600)
+            minutos //= 60
+
+            # Mostrar la duración en la etiqueta
+            self.duracion_label.config(text=f"{horas} horas y {minutos} minutos")
+
+        except ValueError:
+            self.duracion_label.config(text="Formato inválido")
+
+
+
 
     def create_structure(self):
         # Check if 'genre' column exists and is not empty
@@ -429,7 +487,7 @@ class PresentationApp:
         else:
             self.thumbnail_button = tk.Button(self.root, image=self.thumbnail_image,
                                               command=self.select_background_image)
-            self.thumbnail_button.grid(row=2, column=0, columnspan=2, pady=10)
+            self.thumbnail_button.grid(row=0, column=4, columnspan=2, pady=10)
 
     def select_background_image(self):
         new_image_path = filedialog.askopenfilename(
@@ -495,9 +553,6 @@ class PresentationApp:
 
         # self.apply_gradient_overlay()
 
-        # Titulo cortina, Artista cortina, Orquesta tango, Firma DJ, Estilo y Cantores, Canciones, años, autores
-        fuentes = [100, 50, 55, 35, 20, 50, 20, 12]
-
          # NAME OF THE ORCHESTRA
         orchestra_value = titulo
         orchestra_value_min = unidecode(orchestra_value).lower()
@@ -540,7 +595,7 @@ class PresentationApp:
             title_paragraph1 = title_frame.paragraphs[0]
             run_orquesta = title_paragraph1.add_run()
             run_orquesta.text = f'{orchestra_value}'
-            run_orquesta.font.size = Pt(fuentes[0])
+            run_orquesta.font.size = Pt(positions_initial["fuentes"]["cortina_titulo"])
             run_orquesta.font.color.rgb = RGBColor(255, 255, 255)
             run_orquesta.font.bold = True
             run_orquesta.font.name = DEFAULT_FONT_NAME  # Aplicar la fuente desde config.py
@@ -548,7 +603,7 @@ class PresentationApp:
             # Ajustar el tamaño del texto según el ancho y altura disponibles
             adjust_text_size(title_frame,
                              max_width_cm=positions_calculated["cortina_title"][2],
-                             max_font_size=fuentes[0], fuente=DEFAULT_FONT_NAME)
+                             max_font_size=positions_initial["fuentes"]["cortina_titulo"], fuente=DEFAULT_FONT_NAME)
 
             cortina_subtitle = slide.shapes.add_textbox(positions_calculated["cortina_subtitle"][0],
                                                         positions_calculated["cortina_subtitle"][1],
@@ -560,7 +615,7 @@ class PresentationApp:
             paragraph1 = text_frame.paragraphs[0]
             run_titulo = paragraph1.add_run()
             run_titulo.text = title
-            run_titulo.font.size = Pt(fuentes[1])
+            run_titulo.font.size = Pt(positions_initial["fuentes"]["cortina_artista"])
             run_titulo.font.color.rgb = RGBColor(255, 255, 255)
             run_titulo.font.bold = True
             run_titulo.font.name = DEFAULT_FONT_NAME  # Aplicar la fuente desde config.py
@@ -573,7 +628,7 @@ class PresentationApp:
             # Ajustar el tamaño del texto según el ancho y altura disponibles
             adjust_text_size(text_frame,
                              max_width_cm=positions_calculated["cortina_subtitle"][2],
-                             max_font_size=fuentes[1], fuente=DEFAULT_FONT_NAME)
+                             max_font_size=positions_initial["fuentes"]["cortina_artista"], fuente=DEFAULT_FONT_NAME)
 
         else:
 
@@ -581,8 +636,8 @@ class PresentationApp:
                 slide,
                 titulo_orquesta,
                 positions_calculated["tanda_orquesta_shadow"],
-                positions_calculated["offset_shadow"],
-                fuentes[2],
+                positions_calculated["offset_shadow"]*2.5,
+                positions_initial["fuentes"]["orquesta"],
                 DEFAULT_FONT_NAME,
                 (255, 255, 255),  # Color blanco
                 True,  # Negrita activada
@@ -594,7 +649,7 @@ class PresentationApp:
                 subtitulo,
                 positions_calculated["tanda_cantor_shadow"],
                 positions_calculated["offset_shadow"],
-                fuentes[3],
+                positions_initial["fuentes"]["estilo"],
                 DEFAULT_FONT_NAME,
                 (255, 255, 255),  # Color blanco
                 True,  # Negrita activada
@@ -606,7 +661,7 @@ class PresentationApp:
                 f'© TDJ Edmundo Fraga\n{self.nombre_milonga_entry.get()}\n{self.fecha_entry.get()}',
                 positions_calculated["firma_tgdj_box"],
                 positions_calculated["offset_shadow"],
-                fuentes[4],
+                positions_initial["fuentes"]["firma"],
                 DEFAULT_FONT_NAME,
                 (255, 255, 255),  # Color blanco
                 False,  # Negrita activada
@@ -633,15 +688,15 @@ class PresentationApp:
                     title,
                     positions_calculated["canciones_start"],
                     positions_calculated["offset_shadow"],
-                    fuentes[5],
+                    positions_initial["fuentes"]["canciones"],
                     'Bernard MT Condensed',
                     (255, 255, 255),  # Color blanco
                     False,  # Negrita activada
                     True,  # Sombra activada
                     extra_paragraph_text = composer,
                     extra_run_text = f'   ({year})',
-                    extra_paragraph_settings ={'font_name':DEFAULT_FONT_NAME, 'tamano_fuente':fuentes[7], 'font_color_rgb':RGBColor(255, 255, 255), 'is_bold':False, 'is_italic':False},
-                    extra_run_settings = {'font_name':DEFAULT_FONT_NAME, 'tamano_fuente':fuentes[6], 'font_color_rgb':RGBColor(255, 255, 255), 'is_bold':False, 'is_italic':False},
+                    extra_paragraph_settings ={'font_name':DEFAULT_FONT_NAME, 'tamano_fuente':positions_initial["fuentes"]["autores"], 'font_color_rgb':RGBColor(255, 255, 255), 'is_bold':False, 'is_italic':True},
+                    extra_run_settings = {'font_name':DEFAULT_FONT_NAME, 'tamano_fuente':positions_initial["fuentes"]["anos"], 'font_color_rgb':RGBColor(255, 255, 255), 'is_bold':False, 'is_italic':False},
                 )
 
                 positions_calculated["canciones_start"][1] = positions_calculated["canciones_start"][1] + positions_calculated["canciones_start"][4]
@@ -654,7 +709,24 @@ class PresentationApp:
         slide = prs.slides.add_slide(slide_layout)
 
         # Set the merged background image with gradient
-        slide.shapes.add_picture(background_image_path, 0, 0, width=prs.slide_width, height=prs.slide_height)
+        slide.shapes.add_picture(background_tango_degradado, 0, 0, width=prs.slide_width, height=prs.slide_height)
+
+        pos = calculate_positions(prs, posiciones)
+        for row in datos['tandas']:
+            add_text_to_slide(
+                slide,
+                row,
+                pos["canciones_start"],
+                pos["offset_shadow"],
+                15,
+                'Bernard MT Condensed',
+                (255, 255, 255),  # Color blanco
+                False,  # Negrita activada
+                True,  # Sombra activada
+            )
+
+            pos["canciones_start"][1] = pos["canciones_start"][1] + \
+                                                         pos["canciones_start"][4]
 
     def preparar_datos_first_slide(self):
 
@@ -681,8 +753,6 @@ class PresentationApp:
                  'duracion_total_sin_cortina' : tx_duracion_total_sin_cortina,
                  'duracion_total_estimada': tx_duracion_total_estimado
                  }
-
-        print(datos)
 
         return  datos
 
@@ -734,15 +804,15 @@ class PresentationApp:
         prs.slide_height = Cm(19.05)
 
         posiciones_first_slide = {
-            "cortina_title": {"left": Cm(5), "top": Cm(5), "right": Cm(1), "height": Cm(5)},
-            "cortina_subtitle": {"left": Cm(8), "top": Cm(10), "right": Cm(1), "height": Cm(5)},
-            "tanda_orquesta_shadow": {"left": Cm(1.6), "top": Cm(0), "right": Cm(1), "height": Cm(3)},
-            "tanda_cantor_shadow": {"left": Cm(3), "top": Cm(2.3), "right": Cm(1), "height": Cm(2)},
-            "firma_tgdj_box": {"left": Cm(1), "top": Cm(15.5), "right": Cm(24), "height": Cm(2.8)},
-            "linea_divisoria": {"left": Cm(13.5), "top": Cm(4.5), "right": Cm(1), "height": Cm(0)},
-            "canciones_start": {"left": Cm(13.5), "top": Cm(4.5), "right": Cm(1), "height": Cm(3), "spacing": Cm(2.5)},
-            "offset_shadow": Cm(0.05),
-            "maxima_anchura_image": 1
+                "cortina_title": {"left": Cm(5), "top": Cm(5), "right": Cm(1), "height": Cm(5)},
+                "cortina_subtitle": {"left": Cm(8), "top": Cm(10), "right": Cm(1), "height": Cm(5)},
+                "tanda_orquesta_shadow": {"left": Cm(1.6), "top": Cm(0), "right": Cm(1), "height": Cm(3)},
+                "tanda_cantor_shadow": {"left": Cm(3), "top": Cm(2.3), "right": Cm(1), "height": Cm(2)},
+                "firma_tgdj_box": {"left": Cm(1), "top": Cm(15.5), "right": Cm(24), "height": Cm(2.8)},
+                "linea_divisoria": {"left": Cm(13.5), "top": Cm(4.5), "right": Cm(1), "height": Cm(0)},
+                "canciones_start": {"left": Cm(4), "top": Cm(4), "right": Cm(1), "height": Cm(15), "spacing": Cm(0.8)},
+                "offset_shadow": Cm(0.06),
+                "maxima_anchura_image": 1
         }
 
         datos_first_slide = self.preparar_datos_first_slide()
@@ -769,7 +839,8 @@ class PresentationApp:
                 "linea_divisoria": {"left": Cm(13.5), "top": Cm(4.5), "right": Cm(1), "height": Cm(0)},
                 "canciones_start": {"left": Cm(13.5), "top": Cm(4.5), "right": Cm(1), "height": Cm(3), "spacing": Cm(2.5)},
                 "offset_shadow": Cm(0.05),
-                "maxima_anchura_image": 1
+                "maxima_anchura_image": 1,
+                "fuentes" : {"cortina_titulo": 100,"cortina_artista": 50,"orquesta": 55, "estilo": 35, "canciones": 50, "anos": 20, "autores": 20, "firma": 20}
         }
 
             self.create_slide_for_tanda(prs, tanda_number, titulo, titulo_orquesta, subtitulo, genero, canciones, positions_initial)

@@ -90,7 +90,7 @@ project_root = PROJECT_ROOT
 #directorio_raiz = dropbox_path + "\\MUSICA\\MP3\\TANGO\\other_stuff\\"
 directorio_raiz = MUSIC_PATH
 dropbox_path=MUSIC_PATH
-m3u_start_path = os.path.join(dropbox_path, "MUSICA", "MP3", "TANGO", "other_stuff")
+m3u_start_path = os.path.join(dropbox_path, "MUSICA", "MP3", "TANGO", "other_stuff", "playlists")
 
 data_folder = DATA_FOLDER
 csv_grabaciones = os.path.join(data_folder, 'todo.csv')
@@ -112,6 +112,7 @@ orchestra_folder = os.path.join(IMAGE_FOLDER, "orquestas")
 
 background_image_folder = os.path.join(IMAGE_FOLDER,"backgounds")
 background_image_path = os.path.join(IMAGE_FOLDER,"backgounds" ,"background_tango.png")
+background_tango_degradado = os.path.join(background_image_folder, "background_tango_degradado.png")
 
 merged_images_folder = os.path.join(IMAGE_FOLDER,"orquestas_con_fondo")
 
