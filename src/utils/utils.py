@@ -385,6 +385,21 @@ def adjust_text_size(text_frame, max_width_cm, max_font_size=100, min_font_size=
             run.font.name = DEFAULT_FONT_NAME
 
 
+def obtener_intervalo_anos(lista):
+    # Filtramos sublistas vacías y convertimos los años a enteros, ignorando strings vacíos
+    años_int = [int(sublista[0]) for sublista in lista if sublista and sublista[0].isdigit()]
+    # Si la lista resultante está vacía, retornamos un mensaje de error o un valor predeterminado
+    if not años_int:
+        return "No hay años válidos en la lista"
+
+    # Encontramos el año mínimo y máximo
+    año_min = min(años_int)
+    año_max = max(años_int)
+    # Retornamos el string en el formato deseado
+    return f"({año_min} - {año_max})"
+
+
+
 def obtener_autores(lista):
     # Convertimos la lista en un conjunto para eliminar duplicados
     autores = set()

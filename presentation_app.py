@@ -12,7 +12,7 @@ from unidecode import unidecode
 import os
 from os.path import join
 from src.config.config import dropbox_path, image_folder, m3u_start_path, background_image_path, data_folder, output_folder, orchestra_folder, background_image_folder, merged_images_folder, DEFAULT_FONT_NAME, background_tango_degradado
-from src.utils.utils import extract_year, separar_artistas, obtener_autores, convertir_segundos
+from src.utils.utils import extract_year, separar_artistas, obtener_autores, convertir_segundos, obtener_intervalo_anos
 from src.utils.funciones_para_diapos import *
 # add_text_to_slide, calculate_positions, adjust_text_size
 from datetime import datetime, timedelta
@@ -275,6 +275,12 @@ class PresentationApp:
             for tanda_number, row in self.result.iterrows()
         ]
 
+        self.result['intervalo_anos'] = [
+            obtener_intervalo_anos(self.canciones_tanda(tanda_number + 1, ['ano']))
+            for tanda_number, row in self.result.iterrows()
+        ]
+
+        
         # Añadir la columna 'total_duration' con la suma de 'duration' en cada group_data
         self.result['duracion_total'] = self.result['group_data'].apply(
             lambda group_df: group_df['duration'].sum() if 'duration' in group_df.columns else 0
@@ -907,7 +913,7 @@ class PresentationApp:
             titulo_orquesta = self.result.iloc[tanda_number - 1]['titulo_orquesta']
             genero = self.tanda_gender = self.result.iloc[tanda_number - 1]['unique_value']
 
-            subtitulo = self.result.iloc[tanda_number - 1]['genero_autores']
+            subtitulo = self.result.iloc[tanda_number - 1]['genero_autores'] + " " + self.result.iloc[tanda_number - 1]['intervalo_anos']
 
             canciones = self.canciones_tanda(tanda_number, ['title', 'ano', 'composer'])
 

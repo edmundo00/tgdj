@@ -148,7 +148,7 @@ def add_text_to_slide(slide, calculadora_fuentes, full_text, posicion, offset, t
         font_size_paragraph = extra_paragraph_settings.get('tamano_fuente', tamano_fuente)
 
     if adjust_size == True:
-        DPI = 70
+        DPI = 65
         font_size_normal = tamano_fuente
         if extra_paragraph_text:
             porcentaje_ocupacion = 100*calculadora_fuentes.calcular_ancho_texto(get_largest_paragraph(extra_paragraph_text), extra_paragraph_settings.get('font_name', font_size_paragraph), tamaño_fuente=font_size_paragraph, DPI=DPI, unidad='emus')/posicion[2]
