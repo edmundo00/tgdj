@@ -161,7 +161,7 @@ class FontWidthCalculator():
         ]
 
         # Tamaños base para medir los anchos
-        tamaños_base = [5, 10, 20, 40]  # Tamaños base
+        tamaños_base = [5, 10, 20, 40, 100, 200]  # Tamaños base
 
         # Caracteres comunes que podrían aparecer en textos
         caracteres = (

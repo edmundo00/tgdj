@@ -416,3 +416,25 @@ def obtener_autores(lista):
         return ' y '.join(autores)
     else:
         return ', '.join(autores[:-1]) + ' y ' + autores[-1]
+
+def get_largest_paragraph(text):
+    """
+    Separates the input text into paragraphs based on newline characters and returns the largest paragraph.
+
+    Parameters:
+        text (str): The input string containing paragraphs separated by newline characters.
+
+    Returns:
+        str: The largest paragraph based on the length of characters.
+    """
+    # Split the text into paragraphs using newline as the separator
+    paragraphs = text.split('\n')
+
+    # Remove empty paragraphs (in case of multiple consecutive newline characters)
+    paragraphs = [para.strip() for para in paragraphs if para.strip()]
+
+    # Find the largest paragraph based on length
+    largest_paragraph = max(paragraphs, key=len) if paragraphs else ""
+
+    return largest_paragraph
+

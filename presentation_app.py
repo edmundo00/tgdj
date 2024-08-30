@@ -610,7 +610,7 @@ class PresentationApp:
             add_text_to_slide(
                 slide,
                 self.calculadora,
-                title,
+                f'{title}   ({year})',
                 positions_calculated["cortina_subtitle"],
                 positions_calculated["offset_shadow"]*2.5,
                 positions_initial["fuentes"]["cortina_artista"]['tamaño'],
@@ -619,10 +619,6 @@ class PresentationApp:
                 True,  # Negrita activada
                 True,  # Sombra activada
                 adjust_size = False,
-                extra_run_text = f'   ({year})',
-                extra_run_settings = {'font_name': positions_initial["fuentes"]["cortina_artista"]['tipo_fuente'],
-                                  'tamano_fuente': positions_initial["fuentes"]["cortina_artista"]['tamaño'],
-                                  'font_color_rgb': RGBColor(255, 255, 255), 'is_bold': False, 'is_italic': False},
             )
 
         else:

@@ -4,6 +4,7 @@ from src.config.config import DEFAULT_FONT_NAME, DEFAULT_CHAR_WIDTH
 from PIL import Image as PilImage
 from pptx.util import Inches
 from src.utils.calcular_ancho_fuentes import FontWidthCalculator
+from src.utils.utils import get_largest_paragraph
 
 def add_resized_image_to_slide(slide, img_path, maxima_anchura_percent, prs):
     """
@@ -199,8 +200,11 @@ def add_text_to_slide(slide, calculadora_fuentes, full_text, posicion, offset, t
     run_orquesta.font.bold = is_bold
     run_orquesta.font.name = font_name
 
-    print(f'el texto {full_text} ocupa {calculadora_fuentes.calcular_ancho_texto(full_text, font_name, tamaño_fuente=tamano_fuente, DPI=90, unidad='emus')}')
-    print(f' y el cuadro mide {posicion[2]}')
+
+    porcentaje_ocupacion = 100*calculadora_fuentes.calcular_ancho_texto(get_largest_paragraph(full_text), font_name, tamaño_fuente=tamano_fuente, DPI=70, unidad='emus')/posicion[2]
+    if porcentaje_ocupacion > 100:
+        print(f'el texto {full_text} ocupa {porcentaje_ocupacion}% del cuadro')
+
 
     # Añadir el segundo párrafo si se proporciona
     if extra_run_text:
