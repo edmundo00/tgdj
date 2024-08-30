@@ -603,7 +603,7 @@ class PresentationApp:
                 (255, 255, 255),  # Color blanco
                 True,  # Negrita activada
                 True,  # Sombra activada
-                adjust_size = False
+                adjust_size = True
             )
 
 
@@ -618,7 +618,7 @@ class PresentationApp:
                 (255, 255, 255),  # Color blanco
                 True,  # Negrita activada
                 True,  # Sombra activada
-                adjust_size = False,
+                adjust_size = True,
             )
 
         else:
@@ -634,7 +634,7 @@ class PresentationApp:
                 (255, 255, 255),  # Color blanco
                 True,  # Negrita activada
                 True,  # Sombra activada
-                adjust_size = False
+                adjust_size = True
             )
 
             add_text_to_slide(
@@ -648,7 +648,7 @@ class PresentationApp:
                 (255, 255, 255),  # Color blanco
                 True,  # Negrita activada
                 True,  # Sombra activada
-                adjust_size=False
+                adjust_size=True
             )
 
             add_text_to_slide(
@@ -662,7 +662,7 @@ class PresentationApp:
                 (255, 255, 255),  # Color blanco
                 False,  # Negrita activada
                 True,  # Sombra activada
-                adjust_size=False,
+                adjust_size=True,
                 border_color_rgb = (0, 0, 0),
                 border_width_pt = 2
             )
@@ -691,7 +691,7 @@ class PresentationApp:
                     (255, 255, 255),  # Color blanco
                     False,  # Negrita activada
                     True,  # Sombra activada
-                    adjust_size=False,
+                    adjust_size=True,
                     extra_paragraph_text = composer,
                     extra_run_text = f'   ({year})',
                     extra_paragraph_settings ={'font_name':positions_initial["fuentes"]["autores"]['tipo_fuente'], 'tamano_fuente':positions_initial["fuentes"]["autores"]['tamaño'], 'font_color_rgb':RGBColor(255, 255, 255), 'is_bold':False, 'is_italic':True},
@@ -748,6 +748,7 @@ class PresentationApp:
             (255, 255, 255),  # Color blanco
             False,  # Negrita activada
             True,  # Sombra activada
+            adjust_size=True,
         )
 
         add_text_to_slide(
@@ -761,7 +762,7 @@ class PresentationApp:
             (255, 255, 255),  # Color blanco
             False,  # Negrita activada
             True,  # Sombra activada
-            adjust_size=False,
+            adjust_size=True,
         )
 
         add_text_to_slide(
@@ -775,7 +776,7 @@ class PresentationApp:
             (255, 255, 255),  # Color blanco
             False,  # Negrita activada
             True,  # Sombra activada
-            adjust_size=False,
+            adjust_size=True,
         )
 
         for row in datos['tandas']:
@@ -790,7 +791,7 @@ class PresentationApp:
                 (255, 255, 255),  # Color blanco
                 False,  # Negrita activada
                 True,  # Sombra activada
-                adjust_size=False,
+                adjust_size=True,
             )
 
             pos["tandas_start"][1] = pos["tandas_start"][1] + pos["tandas_spacing"]
@@ -928,7 +929,7 @@ class PresentationApp:
                 "estilo": {"tamaño": 35, "tipo_fuente": DEFAULT_FONT_NAME},
                 "canciones": {"tamaño": 50, "tipo_fuente": 'Bernard MT Condensed'},
                 "anos": {"tamaño": 20, "tipo_fuente": "Arial"},
-                "autores": {"tamaño": 20, "tipo_fuente": 'Arial Narrow'},
+                "autores": {"tamaño": 20, "tipo_fuente": 'Arial'},
                 "firma": {"tamaño": 20, "tipo_fuente": DEFAULT_FONT_NAME}
             }
         }

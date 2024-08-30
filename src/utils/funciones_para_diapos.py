@@ -141,6 +141,35 @@ def add_text_to_slide(slide, calculadora_fuentes, full_text, posicion, offset, t
         Grosor del borde en puntos (por ejemplo, 2 para un borde de 2 pt de grosor).
     """
 
+    font_size_normal = tamano_fuente
+    if extra_run_text:
+        font_size_run = extra_run_settings.get('tamano_fuente', tamano_fuente)
+    if extra_paragraph_text:
+        font_size_paragraph = extra_paragraph_settings.get('tamano_fuente', tamano_fuente)
+
+    if adjust_size == True:
+        DPI = 70
+        font_size_normal = tamano_fuente
+        if extra_paragraph_text:
+            porcentaje_ocupacion = 100*calculadora_fuentes.calcular_ancho_texto(get_largest_paragraph(extra_paragraph_text), extra_paragraph_settings.get('font_name', font_size_paragraph), tamaño_fuente=font_size_paragraph, DPI=DPI, unidad='emus')/posicion[2]
+            while porcentaje_ocupacion > 100:
+                font_size_paragraph -= 1
+                porcentaje_ocupacion = 100 * calculadora_fuentes.calcular_ancho_texto(
+                    get_largest_paragraph(extra_paragraph_text),
+                    extra_paragraph_settings.get('font_name', font_size_paragraph), tamaño_fuente=font_size_paragraph,
+                    DPI=DPI, unidad='emus') / posicion[2]    # print(f'el texto {full_text} ocupa {porcentaje_ocupacion}% del cuadro')
+        if extra_run_text:
+            porcentaje_ocupacion = 100*calculadora_fuentes.calcular_ancho_texto(get_largest_paragraph(full_text+extra_run_text), font_name, tamaño_fuente=font_size_normal, DPI=DPI, unidad='emus')/posicion[2]
+            while porcentaje_ocupacion > 100:
+                font_size_normal -=1
+                porcentaje_ocupacion = 100*calculadora_fuentes.calcular_ancho_texto(get_largest_paragraph(full_text+extra_run_text), font_name, tamaño_fuente=font_size_normal, DPI=DPI, unidad='emus')/posicion[2]
+                # print(f'el texto {full_text} ocupa {porcentaje_ocupacion}% del cuadro')
+        else:
+            porcentaje_ocupacion = 100*calculadora_fuentes.calcular_ancho_texto(get_largest_paragraph(full_text), font_name, tamaño_fuente=font_size_normal, DPI=DPI, unidad='emus')/posicion[2]
+            while porcentaje_ocupacion > 100:
+                font_size_normal -= 1
+                porcentaje_ocupacion = 100*calculadora_fuentes.calcular_ancho_texto(get_largest_paragraph(full_text), font_name, tamaño_fuente=font_size_normal, DPI=DPI, unidad='emus')/posicion[2]# print(f'el texto {full_text} ocupa {porcentaje_ocupacion}% del cuadro')
+
 
 
     # Añadir las sombras si has_shadow es True para el texto principal
@@ -158,7 +187,7 @@ def add_text_to_slide(slide, calculadora_fuentes, full_text, posicion, offset, t
                 shadow_run = shadow_paragraph.add_run()
 
                 shadow_run.text = full_text
-                shadow_run.font.size = Pt(tamano_fuente)
+                shadow_run.font.size = Pt(font_size_normal)
                 shadow_run.font.color.rgb = RGBColor(0, 0, 0)  # Color negro para la sombra
                 shadow_run.font.bold = is_bold
                 shadow_run.font.name = font_name
@@ -168,7 +197,7 @@ def add_text_to_slide(slide, calculadora_fuentes, full_text, posicion, offset, t
 
                     if extra_run_settings:
                         extra_run.font.name = extra_run_settings.get('font_name', font_name)
-                        extra_run.font.size = Pt(extra_run_settings.get('tamano_fuente', tamano_fuente))
+                        extra_run.font.size = Pt(font_size_run)
                         extra_run.font.color.rgb = RGBColor(0, 0, 0)
                         extra_run.font.bold = extra_run_settings.get('is_bold', is_bold)
                         extra_run.font.italic = extra_run_settings.get('is_italic', False)
@@ -178,7 +207,7 @@ def add_text_to_slide(slide, calculadora_fuentes, full_text, posicion, offset, t
 
                     if extra_paragraph_settings:
                         extra_paragraph.font.name = extra_paragraph_settings.get('font_name', font_name)
-                        extra_paragraph.font.size = Pt(extra_paragraph_settings.get('tamano_fuente', tamano_fuente))
+                        extra_paragraph.font.size = Pt(font_size_paragraph)
                         extra_paragraph.font.color.rgb = RGBColor(0, 0, 0)
                         extra_paragraph.font.bold = extra_paragraph_settings.get('is_bold', is_bold)
                         extra_paragraph.font.italic = extra_paragraph_settings.get('is_italic', False)
@@ -195,15 +224,13 @@ def add_text_to_slide(slide, calculadora_fuentes, full_text, posicion, offset, t
     run_orquesta = title_paragraph1.add_run()
 
     run_orquesta.text = full_text
-    run_orquesta.font.size = Pt(tamano_fuente)
+    run_orquesta.font.size = Pt(font_size_normal)
     run_orquesta.font.color.rgb = RGBColor(*font_color_rgb)  # Color definido por el usuario
     run_orquesta.font.bold = is_bold
     run_orquesta.font.name = font_name
 
 
-    porcentaje_ocupacion = 100*calculadora_fuentes.calcular_ancho_texto(get_largest_paragraph(full_text), font_name, tamaño_fuente=tamano_fuente, DPI=70, unidad='emus')/posicion[2]
-    if porcentaje_ocupacion > 100:
-        print(f'el texto {full_text} ocupa {porcentaje_ocupacion}% del cuadro')
+
 
 
     # Añadir el segundo párrafo si se proporciona
@@ -213,7 +240,7 @@ def add_text_to_slide(slide, calculadora_fuentes, full_text, posicion, offset, t
 
         if extra_run_settings:
             extra_run.font.name = extra_run_settings.get('font_name', font_name)
-            extra_run.font.size = Pt(extra_run_settings.get('tamano_fuente', tamano_fuente))
+            extra_run.font.size = Pt(font_size_run)
             extra_run.font.color.rgb = RGBColor(*extra_run_settings.get('font_color_rgb', font_color_rgb))
             extra_run.font.bold = extra_run_settings.get('is_bold', is_bold)
             extra_run.font.italic = extra_run_settings.get('is_italic', False)
@@ -225,7 +252,7 @@ def add_text_to_slide(slide, calculadora_fuentes, full_text, posicion, offset, t
 
         if extra_paragraph_settings:
             extra_paragraph.font.name = extra_paragraph_settings.get('font_name', font_name)
-            extra_paragraph.font.size = Pt(extra_paragraph_settings.get('tamano_fuente', tamano_fuente))
+            extra_paragraph.font.size = Pt(font_size_paragraph)
             extra_paragraph.font.color.rgb = RGBColor(*extra_paragraph_settings.get('font_color_rgb', font_color_rgb))
             extra_paragraph.font.bold = extra_paragraph_settings.get('is_bold', is_bold)
             extra_paragraph.font.italic = extra_paragraph_settings.get('is_italic', False)
