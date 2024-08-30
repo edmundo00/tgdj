@@ -3,6 +3,7 @@ from pptx.dml.color import RGBColor
 from src.config.config import DEFAULT_FONT_NAME, DEFAULT_CHAR_WIDTH
 from PIL import Image as PilImage
 from pptx.util import Inches
+from src.utils.calcular_ancho_fuentes import FontWidthCalculator
 
 def add_resized_image_to_slide(slide, img_path, maxima_anchura_percent, prs):
     """
@@ -53,6 +54,7 @@ def adjust_text_size(text_frame, max_width_cm, max_font_size=100, min_font_size=
     # Convertir las medidas de cm a puntos (pt)
     max_width_pt = max_width_cm / 11500
 
+
     font_size = max_font_size
     text = ''.join(run.text for paragraph in text_frame.paragraphs for run in paragraph.runs)
     text_length = len(text)
@@ -68,6 +70,9 @@ def adjust_text_size(text_frame, max_width_cm, max_font_size=100, min_font_size=
         char_width = (DEFAULT_CHAR_WIDTH / 100) * font_size
         estimated_text_width = char_width * text_length
 
+        # Calcular el ancho del texto
+
+
         # Si el ancho estimado del texto es menor o igual al ancho máximo permitido, se rompe el bucle
         if estimated_text_width <= max_width_pt:
             break
@@ -81,10 +86,10 @@ def adjust_text_size(text_frame, max_width_cm, max_font_size=100, min_font_size=
             run.font.name = fuente
 
 
-def add_text_to_slide(slide, full_text, posicion, offset, tamano_fuente, font_name, font_color_rgb, is_bold,
+def add_text_to_slide(slide, calculadora_fuentes, full_text, posicion, offset, tamano_fuente, font_name, font_color_rgb, is_bold,
                       has_shadow, extra_paragraph_text=None, extra_run_text=None,
                       extra_paragraph_settings=None, extra_run_settings=None,
-                      border_color_rgb=None, border_width_pt=None):
+                      border_color_rgb=None, border_width_pt=None, adjust_size=False):
     """
     Añade texto con sombra en una diapositiva, si se especifica. También permite agregar un segundo párrafo y run opcionalmente, ambos con sombras si se especifica.
     Además, permite añadir un borde alrededor del cuadro de texto.
@@ -134,6 +139,9 @@ def add_text_to_slide(slide, full_text, posicion, offset, tamano_fuente, font_na
     :param border_width_pt: int or float, optional
         Grosor del borde en puntos (por ejemplo, 2 para un borde de 2 pt de grosor).
     """
+
+
+
     # Añadir las sombras si has_shadow es True para el texto principal
     if has_shadow:
         for x_offset in [-offset, offset]:
@@ -191,26 +199,20 @@ def add_text_to_slide(slide, full_text, posicion, offset, tamano_fuente, font_na
     run_orquesta.font.bold = is_bold
     run_orquesta.font.name = font_name
 
-    # # Añadir sombra al segundo párrafo si se proporciona
-    # if extra_paragraph_text and has_shadow:
-    #     for x_offset in [-offset, offset]:
-    #         for y_offset in [-offset, offset]:
-    #             shadow_paragraph = slide.shapes.add_textbox(
-    #                 posicion[0] + x_offset,
-    #                 posicion[1] + y_offset + 100000,  # Añadir un desplazamiento vertical
-    #                 posicion[2],
-    #                 posicion[3]
-    #             )
-    #             shadow_frame = shadow_paragraph.text_frame
-    #             shadow_paragraph = shadow_frame.add_paragraph()
-    #             shadow_paragraph.text = extra_paragraph_text
-    #
-    #             if extra_paragraph_settings:
-    #                 shadow_paragraph.font.size = Pt(extra_paragraph_settings.get('tamano_fuente', tamano_fuente))
-    #                 shadow_paragraph.font.color.rgb = RGBColor(0, 0, 0)
-    #                 shadow_paragraph.font.bold = extra_paragraph_settings.get('is_bold', is_bold)
-    #                 shadow_paragraph.font.name = extra_paragraph_settings.get('font_name', font_name)
-    #                 shadow_paragraph.font.italic = extra_paragraph_settings.get('is_italic', False)
+    print(f'el texto {full_text} ocupa {calculadora_fuentes.calcular_ancho_texto(full_text, font_name, tamaño_fuente=tamano_fuente, DPI=90, unidad='emus')}')
+    print(f' y el cuadro mide {posicion[2]}')
+
+    # Añadir el segundo párrafo si se proporciona
+    if extra_run_text:
+        extra_run = title_paragraph1.add_run()
+        extra_run.text = extra_run_text
+
+        if extra_run_settings:
+            extra_run.font.name = extra_run_settings.get('font_name', font_name)
+            extra_run.font.size = Pt(extra_run_settings.get('tamano_fuente', tamano_fuente))
+            extra_run.font.color.rgb = RGBColor(*extra_run_settings.get('font_color_rgb', font_color_rgb))
+            extra_run.font.bold = extra_run_settings.get('is_bold', is_bold)
+            extra_run.font.italic = extra_run_settings.get('is_italic', False)
 
     # Añadir el segundo párrafo si se proporciona
     if extra_paragraph_text:
@@ -223,40 +225,6 @@ def add_text_to_slide(slide, full_text, posicion, offset, tamano_fuente, font_na
             extra_paragraph.font.color.rgb = RGBColor(*extra_paragraph_settings.get('font_color_rgb', font_color_rgb))
             extra_paragraph.font.bold = extra_paragraph_settings.get('is_bold', is_bold)
             extra_paragraph.font.italic = extra_paragraph_settings.get('is_italic', False)
-
-    # # Añadir sombra al segundo run si se proporciona
-    # if extra_run_text and has_shadow:
-    #     for x_offset in [-offset, offset]:
-    #         for y_offset in [-offset, offset]:
-    #             shadow_run = slide.shapes.add_textbox(
-    #                 posicion[0] + x_offset,
-    #                 posicion[1] + y_offset,
-    #                 posicion[2],
-    #                 posicion[3]
-    #             )
-    #             shadow_frame = shadow_run.text_frame
-    #             shadow_paragraph = shadow_frame.paragraphs[0]
-    #             shadow_run = shadow_paragraph.add_run()
-    #
-    #             shadow_run.text = extra_run_text
-    #             if extra_run_settings:
-    #                 shadow_run.font.size = Pt(extra_run_settings.get('tamano_fuente', tamano_fuente))
-    #                 shadow_run.font.color.rgb = RGBColor(0, 0, 0)
-    #                 shadow_run.font.bold = extra_run_settings.get('is_bold', is_bold)
-    #                 shadow_run.font.name = extra_run_settings.get('font_name', font_name)
-    #                 shadow_run.font.italic = extra_run_settings.get('is_italic', False)
-
-    # Añadir el segundo run si se proporciona
-    if extra_run_text:
-        extra_run = title_paragraph1.add_run()
-        extra_run.text = extra_run_text
-
-        if extra_run_settings:
-            extra_run.font.name = extra_run_settings.get('font_name', font_name)
-            extra_run.font.size = Pt(extra_run_settings.get('tamano_fuente', tamano_fuente))
-            extra_run.font.color.rgb = RGBColor(*extra_run_settings.get('font_color_rgb', font_color_rgb))
-            extra_run.font.bold = extra_run_settings.get('is_bold', is_bold)
-            extra_run.font.italic = extra_run_settings.get('is_italic', False)
 
     # Añadir borde al cuadro de texto si se especifica
     if border_color_rgb and border_width_pt:

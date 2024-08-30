@@ -16,6 +16,7 @@ from src.utils.utils import extract_year, separar_artistas, obtener_autores, con
 from src.utils.funciones_para_diapos import *
 # add_text_to_slide, calculate_positions, adjust_text_size
 from datetime import datetime, timedelta
+from src.utils.calcular_ancho_fuentes import FontWidthCalculator
 
 # Estructura de self.result:
 # --------------------------
@@ -90,6 +91,12 @@ class PresentationApp:
         self.root = root
         self.root.title("Presentation Creator")
         self.root.geometry('1500x800')  # Define el tamaño inicial de la ventana
+
+        # Uso de la clase FontWidthCalculator
+        self.calculadora = FontWidthCalculator()
+        # Crear la base de datos y cargarla en memoria
+        self.calculadora.crear_base_de_datos()
+
         # self.root.state('zoomed')
         # Set the window to be on top
         # self.root.attributes('-topmost', True)
@@ -585,55 +592,44 @@ class PresentationApp:
         if 'tango' not in self.tanda_gender:
             title, year, composer = lista_canciones[0]
 
-            cortina_title = slide.shapes.add_textbox(positions_calculated["cortina_title"][0],
-                                                     positions_calculated["cortina_title"][1],
-                                                     positions_calculated["cortina_title"][2],
-                                                     positions_calculated["cortina_title"][3])
-            title_frame = cortina_title.text_frame
-            title_frame.clear()
+            add_text_to_slide(
+                slide,
+                self.calculadora,
+                f'{orchestra_value}',
+                positions_calculated["cortina_title"],
+                positions_calculated["offset_shadow"]*2.5,
+                positions_initial["fuentes"]["cortina_titulo"]['tamaño'],
+                positions_initial["fuentes"]["cortina_titulo"]['tipo_fuente'],
+                (255, 255, 255),  # Color blanco
+                True,  # Negrita activada
+                True,  # Sombra activada
+                adjust_size = False
+            )
 
-            title_paragraph1 = title_frame.paragraphs[0]
-            run_orquesta = title_paragraph1.add_run()
-            run_orquesta.text = f'{orchestra_value}'
-            run_orquesta.font.size = Pt(positions_initial["fuentes"]["cortina_titulo"]['tamaño'])
-            run_orquesta.font.color.rgb = RGBColor(255, 255, 255)
-            run_orquesta.font.bold = True
-            run_orquesta.font.name = positions_initial["fuentes"]["cortina_titulo"]['tipo_fuente']  # Aplicar la fuente desde config.py
 
-            # Ajustar el tamaño del texto según el ancho y altura disponibles
-            adjust_text_size(title_frame,
-                             max_width_cm=positions_calculated["cortina_title"][2],
-                             max_font_size=positions_initial["fuentes"]["cortina_titulo"]['tamaño'], fuente=positions_initial["fuentes"]["cortina_titulo"]['tipo_fuente'])
-
-            cortina_subtitle = slide.shapes.add_textbox(positions_calculated["cortina_subtitle"][0],
-                                                        positions_calculated["cortina_subtitle"][1],
-                                                        positions_calculated["cortina_subtitle"][2],
-                                                        positions_calculated["cortina_subtitle"][3])
-            text_frame = cortina_subtitle.text_frame
-            text_frame.clear()
-
-            paragraph1 = text_frame.paragraphs[0]
-            run_titulo = paragraph1.add_run()
-            run_titulo.text = title
-            run_titulo.font.size = Pt(positions_initial["fuentes"]["cortina_artista"]['tamaño'])
-            run_titulo.font.color.rgb = RGBColor(255, 255, 255)
-            run_titulo.font.bold = True
-            run_titulo.font.name = positions_initial["fuentes"]["cortina_artista"]['tipo_fuente']  # Aplicar la fuente desde config.py
-
-            run_fecha = paragraph1.add_run()
-            run_fecha.text = f'   ({year})'
-            run_fecha.font.color.rgb = RGBColor(255, 255, 255)
-            run_fecha.font.name = DEFAULT_FONT_NAME  # Aplicar la fuente desde config.py
-
-            # Ajustar el tamaño del texto según el ancho y altura disponibles
-            adjust_text_size(text_frame,
-                             max_width_cm=positions_calculated["cortina_subtitle"][2],
-                             max_font_size=positions_initial["fuentes"]["cortina_artista"]['tamaño'], fuente=positions_initial["fuentes"]["cortina_artista"]['tipo_fuente'])
+            add_text_to_slide(
+                slide,
+                self.calculadora,
+                title,
+                positions_calculated["cortina_subtitle"],
+                positions_calculated["offset_shadow"]*2.5,
+                positions_initial["fuentes"]["cortina_artista"]['tamaño'],
+                positions_initial["fuentes"]["cortina_artista"]['tipo_fuente'],
+                (255, 255, 255),  # Color blanco
+                True,  # Negrita activada
+                True,  # Sombra activada
+                adjust_size = False,
+                extra_run_text = f'   ({year})',
+                extra_run_settings = {'font_name': positions_initial["fuentes"]["cortina_artista"]['tipo_fuente'],
+                                  'tamano_fuente': positions_initial["fuentes"]["cortina_artista"]['tamaño'],
+                                  'font_color_rgb': RGBColor(255, 255, 255), 'is_bold': False, 'is_italic': False},
+            )
 
         else:
 
             add_text_to_slide(
                 slide,
+                self.calculadora,
                 titulo_orquesta,
                 positions_calculated["tanda_orquesta_shadow"],
                 positions_calculated["offset_shadow"]*2.5,
@@ -641,11 +637,13 @@ class PresentationApp:
                 positions_initial["fuentes"]["orquesta"]['tipo_fuente'],
                 (255, 255, 255),  # Color blanco
                 True,  # Negrita activada
-                True  # Sombra activada
+                True,  # Sombra activada
+                adjust_size = False
             )
 
             add_text_to_slide(
                 slide,
+                self.calculadora,
                 subtitulo,
                 positions_calculated["tanda_cantor_shadow"],
                 positions_calculated["offset_shadow"],
@@ -653,11 +651,13 @@ class PresentationApp:
                 positions_initial["fuentes"]["estilo"]['tipo_fuente'],
                 (255, 255, 255),  # Color blanco
                 True,  # Negrita activada
-                True  # Sombra activada
+                True,  # Sombra activada
+                adjust_size=False
             )
 
             add_text_to_slide(
                 slide,
+                self.calculadora,
                 f'© TDJ Edmundo Fraga\n{self.nombre_milonga_entry.get()}\n{self.fecha_entry.get()}',
                 positions_calculated["firma_tgdj_box"],
                 positions_calculated["offset_shadow"],
@@ -666,6 +666,7 @@ class PresentationApp:
                 (255, 255, 255),  # Color blanco
                 False,  # Negrita activada
                 True,  # Sombra activada
+                adjust_size=False,
                 border_color_rgb = (0, 0, 0),
                 border_width_pt = 2
             )
@@ -685,6 +686,7 @@ class PresentationApp:
 
                 add_text_to_slide(
                     slide,
+                    self.calculadora,
                     title,
                     positions_calculated["canciones_start"],
                     positions_calculated["offset_shadow"],
@@ -693,6 +695,7 @@ class PresentationApp:
                     (255, 255, 255),  # Color blanco
                     False,  # Negrita activada
                     True,  # Sombra activada
+                    adjust_size=False,
                     extra_paragraph_text = composer,
                     extra_run_text = f'   ({year})',
                     extra_paragraph_settings ={'font_name':positions_initial["fuentes"]["autores"]['tipo_fuente'], 'tamano_fuente':positions_initial["fuentes"]["autores"]['tamaño'], 'font_color_rgb':RGBColor(255, 255, 255), 'is_bold':False, 'is_italic':True},
@@ -740,6 +743,7 @@ class PresentationApp:
 
         add_text_to_slide(
             slide,
+            self.calculadora,
             datos["milonga"],
             pos["Milonga"],
             pos["offset_shadow"],
@@ -752,6 +756,7 @@ class PresentationApp:
 
         add_text_to_slide(
             slide,
+            self.calculadora,
             datos["fecha"] + " de " + datos["inicio"] +" a "+  datos["finalizacion"] + " duracion: " + datos["duracion"],
             pos["Fecha_Milonga"],
             pos["offset_shadow"],
@@ -760,10 +765,12 @@ class PresentationApp:
             (255, 255, 255),  # Color blanco
             False,  # Negrita activada
             True,  # Sombra activada
+            adjust_size=False,
         )
 
         add_text_to_slide(
             slide,
+            self.calculadora,
             datos['duracion_total_sin_cortina'] + ", " + datos['duracion_total_estimada'],
             pos["Duracion_Milonga"],
             pos["offset_shadow"],
@@ -772,11 +779,13 @@ class PresentationApp:
             (255, 255, 255),  # Color blanco
             False,  # Negrita activada
             True,  # Sombra activada
+            adjust_size=False,
         )
 
         for row in datos['tandas']:
             add_text_to_slide(
                 slide,
+                self.calculadora,
                 row,
                 pos["tandas_start"],
                 pos["offset_shadow"],
@@ -785,6 +794,7 @@ class PresentationApp:
                 (255, 255, 255),  # Color blanco
                 False,  # Negrita activada
                 True,  # Sombra activada
+                adjust_size=False,
             )
 
             pos["tandas_start"][1] = pos["tandas_start"][1] + pos["tandas_spacing"]
@@ -922,7 +932,7 @@ class PresentationApp:
                 "estilo": {"tamaño": 35, "tipo_fuente": DEFAULT_FONT_NAME},
                 "canciones": {"tamaño": 50, "tipo_fuente": 'Bernard MT Condensed'},
                 "anos": {"tamaño": 20, "tipo_fuente": "Arial"},
-                "autores": {"tamaño": 20, "tipo_fuente": 'Bernard MT Condensed'},
+                "autores": {"tamaño": 20, "tipo_fuente": 'Arial Narrow'},
                 "firma": {"tamaño": 20, "tipo_fuente": DEFAULT_FONT_NAME}
             }
         }
