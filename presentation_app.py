@@ -280,7 +280,7 @@ class PresentationApp:
             for tanda_number, row in self.result.iterrows()
         ]
 
-        
+
         # Añadir la columna 'total_duration' con la suma de 'duration' en cada group_data
         self.result['duracion_total'] = self.result['group_data'].apply(
             lambda group_df: group_df['duration'].sum() if 'duration' in group_df.columns else 0
