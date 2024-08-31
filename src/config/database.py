@@ -17,7 +17,7 @@ class Database:
             print(f"Error: The database file at path '{dbpath}' does not exist.")
             return
         
-        self.db = pd.read_csv(dbpath, encoding="utf-8", sep=";")
+        self.db = pd.read_csv(dbpath, encoding="utf-8", sep=";", na_filter=False)
         if self.db is not None:
             self.dic_art = {artista: group for artista, group in self.db.groupby('artista_min')}
             print("Data loaded successfully")
