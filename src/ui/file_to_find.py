@@ -9,7 +9,7 @@ from src.config.database import Database
 
 class FILETOFIND:
 
-    def __init__(self, ancho_disponible, framefiles, framedatabase, ruta_archivo, frame_number, root):
+    def __init__(self, framefiles, framedatabase, frames_columnas_archivo, frames_columnas_resultado, ruta_archivo, frame_number, root):
         # print(db)
         self.data_store = Database()
         self.db = self.data_store.get_db()
@@ -21,10 +21,11 @@ class FILETOFIND:
         self.ruta_archivo = ruta_archivo
         self.vars = []
         self.checkbuttons = []
-        self.ancho_disponible = ancho_disponible
         self.frame_number = frame_number
         self.framefiles = framefiles
         self.framedatabase = framedatabase
+        self.frames_columnas_archivo = frames_columnas_archivo
+        self.frames_columnas_resultado = frames_columnas_resultado  # Asegúrate
 
         self.leer_tags()
 
@@ -33,10 +34,10 @@ class FILETOFIND:
         self.representar_datos()
 
     def representar_datos(self):
-        # Determine background color based on frame number
+        # Determinar color de fondo basado en el número de frame
         color_de_fondo = 'whitesmoke' if es_par(self.frame_number) else 'lightgrey'
 
-        # Define colors for different types of matches
+        # Definir colores para diferentes tipos de coincidencias
         colores_por_coincidencia = {
             0: 'palegreen',
             1: 'lime',
@@ -46,123 +47,78 @@ class FILETOFIND:
             5: 'red'
         }
 
-        # Determine the frame color based on the match type
+        # Asignar color de fondo basado en el tipo de coincidencia
         color_de_fondo = colores_por_coincidencia.get(self.tipo_de_coincidencia, color_de_fondo)
 
-        # Set frame height based on match type
-        altura_frame = 27 * (
-            1 if self.tipo_de_coincidencia == 2 or len(self.coincidencias) == 0 else len(self.coincidencias))
-
-        # Calculate frame widths
-        ancho_coincidencias = self.ancho_disponible * (5.4 / 10)
-        ancho_archivo = self.ancho_disponible * (4.6 / 10)
-
-        # Create frames for coincidences and file data
-        self.frame_coincidencias = tk.Frame(self.framedatabase, height=altura_frame,
-                                            width=ancho_coincidencias, bd=2, relief="sunken", bg=color_de_fondo)
-        self.frame_archivo = tk.Frame(self.framefiles, bd=2, relief="sunken",
-                                      height=altura_frame, width=ancho_archivo, bg=color_de_fondo)
-
-        # Grid setup for both frames
-        self.frame_coincidencias.grid(row=self.frame_number, column=0, sticky="nsew")
-        # self.frame_coincidencias.grid_propagate(False)
-        self.frame_archivo.grid(row=self.frame_number, column=0, sticky="nsew")
-        # self.frame_archivo.grid_propagate(False)
-
-        # Font styles
+        # Estilos de fuente
         fuente_10_bold = ('Consolas', 11, "bold")
         fuente_10 = ('Consolas', 11)
 
-        # Column configurations stored in a dictionary with descriptions
-        columnas_config = {
-            'archivo': [
-                {'col': 1, 'weight': 0, 'minsize': 10, 'description': 'Info'},
-                {'col': 2, 'weight': 4, 'minsize': 100, 'description': 'Titulo'},
-                {'col': 3, 'weight': 3, 'minsize': 75, 'description': 'Orquesta'},
-                {'col': 4, 'weight': 3, 'minsize': 75, 'description': 'Cantor'},
-                {'col': 5, 'weight': 0, 'minsize': 50, 'description': 'Fecha'},
-                {'col': 6, 'weight': 0, 'minsize': 10, 'description': 'Play'},
-                {'col': 7, 'weight': 0, 'minsize': 10, 'description': 'Pausa'},
-            ],
-            'resultado': [
-                {'col': 1, 'weight': 0, 'minsize': 10, 'description': 'Checkbox'},
-                {'col': 2, 'weight': 4, 'minsize': 100, 'description': 'Titulo'},
-                {'col': 3, 'weight': 3, 'minsize': 75, 'description': 'Orquesta'},
-                {'col': 4, 'weight': 3, 'minsize': 75, 'description': 'Cantor'},
-                {'col': 5, 'weight': 0, 'minsize': 50, 'description': 'Estilo'},
-                {'col': 6, 'weight': 0, 'minsize': 10, 'description': 'Info'},
-                {'col': 7, 'weight': 0, 'minsize': 10, 'description': 'Play_30'},
-                {'col': 8, 'weight': 0, 'minsize': 10, 'description': 'Play_10'},
-                {'col': 9, 'weight': 0, 'minsize': 10, 'description': 'Pausa'},
-            ]
-        }
+        # Usar numero_canciones para determinar la fila actual
+        current_row = self.frame_number
 
-        # Apply column configurations using the dictionary
-        for config in columnas_config['resultado']:
-            self.frame_coincidencias.grid_columnconfigure(config['col'], weight=config['weight'],
-                                                          minsize=config['minsize'])
-
-        for config in columnas_config['archivo']:
-            self.frame_archivo.grid_columnconfigure(config['col'], weight=config['weight'], minsize=config['minsize'])
-
-        # Handle displaying matches or "NADA ENCONTRADO"
+        # Manejar la visualización de coincidencias o "NADA ENCONTRADO"
         if self.coincidencias.empty:
-            self._crear_label(self.frame_coincidencias, text=self.frame_number, row=0, col=0, font=fuente_10,
-                              bg=color_de_fondo)
-            self._crear_label(self.frame_coincidencias, text="NADA ENCONTRADO", row=0, col=1, font=fuente_10,
-                              bg=color_de_fondo)
+            self._crear_label(self.frames_columnas_resultado.get('Checkbox', self.framedatabase),
+                              text=self.frame_number, row=current_row, col=0, font=fuente_10, bg=color_de_fondo)
+            self._crear_label(self.frames_columnas_resultado.get('Titulo', self.framedatabase), text="NADA ENCONTRADO",
+                              row=current_row, col=0, font=fuente_10, bg=color_de_fondo)
         else:
             for counter, (_, row) in enumerate(self.coincidencias.iterrows()):
                 if isinstance(row, pd.Series) and 'audio30' in row and 'audio10' in row:
-                    self._crear_checkbutton(self.frame_coincidencias, counter)
+                    self._crear_checkbutton(self.frames_columnas_resultado.get('Checkbox', self.framedatabase),
+                                            current_row)
 
                     labels_data = [
-                        (row['titulo'], 2, None, "w"),
-                        (row['artista'], 3, None, "w"),
-                        (row['cantor'], 4, None, "w"),
-                        (row['estilo'], 5, 11, "w"),
-                        (row['fecha'], 6, 10, "w"),
+                        (row['titulo'], 'Titulo', None, "w"),
+                        (row['artista'], 'Orquesta', None, "w"),
+                        (row['cantor'], 'Cantor', None, "w"),
+                        (row['estilo'], 'Estilo', 11, "w"),
+                        (row['fecha'], 'Fecha', 10, "w"),
                     ]
 
-                    for text, col, char_width, anchor in labels_data:
-                        self._crear_label(self.frame_coincidencias, text=text, row=counter, col=col,
-                                          font=fuente_10_bold if col == 2 else fuente_10, bg=color_de_fondo,
-                                          width=char_width, anchor=anchor)
+                    for text, description, char_width, anchor in labels_data:
+                        if description in self.frames_columnas_resultado:
+                            self._crear_label(self.frames_columnas_resultado[description], text=text, row=current_row,
+                                              col=0,
+                                              font=fuente_10_bold if description == 'Titulo' else fuente_10,
+                                              bg=color_de_fondo, width=char_width, anchor=anchor)
+                        else:
+                            print(f"Frame for '{description}' not found in frames_columnas_resultado.")
 
-                    self._crear_button(self.frame_coincidencias, image=self.info_icon,
-                                       command=lambda r=row: self.show_popup_db(r), row=counter, col=7,
+                    self._crear_button(self.frames_columnas_resultado.get('Info', self.framedatabase),
+                                       image=self.info_icon,
+                                       command=lambda r=row: self.show_popup_db(r), row=current_row, col=0,
                                        bg=color_de_fondo)
-                    self._crear_play_buttons(self.frame_coincidencias, row, counter, bg=color_de_fondo)
+                    self._crear_play_buttons(self.frames_columnas_resultado.get('Play_30', self.framedatabase), row,
+                                             current_row, bg=color_de_fondo)
                 else:
                     print(f"Unexpected row format or missing columns: {row}")
 
             if self.hay_coincidencia_preferida:
                 self.activar_checkbox(self.coincidencia_preferida)
 
-        # Create labels and buttons for the file information
-        self._crear_button(self.frame_archivo, image=self.info_icon, command=self.show_popup_file, row=0, col=1,
-                           bg=color_de_fondo)
+        # Crear labels y botones para la información del archivo
+        self._crear_button(self.frames_columnas_archivo.get('Info', self.framefiles), image=self.info_icon,
+                           command=self.show_popup_file, row=current_row, col=0, bg=color_de_fondo)
 
         file_labels_data = [
-            (self.tags.title, 2, None),
-            (self.artists1, 3, None),
-            (self.artists2, 4, None),
-            (self.tags.year, 5, 11),
+            (self.tags.title, 'Titulo', None),
+            (self.artists1, 'Orquesta', None),
+            (self.artists2, 'Cantor', None),
+            (self.tags.year, 'Fecha', 11),
         ]
 
-        for text, col, char_width in file_labels_data:
-            self._crear_label(self.frame_archivo, text=text, row=0, col=col,
-                              font=fuente_10_bold if col == 2 else fuente_10, bg=color_de_fondo, width=char_width)
+        for text, description, char_width in file_labels_data:
+            if description in self.frames_columnas_archivo:
+                self._crear_label(self.frames_columnas_archivo[description], text=text, row=current_row, col=0,
+                                  font=fuente_10_bold if description == 'Titulo' else fuente_10,
+                                  bg=color_de_fondo, width=char_width)
+            else:
+                print(f"Frame for '{description}' not found in frames_columnas_archivo.")
 
-        self._crear_play_button_file(self.frame_archivo, self.tags._filename, len(file_labels_data) + 2,
-                                     bg=color_de_fondo)
-
-
-
-
-
-
-
+        self._crear_play_button_file(self.frames_columnas_archivo.get('Play', self.framefiles), self.tags._filename,
+                                     current_row, bg=color_de_fondo)
 
     def _crear_label(self, parent, text, row, col, font, bg, width=None, anchor="w"):
         label = tk.Label(parent, text=text, font=font, borderwidth=1, relief="solid", bg=bg, anchor=anchor)

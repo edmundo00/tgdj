@@ -8,161 +8,19 @@ from src.ui.file_to_find import FILETOFIND
 from src.utils.utils import *
 from src.config.database import Database
 import src.config.config as config
+from src.config.config import columnas_config
 
 import tkinter as tk
-
-
-# class Ventana:
-#     def __init__(self, root):
-#         self.data_store = Database()
-#         self.root = root
-#         self.root.title("Tkinter Window with Menu, Icon, and Status Bar")
-#         self.root.geometry('1500x800')
-#
-#         # Create a menu bar
-#         self.menubar = tk.Menu(root)
-#         self.root.config(menu=self.menubar)
-#
-#         # Create File and Edit menus
-#         self.file_menu = tk.Menu(self.menubar, tearoff=0)
-#         self.menubar.add_cascade(label="File", menu=self.file_menu)
-#         self.file_menu.add_command(label="New")
-#         self.file_menu.add_command(label="Open")
-#         self.file_menu.add_command(label="Save")
-#         self.file_menu.add_separator()
-#         self.file_menu.add_command(label="Exit", command=self.root.quit)
-#
-#         self.edit_menu = tk.Menu(self.menubar, tearoff=0)
-#         self.menubar.add_cascade(label="Edit", menu=self.edit_menu)
-#         self.edit_menu.add_command(label="Undo")
-#         self.edit_menu.add_command(label="Redo")
-#         self.edit_menu.add_separator()
-#         self.edit_menu.add_command(label="Cut")
-#         self.edit_menu.add_command(label="Copy")
-#         self.edit_menu.add_command(label="Paste")
-#
-#         # Create an icon bar
-#         self.icon_bar = tk.Frame(root, relief=tk.RAISED, bd=2)
-#         self.icon_bar.grid(row=0, column=0, columnspan=3, sticky="ew")
-#
-#         # Load icons and create buttons for the icon bar
-#         icon_names = ['archivo', 'directorio', 'correr', 'transfer', 'trash', 'searchdb', 'presentacion', 'playlist',
-#                       'convert_playlist']
-#         for icon_name in icon_names:
-#             setattr(self, f"{icon_name}_icon", tk.PhotoImage(file=icon_paths[icon_name]))
-#
-#         buttons = [
-#             (self.archivo_icon, self.load_music_file),
-#             (self.directorio_icon, self.load_music_folder),
-#             (self.correr_icon, None),
-#             (self.transfer_icon, self.aplicartags),
-#             (self.trash_icon, self.borrar_todo),
-#             (self.searchdb_icon, self.searchdb),
-#             (self.presentacion_icon, self.open_presentation_popup),
-#             (self.playlist_icon, self.open_playlist),
-#             (self.convert_playlist_icon, self.convert_playlist),
-#         ]
-#
-#         for i, (icon, command) in enumerate(buttons):
-#             btn = tk.Button(self.icon_bar, image=icon, relief=tk.FLAT, command=command)
-#             btn.grid(row=0, column=i, padx=2, pady=2)
-#
-#         # Ensure the columns of the root window expand to fill the width
-#         self.root.grid_columnconfigure(0, weight=1)
-#
-#         # Create a fixed frame for titles with column weights
-#         self.title_frame = tk.Frame(root, relief=tk.RAISED, bd=2)
-#         self.title_frame.grid(row=1, column=0, columnspan=3, sticky="ew")
-#         self.title_frame.grid_propagate(True)  # Allow resizing to content
-#
-#         # Set weights and minsize explicitly for the title columns
-#         self.title_frame.grid_columnconfigure(0, weight=47, minsize=200)  # Control size for "File Tags"
-#         self.title_frame.grid_columnconfigure(1, weight=53, minsize=200)  # Control size for "Database Tags"
-#
-#         # Create the title for File Tags (fixed label)
-#         file_tags_label = tk.Label(
-#             self.title_frame,
-#             text="File Tags",
-#             font=('Consolas', 12, 'bold'),
-#             bg='lightblue',
-#             relief=tk.SOLID,
-#             bd=1
-#         )
-#         file_tags_label.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
-#
-#         # Create the title for Database Tags (fixed label)
-#         database_tags_label = tk.Label(
-#             self.title_frame,
-#             text="Database Tags",
-#             font=('Consolas', 12, 'bold'),
-#             bg='lightblue',
-#             relief=tk.SOLID,
-#             bd=1
-#         )
-#         database_tags_label.grid(row=0, column=1, padx=5, pady=5, sticky="nsew")
-#
-#         # Create the main content area
-#         self.canvas_frame = tk.Frame(root)
-#         self.canvas_frame.grid(row=2, column=0, columnspan=3, sticky="nsew")
-#
-#         # Correctly set grid weights for proper expansion
-#         self.root.grid_rowconfigure(2, weight=1)  # Main content should expand fully
-#
-#         # Create a canvas widget for scrolling content
-#         self.canvas = tk.Canvas(self.canvas_frame)
-#         self.canvas.grid(row=0, column=0, sticky="nsew")
-#
-#         # Add a vertical scrollbar to the canvas
-#         self.scrollbar = tk.Scrollbar(self.canvas_frame, orient="vertical", command=self.canvas.yview)
-#         self.scrollbar.grid(row=0, column=1, sticky="ns")
-#
-#         # Configure the canvas to use the scrollbar
-#         self.canvas.configure(yscrollcommand=self.scrollbar.set)
-#
-#         # Create a frame inside the canvas for the main content
-#         self.main_content = tk.Frame(self.canvas)
-#         self.canvas.create_window((0, 0), window=self.main_content, anchor="nw")
-#
-#         # Bind the canvas to update its scroll region whenever the main_content frame changes size
-#         self.main_content.bind("<Configure>", lambda event: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
-#
-#         # Ensure the canvas expands correctly
-#         self.canvas_frame.grid_rowconfigure(0, weight=1)
-#         self.canvas_frame.grid_columnconfigure(0, weight=1)
-#
-#         # Bind mousewheel scrolling to the canvas
-#         self.canvas.bind_all("<MouseWheel>",
-#                              lambda event: self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units"))
-#
-#         # Ensure the main content subframes occupy the correct space
-#         self.subframe1 = tk.Frame(self.main_content, bg='white', bd=1, relief="ridge")
-#         self.subframe1.grid(row=0, column=0, sticky="nsew")
-#
-#         self.subframe2 = tk.Frame(self.main_content, bg='white', bd=1, relief="ridge")
-#         self.subframe2.grid(row=0, column=1, sticky="nsew")
-#
-#         # Set proper weights for subframes
-#         self.main_content.grid_columnconfigure(0, weight=1)
-#         self.main_content.grid_columnconfigure(1, weight=1)
-#         self.main_content.grid_rowconfigure(0, weight=1)
-#
-#         # Create a status bar at the bottom
-#         self.status_bar = tk.Label(root, text="Status: Ready", bd=1, relief=tk.SUNKEN, anchor=tk.W)
-#         self.status_bar.grid(row=3, column=0, columnspan=3, sticky="ew")
-#
-#         # Fix status bar to the bottom and prevent overlapping
-#         self.root.grid_rowconfigure(3, weight=0)
-#
-#         # Start the event loop
-#         self.root.after(100, self.calculate_available_width)
-#         self.root.mainloop()
 
 class Ventana:
     def __init__(self, root):
         self.data_store = Database()
         self.root = root
 
-        self.root.bind("<Configure>", self.update_canvas)
+        # Inicializar los diccionarios para almacenar los frames de columnas
+        self.frames_columnas_archivo = {}
+        self.frames_columnas_resultado = {}
+
 
         self.root.title("Tkinter Window with Menu, Icon, and Status Bar")
         self.root.geometry('1500x800')
@@ -178,7 +36,6 @@ class Ventana:
         self.create_status_bar()  # Ensure this is called to add the status bar
 
         # Start the event loop
-        self.root.after(100, self.calculate_available_width)
         self.root.mainloop()
 
     def layout_configurations(self):
@@ -284,42 +141,56 @@ class Ventana:
         database_tags_label.grid(row=0, column=1, padx=5, pady=5, sticky="nsew")
 
     def create_main_content_area(self):
-        """Create the main content area with a canvas and scrollbar."""
-        self.canvas_frame = tk.Frame(self.root)
-        self.canvas_frame.grid(row=self.main_content_row, column=0, columnspan=self.main_content_colspan, sticky="nsew")
+        """Create the main content area with two subframes occupying all available space."""
+        # Crear el contenedor principal para los subframes
+        self.main_content = tk.Frame(self.root, bg='yellow')  # Color de fondo del main_content
+        self.main_content.grid(row=self.main_content_row, column=0, columnspan=self.main_content_colspan, sticky="nsew")
 
-        self.canvas = tk.Canvas(self.canvas_frame, bg='blue')
-        self.canvas.grid(row=0, column=0, sticky="nsew")
+        # Configuración para expandir el main_content
+        self.main_content.grid_rowconfigure(0, weight=1)  # Permitir que la fila se expanda
+        self.main_content.grid_columnconfigure(0, weight=1)  # Ajuste proporcional para el primer subframe
+        self.main_content.grid_columnconfigure(1, weight=1)  # Ajuste proporcional para el segundo subframe
 
-        self.scrollbar = tk.Scrollbar(self.canvas_frame, orient="vertical", command=self.canvas.yview)
-        self.scrollbar.grid(row=0, column=1, sticky="ns")
+        # Crear los subframes
+        self.create_subframes()
 
-        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+    def create_subframes(self):
+        """Create subframes inside the main content area, ensuring they resize with the window."""
+        # Crear el primer subframe con expansión completa
+        self.subframe1 = tk.Frame(self.main_content, relief=tk.RAISED, bd=2, bg='lightblue')  # Color para subframe1
+        self.subframe1.grid(row=0, column=0, sticky="nsew")  # Asegurar que se expanda correctamente
 
-        self.main_content = tk.Frame(self.canvas, bg='yellow')
-        self.canvas_window = self.canvas.create_window((0, 0), window=self.main_content, anchor="nw")
+        # Asegurar que el subframe1 se expanda correctamente
+        self.main_content.grid_rowconfigure(0, weight=1)
+        self.main_content.grid_columnconfigure(0, weight=1)
 
-        # Configuración para actualizar la región de desplazamiento y tamaño del main_content
-        self.main_content.bind("<Configure>", self.update_scroll_region)
+        # Crear fila fija de títulos para subframe1
+        self.crear_titulos(self.subframe1, columnas_config['archivo'])
 
-        self.canvas_frame.grid_rowconfigure(0, weight=1)
-        self.canvas_frame.grid_columnconfigure(0, weight=1)
+        # Crear área desplazable para los datos en subframe1
+        scrollable_frame1 = self.create_scrollable_area(self.subframe1, bg='lightgreen')  # Color para área desplazable
 
-        self.canvas.bind_all("<MouseWheel>", self.on_mouse_wheel)
+        # Crear frames dentro de subframe1 que correspondan con la configuración de 'archivo'
+        self.crear_frames_en_columnas(self.subframe1, columnas_config['archivo'], scrollable_frame1,
+                                      self.frames_columnas_archivo)
 
-        self.create_subframes()  # Inicializa los subframes
+        # Crear el segundo subframe con expansión completa
+        self.subframe2 = tk.Frame(self.main_content, relief=tk.RAISED, bd=2, bg='lightcoral')  # Color para subframe2
+        self.subframe2.grid(row=0, column=1, sticky="nsew")  # Asegurar que se expanda correctamente
 
-    def update_canvas(self, event=None):
-        """Actualizar la región de desplazamiento del canvas para incluir todo el contenido de main_content."""
-        # Ajustar la región de desplazamiento del canvas para abarcar todo el main_content
-        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        # Asegurar que el subframe2 se expanda correctamente
+        self.main_content.grid_rowconfigure(0, weight=1)
+        self.main_content.grid_columnconfigure(1, weight=1)
 
-        # Ajustar el tamaño de la ventana creada dentro del canvas para que se expanda con el main_content
-        # Establece el ancho de la ventana del canvas para que coincida con el ancho del canvas
-        self.canvas.itemconfig(self.canvas_window, width=self.canvas.winfo_width())
+        # Crear fila fija de títulos para subframe2
+        self.crear_titulos(self.subframe2, columnas_config['resultado'])
 
-        # Si también necesitas que se ajuste verticalmente (rara vez necesario), añade:
-        self.canvas.itemconfig(self.canvas_window, height=self.canvas.winfo_height())
+        # Crear área desplazable para los datos en subframe2
+        scrollable_frame2 = self.create_scrollable_area(self.subframe2, bg='lightyellow')  # Color para área desplazable
+
+        # Crear frames dentro de subframe2 que correspondan con la configuración de 'resultado'
+        self.crear_frames_en_columnas(self.subframe2, columnas_config['resultado'], scrollable_frame2,
+                                      self.frames_columnas_resultado)
 
     def update_scroll_region(self, event=None):
         """Actualizar la región de desplazamiento del canvas para incluir todo el contenido de main_content."""
@@ -329,28 +200,89 @@ class Ventana:
         """Manejar el desplazamiento con la rueda del ratón en el canvas."""
         self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
-    def create_subframes(self):
-        """Create subframes inside the main content area, ensuring they resize with the window but content remains fixed."""
-        # Crear el primer subframe con expansión completa
-        self.subframe1 = tk.Frame(self.main_content, relief=tk.RAISED, bd=2)
-        self.subframe1.grid(row=0, column=0, sticky="nsew")  # Asegurar que se expanda correctamente
+    def configurar_columnas(self, subframe, config):
+        """Configura las columnas de un subframe según la configuración proporcionada."""
+        for col_config in config:
+            subframe.grid_columnconfigure(col_config['col'], weight=col_config['weight'], minsize=col_config['minsize'])
 
-        # Añadir un contenido fijo que no cambia de tamaño con el subframe
-        dummy_label1 = tk.Label(self.subframe1, text="Dummy 1", bg='white', anchor="center")
-        dummy_label1.grid(row=0, column=0, padx=10, pady=10, sticky="n")  # Ajustar con padding y sticky sin expandir
+    def crear_titulos(self, subframe, config):
+        """
+        Crea una fila de títulos fija en la parte superior del subframe.
+        """
+        titulo_frame = tk.Frame(subframe, relief=tk.RAISED, bd=1, bg='lightgray')
+        titulo_frame.grid(row=0, column=0, sticky="ew", columnspan=len(config))  # Abarcar todas las columnas
 
-        # Crear el segundo subframe con expansión completa
-        self.subframe2 = tk.Frame(self.main_content, relief=tk.RAISED, bd=2)
-        self.subframe2.grid(row=0, column=1, sticky="nsew")  # Asegurar que se expanda correctamente
+        for col_config in config:
+            label = tk.Label(titulo_frame, text=col_config['description'], anchor="center",
+                             font=('Consolas', 10, 'bold'))
+            label.grid(row=0, column=col_config['col'], sticky="ew", padx=1, pady=5)
 
-        # Añadir un contenido fijo que no cambia de tamaño con el subframe
-        dummy_label2 = tk.Label(self.subframe2, text="Dummy 2", bg='red', anchor="center")
-        dummy_label2.grid(row=0, column=0, padx=10, pady=10, sticky="n")  # Ajustar con padding y sticky sin expandir
+    def crear_frames_en_columnas(self, subframe, config, scrollable_frame, frame_store):
+        """
+        Crea una serie de frames dentro del subframe de acuerdo a la configuración proporcionada.
+        Almacena los frames en un diccionario frame_store con un identificador.
+        """
+        for col_config in config:
+            frame = tk.Frame(scrollable_frame, relief=tk.RAISED, bd=1, bg='lightblue')
+            frame.grid(row=1, column=col_config['col'],
+                       sticky="nsew")  # Posiciona en la segunda fila para contenido desplazable
 
-        # Configuración de columnas y filas en main_content para asegurar expansión de subframes
-        self.main_content.grid_columnconfigure(0, weight=47)  # Ajustar el peso para expansión proporcional
-        self.main_content.grid_columnconfigure(1, weight=53)  # Ajustar el peso para expansión proporcional
-        self.main_content.grid_rowconfigure(0, weight=1)  # Permitir que la fila se expanda también
+            # Asigna un nombre al frame basado en la descripción de la columna
+            frame_name = col_config['description']
+            frame_store[frame_name] = frame  # Guarda el frame en el diccionario
+
+    def create_scrollable_area(self, subframe, **kwargs):
+        """
+        Crea un área desplazable dentro del subframe para los datos, debajo de los títulos fijos.
+        """
+        # Crear un canvas para contener el área desplazable
+        canvas = tk.Canvas(subframe, **kwargs)
+        scrollbar = ttk.Scrollbar(subframe, orient="vertical", command=canvas.yview)
+
+        # Crear un frame interno para añadir widgets desplazables
+        scrollable_frame = tk.Frame(canvas)
+
+        # Configurar el evento para ajustar la región de scroll
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(
+                scrollregion=canvas.bbox("all")
+            )
+        )
+
+        # Crear una ventana en el canvas para mostrar el frame desplazable
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+
+        # Configurar el canvas para que funcione con la scrollbar
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        # Configurar el layout dentro del subframe
+        canvas.grid(row=1, column=0, sticky="nsew")  # Asegurar que el canvas ocupe todo el espacio
+        scrollbar.grid(row=1, column=1, sticky="ns")
+
+        # Asegurar que el subframe permita la expansión del canvas y scrollbar
+        subframe.grid_rowconfigure(1, weight=1)  # Asegurar expansión vertical
+        subframe.grid_columnconfigure(0, weight=1)  # Asegurar expansión horizontal
+
+        return scrollable_frame
+
+    def get_frames_columnas_archivo(self):
+        """Devuelve los frames de columnas del subframe1 (archivo)."""
+        return self.frames_columnas_archivo
+
+    def get_frames_columnas_resultado(self):
+        """Devuelve los frames de columnas del subframe2 (resultado)."""
+        return self.frames_columnas_resultado
+
+
+
+
+
+
+
+
+
+
 
     def create_status_bar(self):
         """Create a status bar at the bottom of the window."""
@@ -360,18 +292,6 @@ class Ventana:
 
 
 
-
-
-    def calculate_available_width(self):
-        # Update idle tasks to ensure proper rendering of widgets
-        self.root.update_idletasks()
-
-        # Get the width of the canvas and scrollbar
-        canvas_width = self.canvas.winfo_width()
-        scrollbar_width = self.scrollbar.winfo_width()
-
-        # Now calculate the available width
-        self.ancho_disponible = canvas_width - scrollbar_width
 
 
     def convert_playlist(self):
@@ -621,7 +541,16 @@ class Ventana:
         )
         if file_path:
             # try:
-            new_filetofind = FILETOFIND(self.ancho_disponible, self.subframe1, self.subframe2, file_path, numero_canciones, self.root)
+            new_filetofind = FILETOFIND(
+                framefiles=self.subframe1,
+                framedatabase=self.subframe2,
+                frames_columnas_archivo=self.frames_columnas_archivo,  # Pasar diccionario de frames de archivo
+                frames_columnas_resultado=self.frames_columnas_resultado,  # Pasar diccionario de frames de resultado
+                ruta_archivo=file_path,
+                frame_number=numero_canciones,
+                root=self.root
+            )
+
             numero_canciones += 1
             filetofind_list.append(new_filetofind)
             # except Exception as error:
@@ -650,15 +579,34 @@ class Ventana:
                     line = line.strip()
                     if line and not line.startswith("#"):
                         if os.path.exists(line):
-                            new_filetofind = FILETOFIND(self.ancho_disponible, self.subframe1, self.subframe2, line,
-                                                        numero_canciones, self.root)
+                            new_filetofind = FILETOFIND(
+                                framefiles=self.subframe1,
+                                framedatabase=self.subframe2,
+                                frames_columnas_archivo=self.frames_columnas_archivo,
+                                # Pasar diccionario de frames de archivo
+                                frames_columnas_resultado=self.frames_columnas_resultado,
+                                # Pasar diccionario de frames de resultado
+                                ruta_archivo=line,
+                                frame_number=numero_canciones,
+                                root=self.root
+                            )
                             numero_canciones += 1
                             filetofind_list.append(new_filetofind)
                         else:
                             modified_path = dropbox_path + line.split("Dropbox", 1)[1]
                             if os.path.exists(modified_path):
-                                new_filetofind = FILETOFIND(self.ancho_disponible, self.subframe1, self.subframe2, modified_path,
-                                                            numero_canciones, self.root)
+                                new_filetofind = FILETOFIND(
+                                    framefiles=self.subframe1,
+                                    framedatabase=self.subframe2,
+                                    frames_columnas_archivo=self.frames_columnas_archivo,
+                                    # Pasar diccionario de frames de archivo
+                                    frames_columnas_resultado=self.frames_columnas_resultado,
+                                    # Pasar diccionario de frames de resultado
+                                    ruta_archivo=modified_path,
+                                    frame_number=numero_canciones,
+                                    root=self.root
+                                )
+
                                 numero_canciones += 1
                                 filetofind_list.append(new_filetofind)
                                 # self.m3u_audio_files.append(modified_path)
@@ -688,7 +636,18 @@ class Ventana:
                 file_path = os.path.join(folder_path, filename)
                 if file_path:
                     # try:
-                    new_filetofind = FILETOFIND(self.ancho_disponible, self.subframe1, self.subframe2, file_path, numero_canciones, self.root)
+                    new_filetofind = FILETOFIND(
+                        framefiles=self.subframe1,
+                        framedatabase=self.subframe2,
+                        frames_columnas_archivo=self.frames_columnas_archivo,
+                        # Pasar diccionario de frames de archivo
+                        frames_columnas_resultado=self.frames_columnas_resultado,
+                        # Pasar diccionario de frames de resultado
+                        ruta_archivo=file_path,
+                        frame_number=numero_canciones,
+                        root=self.root
+                    )
+
                     numero_canciones += 1
                     filetofind_list.append(new_filetofind)
                     # except Exception as error:
