@@ -167,8 +167,8 @@ class Ventana:
         # Crear fila fija de títulos para subframe1
         self.crear_titulos(self.subframe1, columnas_config['archivo'])
 
-        # Crear área desplazable para los datos en subframe1
-        scrollable_frame1 = self.create_scrollable_area(self.subframe1, bg='lightgreen')  # Color para área desplazable
+        # Crear área desplazable para los datos en subframe1 y asignar 'canvas1' como atributo
+        scrollable_frame1 = self.create_scrollable_area(self.subframe1, 'canvas1', bg='lightgreen')
 
         # Crear frames dentro de subframe1 que correspondan con la configuración de 'archivo'
         self.crear_frames_en_columnas(self.subframe1, columnas_config['archivo'], scrollable_frame1,
@@ -185,8 +185,8 @@ class Ventana:
         # Crear fila fija de títulos para subframe2
         self.crear_titulos(self.subframe2, columnas_config['resultado'])
 
-        # Crear área desplazable para los datos en subframe2
-        scrollable_frame2 = self.create_scrollable_area(self.subframe2, bg='lightyellow')  # Color para área desplazable
+        # Crear área desplazable para los datos en subframe2 y asignar 'canvas2' como atributo
+        scrollable_frame2 = self.create_scrollable_area(self.subframe2, 'canvas2', bg='lightyellow')
 
         # Crear frames dentro de subframe2 que correspondan con la configuración de 'resultado'
         self.crear_frames_en_columnas(self.subframe2, columnas_config['resultado'], scrollable_frame2,
@@ -197,8 +197,11 @@ class Ventana:
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
     def on_mouse_wheel(self, event):
-        """Manejar el desplazamiento con la rueda del ratón en el canvas."""
-        self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        """Maneja el desplazamiento con la rueda del ratón en ambos canvas."""
+        # Verifica que ambos canvas existan antes de intentar desplazarlos
+        if hasattr(self, 'canvas1') and hasattr(self, 'canvas2'):
+            self.canvas1.yview_scroll(int(-1 * (event.delta / 120)), "units")
+            self.canvas2.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
     def configurar_columnas(self, subframe, config):
         """Configura las columnas de un subframe según la configuración proporcionada."""
@@ -231,10 +234,8 @@ class Ventana:
             frame_name = col_config['description']
             frame_store[frame_name] = frame  # Guarda el frame en el diccionario
 
-    def create_scrollable_area(self, subframe, **kwargs):
-        """
-        Crea un área desplazable dentro del subframe para los datos, debajo de los títulos fijos.
-        """
+    def create_scrollable_area(self, subframe, canvas_attr_name, **kwargs):
+        """Crea un área desplazable dentro del subframe para los datos, debajo de los títulos fijos."""
         # Crear un canvas para contener el área desplazable
         canvas = tk.Canvas(subframe, **kwargs)
         scrollbar = ttk.Scrollbar(subframe, orient="vertical", command=canvas.yview)
@@ -264,7 +265,16 @@ class Ventana:
         subframe.grid_rowconfigure(1, weight=1)  # Asegurar expansión vertical
         subframe.grid_columnconfigure(0, weight=1)  # Asegurar expansión horizontal
 
+        # Guardar el canvas en el atributo correspondiente de la clase
+        setattr(self, canvas_attr_name, canvas)
+
+        # Vincular el evento de la rueda del ratón a ambos canvas
+        canvas.bind_all("<MouseWheel>", self.on_mouse_wheel)
+
         return scrollable_frame
+
+
+
 
     def get_frames_columnas_archivo(self):
         """Devuelve los frames de columnas del subframe1 (archivo)."""
