@@ -38,115 +38,97 @@ class FILETOFIND:
 
         # Define colors for different types of matches
         colores_por_coincidencia = {
-            0: 'palegreen',  # Coincide artista y titulo
-            1: 'lime',  # Coincide artista y titulo y año
-            2: 'darkgray',  # Coincide artista y titulo y año y compositor y estilo
-            3: 'gold',  # Coincide artista y palabras
-            4: 'aquamarine',  # Coincide artista y palabras y año
-            5: 'red'  # No ha encontrado nada
+            0: 'palegreen',
+            1: 'lime',
+            2: 'darkgray',
+            3: 'gold',
+            4: 'aquamarine',
+            5: 'red'
         }
 
         # Determine the frame color based on the match type
         color_de_fondo = colores_por_coincidencia.get(self.tipo_de_coincidencia, color_de_fondo)
 
-        if self.tipo_de_coincidencia == 2 or len(self.coincidencias) == 0:
-            altura_frame = 27
-        else:
-            altura_frame = 27 * len(self.coincidencias)
+        # Set frame height based on match type
+        altura_frame = 27 * (
+            1 if self.tipo_de_coincidencia == 2 or len(self.coincidencias) == 0 else len(self.coincidencias))
 
-        # Obtener el ancho de los frames de origen
-        ancho_coincidencias = self.ancho_disponible*(5.4/10)
-        ancho_archivo = self.ancho_disponible*(4.6/10)
+        # Calculate frame widths
+        ancho_coincidencias = self.ancho_disponible * (5.4 / 10)
+        ancho_archivo = self.ancho_disponible * (4.6 / 10)
 
-
-        # Crear frames para coincidencias y archivo
+        # Create frames for coincidences and file data
         self.frame_coincidencias = tk.Frame(self.framedatabase, height=altura_frame,
-                                            width=ancho_coincidencias,
-                                            bd=2, relief="sunken", bg=color_de_fondo)
-        self.frame_archivo = tk.Frame(self.framefiles, bd=2, relief="sunken", height=altura_frame,
-                                      width=ancho_archivo, bg=color_de_fondo)
-
-        # # Create frames for coincidencias and archivo
-        # self.frame_coincidencias = tk.Frame(self.framedatabase, height=altura_frame,
-        #                                     width=self.root.winfo_screenwidth() / 2,
-        #                                     bd=2, relief="sunken", bg=color_de_fondo)
-        # self.frame_archivo = tk.Frame(self.framefiles, bd=2, relief="sunken", height=altura_frame,
-        #                               width=self.root.winfo_screenwidth() / 2, bg=color_de_fondo)
+                                            width=ancho_coincidencias, bd=2, relief="sunken", bg=color_de_fondo)
+        self.frame_archivo = tk.Frame(self.framefiles, bd=2, relief="sunken",
+                                      height=altura_frame, width=ancho_archivo, bg=color_de_fondo)
 
         # Grid setup for both frames
-        self.frame_coincidencias.grid(row=self.frame_number, column=0)
-        self.frame_coincidencias.grid_propagate(False)
-        self.frame_archivo.grid(row=self.frame_number, column=0)
-        self.frame_archivo.grid_propagate(False)
+        self.frame_coincidencias.grid(row=self.frame_number, column=0, sticky="nsew")
+        # self.frame_coincidencias.grid_propagate(False)
+        self.frame_archivo.grid(row=self.frame_number, column=0, sticky="nsew")
+        # self.frame_archivo.grid_propagate(False)
 
         # Font styles
         fuente_10_bold = ('Consolas', 11, "bold")
         fuente_10 = ('Consolas', 11)
 
-        # Configurar columnas con tamaños fijos y proporcionales para ambos frames
-        columnas_archivo_config = [
-            (2, 4, 200),  # 40% Titulo, con un mínimo de 200 píxeles
-            (3, 3, 150),  # 30% Orquesta, con un mínimo de 150 píxeles
-            (4, 3, 150),  # 30% Cantor, con un mínimo de 150 píxeles
-            (5, 0, 50),  # Columna de 10 caracteres fecha
-            (6, 0, 10),  # Botón 1 (columna 7)
-            (7, 0, 10),  # Botón 1 (columna 7)
-            (8, 0, 10),  # Botón 2 (columna 8)
-            (9, 0, 10)  # Botón 3 (columna 9)
-        ]
+        # Column configurations stored in a dictionary with descriptions
+        columnas_config = {
+            'archivo': [
+                {'col': 1, 'weight': 0, 'minsize': 10, 'description': 'Info'},
+                {'col': 2, 'weight': 4, 'minsize': 100, 'description': 'Titulo'},
+                {'col': 3, 'weight': 3, 'minsize': 75, 'description': 'Orquesta'},
+                {'col': 4, 'weight': 3, 'minsize': 75, 'description': 'Cantor'},
+                {'col': 5, 'weight': 0, 'minsize': 50, 'description': 'Fecha'},
+                {'col': 6, 'weight': 0, 'minsize': 10, 'description': 'Play'},
+                {'col': 7, 'weight': 0, 'minsize': 10, 'description': 'Pausa'},
+            ],
+            'resultado': [
+                {'col': 1, 'weight': 0, 'minsize': 10, 'description': 'Checkbox'},
+                {'col': 2, 'weight': 4, 'minsize': 100, 'description': 'Titulo'},
+                {'col': 3, 'weight': 3, 'minsize': 75, 'description': 'Orquesta'},
+                {'col': 4, 'weight': 3, 'minsize': 75, 'description': 'Cantor'},
+                {'col': 5, 'weight': 0, 'minsize': 50, 'description': 'Estilo'},
+                {'col': 6, 'weight': 0, 'minsize': 10, 'description': 'Info'},
+                {'col': 7, 'weight': 0, 'minsize': 10, 'description': 'Play_30'},
+                {'col': 8, 'weight': 0, 'minsize': 10, 'description': 'Play_10'},
+                {'col': 9, 'weight': 0, 'minsize': 10, 'description': 'Pausa'},
+            ]
+        }
 
-        columnas_resultado_config = [
-            (2, 4, 200),  # 40% Titulo, con un mínimo de 200 píxeles
-            (3, 3, 150),  # 30% Orquesta, con un mínimo de 150 píxeles
-            (4, 3, 150),  # 30% Cantor, con un mínimo de 150 píxeles
-            (5, 0, 50),  # Columna de 12 caracteres estilo
-            (6, 0, 10),  # Columna de 10 caracteres fecha
-            (7, 0, 10),  # Botón 1 (columna 7)
-            (8, 0, 10),  # Botón 2 (columna 8)
-            (9, 0, 10)  # Botón 3 (columna 9)
-        ]
+        # Apply column configurations using the dictionary
+        for config in columnas_config['resultado']:
+            self.frame_coincidencias.grid_columnconfigure(config['col'], weight=config['weight'],
+                                                          minsize=config['minsize'])
 
+        for config in columnas_config['archivo']:
+            self.frame_archivo.grid_columnconfigure(config['col'], weight=config['weight'], minsize=config['minsize'])
 
-        for col, weight, minsize in columnas_resultado_config:
-            self.frame_coincidencias.grid_columnconfigure(col, weight=weight, minsize=minsize)
-
-        for col, weight, minsize in columnas_archivo_config:
-            self.frame_archivo.grid_columnconfigure(col, weight=weight, minsize=minsize)
-
+        # Handle displaying matches or "NADA ENCONTRADO"
         if self.coincidencias.empty:
             self._crear_label(self.frame_coincidencias, text=self.frame_number, row=0, col=0, font=fuente_10,
                               bg=color_de_fondo)
             self._crear_label(self.frame_coincidencias, text="NADA ENCONTRADO", row=0, col=1, font=fuente_10,
                               bg=color_de_fondo)
         else:
-            # Loop through each match and create the corresponding labels and buttons
             for counter, (_, row) in enumerate(self.coincidencias.iterrows()):
                 if isinstance(row, pd.Series) and 'audio30' in row and 'audio10' in row:
-                    # Crear Checkbutton
                     self._crear_checkbutton(self.frame_coincidencias, counter)
 
-                    # Create Labels with fixed and proportional widths
                     labels_data = [
-                        (row['titulo'], 2, None, "w"),  # Titulo with 40% of the space
-                        (row['artista'], 3, None, "w"),  # Orquesta with 30% of the space
-                        (row['cantor'], 4, None, "w"),  # Cantor with 30% of the space
-                        (row['estilo'], 5, 11, "w"),  # Column of 11 characters for estilo
-                        (row['fecha'], 6, 10, "w"),  # Column of 10 characters for fecha
+                        (row['titulo'], 2, None, "w"),
+                        (row['artista'], 3, None, "w"),
+                        (row['cantor'], 4, None, "w"),
+                        (row['estilo'], 5, 11, "w"),
+                        (row['fecha'], 6, 10, "w"),
                     ]
 
                     for text, col, char_width, anchor in labels_data:
-                        self._crear_label(
-                            self.frame_coincidencias,
-                            text=text,
-                            row=counter,
-                            col=col,
-                            font=fuente_10_bold if col == 2 else fuente_10,
-                            bg=color_de_fondo,
-                            width=char_width,
-                            anchor=anchor
-                        )
+                        self._crear_label(self.frame_coincidencias, text=text, row=counter, col=col,
+                                          font=fuente_10_bold if col == 2 else fuente_10, bg=color_de_fondo,
+                                          width=char_width, anchor=anchor)
 
-                    # Crear botones alineados a la derecha
                     self._crear_button(self.frame_coincidencias, image=self.info_icon,
                                        command=lambda r=row: self.show_popup_db(r), row=counter, col=7,
                                        bg=color_de_fondo)
@@ -161,20 +143,26 @@ class FILETOFIND:
         self._crear_button(self.frame_archivo, image=self.info_icon, command=self.show_popup_file, row=0, col=1,
                            bg=color_de_fondo)
 
-
         file_labels_data = [
-            (self.tags.title, 2, None),  # Titulo con 40% del espacio
-            (self.artists1, 3, None),  # Orquesta con 30% del espacio
-            (self.artists2, 4, None),  # Cantor con 30% del espacio
-            (self.tags.year, 5, 11),  # Columna de 12 caracteres para estilo
+            (self.tags.title, 2, None),
+            (self.artists1, 3, None),
+            (self.artists2, 4, None),
+            (self.tags.year, 5, 11),
         ]
 
         for text, col, char_width in file_labels_data:
             self._crear_label(self.frame_archivo, text=text, row=0, col=col,
-                              font=fuente_10_bold if col == 2 else fuente_10, bg=color_de_fondo, width= char_width)
+                              font=fuente_10_bold if col == 2 else fuente_10, bg=color_de_fondo, width=char_width)
 
         self._crear_play_button_file(self.frame_archivo, self.tags._filename, len(file_labels_data) + 2,
                                      bg=color_de_fondo)
+
+
+
+
+
+
+
 
     def _crear_label(self, parent, text, row, col, font, bg, width=None, anchor="w"):
         label = tk.Label(parent, text=text, font=font, borderwidth=1, relief="solid", bg=bg, anchor=anchor)

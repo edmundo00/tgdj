@@ -9,22 +9,202 @@ from src.utils.utils import *
 from src.config.database import Database
 import src.config.config as config
 
+import tkinter as tk
+
+
+# class Ventana:
+#     def __init__(self, root):
+#         self.data_store = Database()
+#         self.root = root
+#         self.root.title("Tkinter Window with Menu, Icon, and Status Bar")
+#         self.root.geometry('1500x800')
+#
+#         # Create a menu bar
+#         self.menubar = tk.Menu(root)
+#         self.root.config(menu=self.menubar)
+#
+#         # Create File and Edit menus
+#         self.file_menu = tk.Menu(self.menubar, tearoff=0)
+#         self.menubar.add_cascade(label="File", menu=self.file_menu)
+#         self.file_menu.add_command(label="New")
+#         self.file_menu.add_command(label="Open")
+#         self.file_menu.add_command(label="Save")
+#         self.file_menu.add_separator()
+#         self.file_menu.add_command(label="Exit", command=self.root.quit)
+#
+#         self.edit_menu = tk.Menu(self.menubar, tearoff=0)
+#         self.menubar.add_cascade(label="Edit", menu=self.edit_menu)
+#         self.edit_menu.add_command(label="Undo")
+#         self.edit_menu.add_command(label="Redo")
+#         self.edit_menu.add_separator()
+#         self.edit_menu.add_command(label="Cut")
+#         self.edit_menu.add_command(label="Copy")
+#         self.edit_menu.add_command(label="Paste")
+#
+#         # Create an icon bar
+#         self.icon_bar = tk.Frame(root, relief=tk.RAISED, bd=2)
+#         self.icon_bar.grid(row=0, column=0, columnspan=3, sticky="ew")
+#
+#         # Load icons and create buttons for the icon bar
+#         icon_names = ['archivo', 'directorio', 'correr', 'transfer', 'trash', 'searchdb', 'presentacion', 'playlist',
+#                       'convert_playlist']
+#         for icon_name in icon_names:
+#             setattr(self, f"{icon_name}_icon", tk.PhotoImage(file=icon_paths[icon_name]))
+#
+#         buttons = [
+#             (self.archivo_icon, self.load_music_file),
+#             (self.directorio_icon, self.load_music_folder),
+#             (self.correr_icon, None),
+#             (self.transfer_icon, self.aplicartags),
+#             (self.trash_icon, self.borrar_todo),
+#             (self.searchdb_icon, self.searchdb),
+#             (self.presentacion_icon, self.open_presentation_popup),
+#             (self.playlist_icon, self.open_playlist),
+#             (self.convert_playlist_icon, self.convert_playlist),
+#         ]
+#
+#         for i, (icon, command) in enumerate(buttons):
+#             btn = tk.Button(self.icon_bar, image=icon, relief=tk.FLAT, command=command)
+#             btn.grid(row=0, column=i, padx=2, pady=2)
+#
+#         # Ensure the columns of the root window expand to fill the width
+#         self.root.grid_columnconfigure(0, weight=1)
+#
+#         # Create a fixed frame for titles with column weights
+#         self.title_frame = tk.Frame(root, relief=tk.RAISED, bd=2)
+#         self.title_frame.grid(row=1, column=0, columnspan=3, sticky="ew")
+#         self.title_frame.grid_propagate(True)  # Allow resizing to content
+#
+#         # Set weights and minsize explicitly for the title columns
+#         self.title_frame.grid_columnconfigure(0, weight=47, minsize=200)  # Control size for "File Tags"
+#         self.title_frame.grid_columnconfigure(1, weight=53, minsize=200)  # Control size for "Database Tags"
+#
+#         # Create the title for File Tags (fixed label)
+#         file_tags_label = tk.Label(
+#             self.title_frame,
+#             text="File Tags",
+#             font=('Consolas', 12, 'bold'),
+#             bg='lightblue',
+#             relief=tk.SOLID,
+#             bd=1
+#         )
+#         file_tags_label.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
+#
+#         # Create the title for Database Tags (fixed label)
+#         database_tags_label = tk.Label(
+#             self.title_frame,
+#             text="Database Tags",
+#             font=('Consolas', 12, 'bold'),
+#             bg='lightblue',
+#             relief=tk.SOLID,
+#             bd=1
+#         )
+#         database_tags_label.grid(row=0, column=1, padx=5, pady=5, sticky="nsew")
+#
+#         # Create the main content area
+#         self.canvas_frame = tk.Frame(root)
+#         self.canvas_frame.grid(row=2, column=0, columnspan=3, sticky="nsew")
+#
+#         # Correctly set grid weights for proper expansion
+#         self.root.grid_rowconfigure(2, weight=1)  # Main content should expand fully
+#
+#         # Create a canvas widget for scrolling content
+#         self.canvas = tk.Canvas(self.canvas_frame)
+#         self.canvas.grid(row=0, column=0, sticky="nsew")
+#
+#         # Add a vertical scrollbar to the canvas
+#         self.scrollbar = tk.Scrollbar(self.canvas_frame, orient="vertical", command=self.canvas.yview)
+#         self.scrollbar.grid(row=0, column=1, sticky="ns")
+#
+#         # Configure the canvas to use the scrollbar
+#         self.canvas.configure(yscrollcommand=self.scrollbar.set)
+#
+#         # Create a frame inside the canvas for the main content
+#         self.main_content = tk.Frame(self.canvas)
+#         self.canvas.create_window((0, 0), window=self.main_content, anchor="nw")
+#
+#         # Bind the canvas to update its scroll region whenever the main_content frame changes size
+#         self.main_content.bind("<Configure>", lambda event: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+#
+#         # Ensure the canvas expands correctly
+#         self.canvas_frame.grid_rowconfigure(0, weight=1)
+#         self.canvas_frame.grid_columnconfigure(0, weight=1)
+#
+#         # Bind mousewheel scrolling to the canvas
+#         self.canvas.bind_all("<MouseWheel>",
+#                              lambda event: self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units"))
+#
+#         # Ensure the main content subframes occupy the correct space
+#         self.subframe1 = tk.Frame(self.main_content, bg='white', bd=1, relief="ridge")
+#         self.subframe1.grid(row=0, column=0, sticky="nsew")
+#
+#         self.subframe2 = tk.Frame(self.main_content, bg='white', bd=1, relief="ridge")
+#         self.subframe2.grid(row=0, column=1, sticky="nsew")
+#
+#         # Set proper weights for subframes
+#         self.main_content.grid_columnconfigure(0, weight=1)
+#         self.main_content.grid_columnconfigure(1, weight=1)
+#         self.main_content.grid_rowconfigure(0, weight=1)
+#
+#         # Create a status bar at the bottom
+#         self.status_bar = tk.Label(root, text="Status: Ready", bd=1, relief=tk.SUNKEN, anchor=tk.W)
+#         self.status_bar.grid(row=3, column=0, columnspan=3, sticky="ew")
+#
+#         # Fix status bar to the bottom and prevent overlapping
+#         self.root.grid_rowconfigure(3, weight=0)
+#
+#         # Start the event loop
+#         self.root.after(100, self.calculate_available_width)
+#         self.root.mainloop()
+
 class Ventana:
     def __init__(self, root):
         self.data_store = Database()
         self.root = root
-        # Create the main window
-        self.root.title("Tkinter Window with Menu, Icon, and Status Bar")
-        # Set the window to full-screen mode
-        self.root.geometry('1500x800')  # Define el tamaño inicial de la ventana
-        # self.root.state('zoomed')
-        self.presentation_window = None  # Track the presentation window
 
-        # Create a menu bar
-        self.menubar = tk.Menu(root)
+        self.root.bind("<Configure>", self.update_canvas)
+
+        self.root.title("Tkinter Window with Menu, Icon, and Status Bar")
+        self.root.geometry('1500x800')
+
+        # Setup layout configurations
+        self.layout_configurations()
+
+        # Create UI components
+        self.create_menu_bar()
+        self.create_icon_bar()
+        self.create_title_frame()
+        self.create_main_content_area()
+        self.create_status_bar()  # Ensure this is called to add the status bar
+
+        # Start the event loop
+        self.root.after(100, self.calculate_available_width)
+        self.root.mainloop()
+
+    def layout_configurations(self):
+        """Define the layout configurations for the main window."""
+        self.root.grid_columnconfigure(0, weight=1)  # Expand the main column
+        self.root.grid_rowconfigure(0, weight=0)  # Icon bar row
+        self.root.grid_rowconfigure(1, weight=0)  # Title frame row
+        self.root.grid_rowconfigure(2, weight=1)  # Main content area should expand
+        self.root.grid_rowconfigure(3, weight=0)  # Status bar row
+
+        # Specific configuration for each section's position
+        self.icon_bar_row = 0
+        self.icon_bar_colspan = 3
+        self.title_frame_row = 1
+        self.title_frame_colspan = 3
+        self.main_content_row = 2
+        self.main_content_colspan = 3
+        self.status_bar_row = 3
+        self.status_bar_colspan = 3
+
+    def create_menu_bar(self):
+        """Create the menu bar at the top of the window."""
+        self.menubar = tk.Menu(self.root)
         self.root.config(menu=self.menubar)
 
-        # Create a 'File' menu and add it to the menu bar
+        # File menu
         self.file_menu = tk.Menu(self.menubar, tearoff=0)
         self.menubar.add_cascade(label="File", menu=self.file_menu)
         self.file_menu.add_command(label="New")
@@ -33,7 +213,7 @@ class Ventana:
         self.file_menu.add_separator()
         self.file_menu.add_command(label="Exit", command=self.root.quit)
 
-        # Create an 'Edit' menu and add it to the menu bar
+        # Edit menu
         self.edit_menu = tk.Menu(self.menubar, tearoff=0)
         self.menubar.add_cascade(label="Edit", menu=self.edit_menu)
         self.edit_menu.add_command(label="Undo")
@@ -43,102 +223,144 @@ class Ventana:
         self.edit_menu.add_command(label="Copy")
         self.edit_menu.add_command(label="Paste")
 
-        # Create an icon bar
-        self.icon_bar = tk.Frame(root, relief=tk.RAISED, bd=2)
-        self.icon_bar.grid(row=0, column=0, columnspan=3, sticky="ew")
+    def create_icon_bar(self):
+        """Create the icon bar with buttons below the menu bar."""
+        self.icon_bar = tk.Frame(self.root, relief=tk.RAISED, bd=2)
+        self.icon_bar.grid(row=self.icon_bar_row, column=0, columnspan=self.icon_bar_colspan, sticky="ew")
 
-        # Define a list of icon names corresponding to the keys in icon_paths
+        # Define icons and their commands
         icon_names = ['archivo', 'directorio', 'correr', 'transfer', 'trash', 'searchdb', 'presentacion', 'playlist',
                       'convert_playlist']
-
-        # Dynamically create and assign PhotoImage objects to instance variables
         for icon_name in icon_names:
             setattr(self, f"{icon_name}_icon", tk.PhotoImage(file=icon_paths[icon_name]))
 
+        # Button definitions and grid placement
+        buttons = [
+            (self.archivo_icon, self.load_music_file),
+            (self.directorio_icon, self.load_music_folder),
+            (self.correr_icon, None),
+            (self.transfer_icon, self.aplicartags),
+            (self.trash_icon, self.borrar_todo),
+            (self.searchdb_icon, self.searchdb),
+            (self.presentacion_icon, self.open_presentation_popup),
+            (self.playlist_icon, self.open_playlist),
+            (self.convert_playlist_icon, self.convert_playlist),
+        ]
 
-        self.load_button_music_file = tk.Button(self.icon_bar, image=self.archivo_icon, relief=tk.FLAT,
-                                                command=self.load_music_file)
-        self.load_button_music_file.grid(row=0, column=0, padx=2, pady=2)
-        self.load_button_music_folder = tk.Button(self.icon_bar, image=self.directorio_icon, relief=tk.FLAT,
-                                                  command=self.load_music_folder)
-        self.load_button_music_folder.grid(row=0, column=1, padx=2, pady=2)
-        self.save_button = tk.Button(self.icon_bar, image=self.correr_icon, relief=tk.FLAT)
-        self.save_button.grid(row=0, column=2, padx=2, pady=2)
-        self.transfer_button = tk.Button(self.icon_bar, image=self.transfer_icon, relief=tk.FLAT,
-                                         command=self.aplicartags)
-        self.transfer_button.grid(row=0, column=3, padx=2, pady=2)
-        self.trash_button = tk.Button(self.icon_bar, image=self.trash_icon, relief=tk.FLAT, command=self.borrar_todo)
-        self.trash_button.grid(row=0, column=4, padx=2, pady=2)
-        self.trash_button = tk.Button(self.icon_bar, image=self.searchdb_icon, relief=tk.FLAT, command=self.searchdb)
-        self.trash_button.grid(row=0, column=5, padx=2, pady=2)
-        self.presentation_button = tk.Button(self.icon_bar, image=self.presentacion_icon, relief=tk.FLAT,
-                                             command=self.open_presentation_popup)
-        self.presentation_button.grid(row=0, column=6, padx=2, pady=2)
-        self.playlist_button = tk.Button(self.icon_bar, image=self.playlist_icon, relief=tk.FLAT,
-                                         command=self.open_playlist)
-        self.playlist_button.grid(row=0, column=7, padx=2, pady=2)
-        self.convert_playlist_button = tk.Button(self.icon_bar, image=self.convert_playlist_icon, relief=tk.FLAT,
-                                                 command=self.convert_playlist)
-        self.convert_playlist_button.grid(row=0, column=8, padx=2, pady=2)
+        for i, (icon, command) in enumerate(buttons):
+            btn = tk.Button(self.icon_bar, image=icon, relief=tk.FLAT, command=command)
+            btn.grid(row=0, column=i, padx=2, pady=2)
 
+    def create_title_frame(self):
+        """Create the title frame with 'File Tags' and 'Database Tags' labels."""
+        self.title_frame = tk.Frame(self.root, relief=tk.RAISED, bd=2)
+        self.title_frame.grid(row=self.title_frame_row, column=0, columnspan=self.title_frame_colspan, sticky="ew")
+        self.title_frame.grid_propagate(True)  # Allow resizing to content
 
-        # Create a main content area
-        self.canvas_frame = tk.Frame(root)
-        self.canvas_frame.grid(row=1, column=0, columnspan=3, sticky="nsew")
+        # Set weights and minsize explicitly for the title columns
+        self.title_frame.grid_columnconfigure(0, weight=47, minsize=200)  # Control size for "File Tags"
+        self.title_frame.grid_columnconfigure(1, weight=53, minsize=200)  # Control size for "Database Tags"
+        self.title_frame.grid_columnconfigure(2, weight=0, minsize=30)  # Dummy space to account for scrollbar width
 
-        # Create a canvas widget
-        self.canvas = tk.Canvas(self.canvas_frame)
+        # Create the labels
+        file_tags_label = tk.Label(
+            self.title_frame,
+            text="File Tags",
+            font=('Consolas', 12, 'bold'),
+            bg='lightblue',
+            relief=tk.SOLID,
+            bd=1
+        )
+        file_tags_label.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
+
+        database_tags_label = tk.Label(
+            self.title_frame,
+            text="Database Tags",
+            font=('Consolas', 12, 'bold'),
+            bg='lightblue',
+            relief=tk.SOLID,
+            bd=1
+        )
+        database_tags_label.grid(row=0, column=1, padx=5, pady=5, sticky="nsew")
+
+    def create_main_content_area(self):
+        """Create the main content area with a canvas and scrollbar."""
+        self.canvas_frame = tk.Frame(self.root)
+        self.canvas_frame.grid(row=self.main_content_row, column=0, columnspan=self.main_content_colspan, sticky="nsew")
+
+        self.canvas = tk.Canvas(self.canvas_frame, bg='blue')
         self.canvas.grid(row=0, column=0, sticky="nsew")
 
-        # Add a vertical scrollbar to the canvas
         self.scrollbar = tk.Scrollbar(self.canvas_frame, orient="vertical", command=self.canvas.yview)
         self.scrollbar.grid(row=0, column=1, sticky="ns")
 
-        # Configure the canvas to use the scrollbar
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
 
-        # Create a frame inside the canvas to hold the main content
-        self.main_content = tk.Frame(self.canvas)
-        self.canvas.create_window((0, 0), window=self.main_content, anchor="nw")
+        self.main_content = tk.Frame(self.canvas, bg='yellow')
+        self.canvas_window = self.canvas.create_window((0, 0), window=self.main_content, anchor="nw")
 
-        # Bind the canvas to update its scroll region whenever the main_content frame changes size
-        self.main_content.bind("<Configure>", self.on_frame_configure)
+        # Configuración para actualizar la región de desplazamiento y tamaño del main_content
+        self.main_content.bind("<Configure>", self.update_scroll_region)
 
-        # Make the canvas expandable
         self.canvas_frame.grid_rowconfigure(0, weight=1)
         self.canvas_frame.grid_columnconfigure(0, weight=1)
 
+        self.canvas.bind_all("<MouseWheel>", self.on_mouse_wheel)
+
+        self.create_subframes()  # Inicializa los subframes
+
+    def update_canvas(self, event=None):
+        """Actualizar la región de desplazamiento del canvas para incluir todo el contenido de main_content."""
+        # Ajustar la región de desplazamiento del canvas para abarcar todo el main_content
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
+        # Ajustar el tamaño de la ventana creada dentro del canvas para que se expanda con el main_content
+        # Establece el ancho de la ventana del canvas para que coincida con el ancho del canvas
+        self.canvas.itemconfig(self.canvas_window, width=self.canvas.winfo_width())
+
+        # Si también necesitas que se ajuste verticalmente (rara vez necesario), añade:
+        self.canvas.itemconfig(self.canvas_window, height=self.canvas.winfo_height())
+
+    def update_scroll_region(self, event=None):
+        """Actualizar la región de desplazamiento del canvas para incluir todo el contenido de main_content."""
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
+    def on_mouse_wheel(self, event):
+        """Manejar el desplazamiento con la rueda del ratón en el canvas."""
+        self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+    def create_subframes(self):
+        """Create subframes inside the main content area, ensuring they resize with the window but content remains fixed."""
+        # Crear el primer subframe con expansión completa
+        self.subframe1 = tk.Frame(self.main_content, relief=tk.RAISED, bd=2)
+        self.subframe1.grid(row=0, column=0, sticky="nsew")  # Asegurar que se expanda correctamente
+
+        # Añadir un contenido fijo que no cambia de tamaño con el subframe
+        dummy_label1 = tk.Label(self.subframe1, text="Dummy 1", bg='white', anchor="center")
+        dummy_label1.grid(row=0, column=0, padx=10, pady=10, sticky="n")  # Ajustar con padding y sticky sin expandir
+
+        # Crear el segundo subframe con expansión completa
+        self.subframe2 = tk.Frame(self.main_content, relief=tk.RAISED, bd=2)
+        self.subframe2.grid(row=0, column=1, sticky="nsew")  # Asegurar que se expanda correctamente
+
+        # Añadir un contenido fijo que no cambia de tamaño con el subframe
+        dummy_label2 = tk.Label(self.subframe2, text="Dummy 2", bg='red', anchor="center")
+        dummy_label2.grid(row=0, column=0, padx=10, pady=10, sticky="n")  # Ajustar con padding y sticky sin expandir
+
+        # Configuración de columnas y filas en main_content para asegurar expansión de subframes
+        self.main_content.grid_columnconfigure(0, weight=47)  # Ajustar el peso para expansión proporcional
+        self.main_content.grid_columnconfigure(1, weight=53)  # Ajustar el peso para expansión proporcional
+        self.main_content.grid_rowconfigure(0, weight=1)  # Permitir que la fila se expanda también
+
+    def create_status_bar(self):
+        """Create a status bar at the bottom of the window."""
+        self.status_bar = tk.Label(self.root, text="Status: Ready", bd=1, relief=tk.SUNKEN, anchor=tk.W)
+        # Set the grid for the status bar, ensuring it spans across the required columns
+        self.status_bar.grid(row=self.status_bar_row, column=0, columnspan=self.status_bar_colspan, sticky="ew")
 
 
-        # Bind mousewheel scrolling to the canvas
-        self.root.bind_all("<MouseWheel>", self._on_mouse_wheel)
 
-        # Create the first subframe
-        self.subframe1 = tk.Frame(self.main_content, bg='white', bd=1, relief="ridge")
-        self.subframe1.grid(row=0, column=0, sticky="nsew")
 
-        # Create the second subframe
-        self.subframe2 = tk.Frame(self.main_content, bg='white', bd=1, relief="ridge")
-        self.subframe2.grid(row=0, column=1, sticky="nsew")
-
-        # Configure grid weights to ensure subframes take up half of the main frame
-
-        self.main_content.grid_columnconfigure(0, weight=1)
-        self.main_content.grid_columnconfigure(1, weight=1)
-        self.main_content.grid_rowconfigure(0, weight=1)
-
-        # Create a status bar
-        self.status_bar = tk.Label(root, text="Status: Ready", bd=1, relief=tk.SUNKEN, anchor=tk.W)
-        self.status_bar.grid(row=2, column=0, columnspan=3, sticky="ew")
-
-        # Configure grid weights to make the main content expandable
-        self.root.grid_rowconfigure(1, weight=1)
-        self.root.grid_columnconfigure(1, weight=1)
-
-        self.root.after(100, self.calculate_available_width)
-
-        # Start the Tkinter event loop
-        self.root.mainloop()
 
     def calculate_available_width(self):
         # Update idle tasks to ensure proper rendering of widgets
@@ -150,7 +372,6 @@ class Ventana:
 
         # Now calculate the available width
         self.ancho_disponible = canvas_width - scrollbar_width
-        print(f"Ancho disponible: {self.ancho_disponible}")
 
 
     def convert_playlist(self):
@@ -391,9 +612,7 @@ class Ventana:
         """Reset the scroll region to encompass the inner frame."""
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
-    def _on_mouse_wheel(self, event):
-        """Scroll the canvas with the mouse wheel."""
-        self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
 
     def load_music_file(self):
         global numero_canciones
