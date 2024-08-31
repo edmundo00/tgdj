@@ -9,7 +9,7 @@ from src.config.database import Database
 
 class FILETOFIND:
 
-    def __init__(self, framefiles, framedatabase, ruta_archivo, frame_number, root):
+    def __init__(self, ancho_disponible, framefiles, framedatabase, ruta_archivo, frame_number, root):
         # print(db)
         self.data_store = Database()
         self.db = self.data_store.get_db()
@@ -21,6 +21,7 @@ class FILETOFIND:
         self.ruta_archivo = ruta_archivo
         self.vars = []
         self.checkbuttons = []
+        self.ancho_disponible = ancho_disponible
         self.frame_number = frame_number
         self.framefiles = framefiles
         self.framedatabase = framedatabase
@@ -53,12 +54,24 @@ class FILETOFIND:
         else:
             altura_frame = 27 * len(self.coincidencias)
 
-        # Create frames for coincidencias and archivo
+        # Obtener el ancho de los frames de origen
+        ancho_coincidencias = self.ancho_disponible*(5.4/10)
+        ancho_archivo = self.ancho_disponible*(4.6/10)
+
+
+        # Crear frames para coincidencias y archivo
         self.frame_coincidencias = tk.Frame(self.framedatabase, height=altura_frame,
-                                            width=self.root.winfo_screenwidth() / 2,
+                                            width=ancho_coincidencias,
                                             bd=2, relief="sunken", bg=color_de_fondo)
         self.frame_archivo = tk.Frame(self.framefiles, bd=2, relief="sunken", height=altura_frame,
-                                      width=self.root.winfo_screenwidth() / 2, bg=color_de_fondo)
+                                      width=ancho_archivo, bg=color_de_fondo)
+
+        # # Create frames for coincidencias and archivo
+        # self.frame_coincidencias = tk.Frame(self.framedatabase, height=altura_frame,
+        #                                     width=self.root.winfo_screenwidth() / 2,
+        #                                     bd=2, relief="sunken", bg=color_de_fondo)
+        # self.frame_archivo = tk.Frame(self.framefiles, bd=2, relief="sunken", height=altura_frame,
+        #                               width=self.root.winfo_screenwidth() / 2, bg=color_de_fondo)
 
         # Grid setup for both frames
         self.frame_coincidencias.grid(row=self.frame_number, column=0)
@@ -67,23 +80,37 @@ class FILETOFIND:
         self.frame_archivo.grid_propagate(False)
 
         # Font styles
-        fuente_10_bold = ('Arial', 12, "bold")
-        fuente_10 = ('Arial', 12)
+        fuente_10_bold = ('Consolas', 11, "bold")
+        fuente_10 = ('Consolas', 11)
 
         # Configurar columnas con tamaños fijos y proporcionales para ambos frames
-        columnas_config = [
+        columnas_archivo_config = [
             (2, 4, 200),  # 40% Titulo, con un mínimo de 200 píxeles
             (3, 3, 150),  # 30% Orquesta, con un mínimo de 150 píxeles
             (4, 3, 150),  # 30% Cantor, con un mínimo de 150 píxeles
-            (5, 0, 50),  # Columna de 12 caracteres estilo
-            (6, 0, 50),  # Columna de 10 caracteres fecha
+            (5, 0, 50),  # Columna de 10 caracteres fecha
+            (6, 0, 10),  # Botón 1 (columna 7)
             (7, 0, 10),  # Botón 1 (columna 7)
             (8, 0, 10),  # Botón 2 (columna 8)
             (9, 0, 10)  # Botón 3 (columna 9)
         ]
 
-        for col, weight, minsize in columnas_config:
+        columnas_resultado_config = [
+            (2, 4, 200),  # 40% Titulo, con un mínimo de 200 píxeles
+            (3, 3, 150),  # 30% Orquesta, con un mínimo de 150 píxeles
+            (4, 3, 150),  # 30% Cantor, con un mínimo de 150 píxeles
+            (5, 0, 50),  # Columna de 12 caracteres estilo
+            (6, 0, 10),  # Columna de 10 caracteres fecha
+            (7, 0, 10),  # Botón 1 (columna 7)
+            (8, 0, 10),  # Botón 2 (columna 8)
+            (9, 0, 10)  # Botón 3 (columna 9)
+        ]
+
+
+        for col, weight, minsize in columnas_resultado_config:
             self.frame_coincidencias.grid_columnconfigure(col, weight=weight, minsize=minsize)
+
+        for col, weight, minsize in columnas_archivo_config:
             self.frame_archivo.grid_columnconfigure(col, weight=weight, minsize=minsize)
 
         if self.coincidencias.empty:
@@ -126,11 +153,18 @@ class FILETOFIND:
         # Create labels and buttons for the file information
         self._crear_button(self.frame_archivo, image=self.info_icon, command=self.show_popup_file, row=0, col=1,
                            bg=color_de_fondo)
-        file_labels_data = [(self.tags.title, 2), (self.artists1, 3), (self.artists2, 4), (self.tags.year, 5)]
 
-        for text, col in file_labels_data:
+
+        file_labels_data = [
+            (self.tags.title, 2, None),  # Titulo con 40% del espacio
+            (self.artists1, 3, None),  # Orquesta con 30% del espacio
+            (self.artists2, 4, None),  # Cantor con 30% del espacio
+            (self.tags.year, 5, 11),  # Columna de 12 caracteres para estilo
+        ]
+
+        for text, col, char_width in file_labels_data:
             self._crear_label(self.frame_archivo, text=text, row=0, col=col,
-                              font=fuente_10_bold if col == 1 else fuente_10, bg=color_de_fondo)
+                              font=fuente_10_bold if col == 2 else fuente_10, bg=color_de_fondo, width= char_width)
 
         self._crear_play_button_file(self.frame_archivo, self.tags._filename, len(file_labels_data) + 2,
                                      bg=color_de_fondo)

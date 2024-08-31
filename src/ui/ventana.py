@@ -16,7 +16,8 @@ class Ventana:
         # Create the main window
         self.root.title("Tkinter Window with Menu, Icon, and Status Bar")
         # Set the window to full-screen mode
-        self.root.state('zoomed')
+        self.root.geometry('1500x800')  # Define el tamaño inicial de la ventana
+        # self.root.state('zoomed')
         self.presentation_window = None  # Track the presentation window
 
         # Create a menu bar
@@ -107,6 +108,8 @@ class Ventana:
         self.canvas_frame.grid_rowconfigure(0, weight=1)
         self.canvas_frame.grid_columnconfigure(0, weight=1)
 
+
+
         # Bind mousewheel scrolling to the canvas
         self.root.bind_all("<MouseWheel>", self._on_mouse_wheel)
 
@@ -132,8 +135,23 @@ class Ventana:
         self.root.grid_rowconfigure(1, weight=1)
         self.root.grid_columnconfigure(1, weight=1)
 
+        self.root.after(100, self.calculate_available_width)
+
         # Start the Tkinter event loop
         self.root.mainloop()
+
+    def calculate_available_width(self):
+        # Update idle tasks to ensure proper rendering of widgets
+        self.root.update_idletasks()
+
+        # Get the width of the canvas and scrollbar
+        canvas_width = self.canvas.winfo_width()
+        scrollbar_width = self.scrollbar.winfo_width()
+
+        # Now calculate the available width
+        self.ancho_disponible = canvas_width - scrollbar_width
+        print(f"Ancho disponible: {self.ancho_disponible}")
+
 
     def convert_playlist(self):
         # Abrir el cuadro de diálogo para seleccionar un archivo M3U
@@ -384,7 +402,7 @@ class Ventana:
         )
         if file_path:
             # try:
-            new_filetofind = FILETOFIND(self.subframe1, self.subframe2, file_path, numero_canciones, self.root)
+            new_filetofind = FILETOFIND(self.ancho_disponible, self.subframe1, self.subframe2, file_path, numero_canciones, self.root)
             numero_canciones += 1
             filetofind_list.append(new_filetofind)
             # except Exception as error:
@@ -413,14 +431,14 @@ class Ventana:
                     line = line.strip()
                     if line and not line.startswith("#"):
                         if os.path.exists(line):
-                            new_filetofind = FILETOFIND(self.subframe1, self.subframe2, line,
+                            new_filetofind = FILETOFIND(self.ancho_disponible, self.subframe1, self.subframe2, line,
                                                         numero_canciones, self.root)
                             numero_canciones += 1
                             filetofind_list.append(new_filetofind)
                         else:
                             modified_path = dropbox_path + line.split("Dropbox", 1)[1]
                             if os.path.exists(modified_path):
-                                new_filetofind = FILETOFIND(self.subframe1, self.subframe2, modified_path,
+                                new_filetofind = FILETOFIND(self.ancho_disponible, self.subframe1, self.subframe2, modified_path,
                                                             numero_canciones, self.root)
                                 numero_canciones += 1
                                 filetofind_list.append(new_filetofind)
@@ -451,7 +469,7 @@ class Ventana:
                 file_path = os.path.join(folder_path, filename)
                 if file_path:
                     # try:
-                    new_filetofind = FILETOFIND(self.subframe1, self.subframe2, file_path, numero_canciones, self.root)
+                    new_filetofind = FILETOFIND(self.ancho_disponible, self.subframe1, self.subframe2, file_path, numero_canciones, self.root)
                     numero_canciones += 1
                     filetofind_list.append(new_filetofind)
                     # except Exception as error:
