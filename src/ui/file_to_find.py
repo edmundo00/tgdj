@@ -125,19 +125,26 @@ class FILETOFIND:
                     # Crear Checkbutton
                     self._crear_checkbutton(self.frame_coincidencias, counter)
 
-                    # Crear Labels con anchos fijos y proporcionales
+                    # Create Labels with fixed and proportional widths
                     labels_data = [
-                        (row['titulo'], 2, None),  # Titulo con 40% del espacio
-                        (row['artista'], 3, None),  # Orquesta con 30% del espacio
-                        (row['cantor'], 4, None),  # Cantor con 30% del espacio
-                        (row['estilo'], 5, 11),  # Columna de 12 caracteres para estilo
-                        (row['fecha'], 6, 10)  # Columna de 10 caracteres para fecha
+                        (row['titulo'], 2, None, "w"),  # Titulo with 40% of the space
+                        (row['artista'], 3, None, "w"),  # Orquesta with 30% of the space
+                        (row['cantor'], 4, None, "w"),  # Cantor with 30% of the space
+                        (row['estilo'], 5, 11, "w"),  # Column of 11 characters for estilo
+                        (row['fecha'], 6, 10, "w"),  # Column of 10 characters for fecha
                     ]
 
-                    for text, col, char_width in labels_data:
-                        self._crear_label(self.frame_coincidencias, text=text, row=counter, col=col,
-                                          font=fuente_10_bold if col == 2 else fuente_10,
-                                          bg=color_de_fondo, width=char_width)
+                    for text, col, char_width, anchor in labels_data:
+                        self._crear_label(
+                            self.frame_coincidencias,
+                            text=text,
+                            row=counter,
+                            col=col,
+                            font=fuente_10_bold if col == 2 else fuente_10,
+                            bg=color_de_fondo,
+                            width=char_width,
+                            anchor=anchor
+                        )
 
                     # Crear botones alineados a la derecha
                     self._crear_button(self.frame_coincidencias, image=self.info_icon,
@@ -169,8 +176,8 @@ class FILETOFIND:
         self._crear_play_button_file(self.frame_archivo, self.tags._filename, len(file_labels_data) + 2,
                                      bg=color_de_fondo)
 
-    def _crear_label(self, parent, text, row, col, font, bg, width=None):
-        label = tk.Label(parent, text=text, font=font, borderwidth=1, relief="solid", bg=bg)
+    def _crear_label(self, parent, text, row, col, font, bg, width=None, anchor="w"):
+        label = tk.Label(parent, text=text, font=font, borderwidth=1, relief="solid", bg=bg, anchor=anchor)
         if width:
             label.config(width=width)
         label.grid(row=row, column=col, sticky="ew" if col in [2, 3, 4] else "w", padx=1, pady=1)
