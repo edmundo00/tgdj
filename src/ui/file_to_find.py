@@ -57,8 +57,8 @@ class FILETOFIND:
         )
 
         # Estilos de fuente
-        fuente_10_bold = ('Consolas', 11, "bold")
-        fuente_10 = ('Consolas', 11)
+        fuente_10_bold = ('Consolas', 12, "bold")
+        fuente_10 = ('Consolas', 12)
 
         # Determinar la fila actual usando numero_canciones
         current_row = self.frame_number
@@ -92,120 +92,133 @@ class FILETOFIND:
                     # Añadir checkbutton al frame correspondiente
                     self._crear_checkbutton(frames['Checkbox'], counter)
 
-                    # Datos de las labels para la fila de coincidencias
-                    labels_data = [
-                        (row['titulo'], 'Titulo', frames['Titulo'], "w"),
-                        (row['artista'], 'Orquesta', frames['Orquesta'], "w"),
-                        (row['cantor'], 'Cantor', frames['Cantor'], "w"),
-                        (row['estilo'], 'Estilo', frames['Estilo'], "w"),
-                        (row['fecha'], 'Fecha', frames['Fecha'], "w"),
+                    # Configuración para los elementos a añadir (labels y botones)
+                    elementos = [
+                        {'tipo': 'label', 'texto': row['titulo'], 'descripcion': 'Titulo', 'frame': frames['Titulo'],
+                         'anchor': "w"},
+                        {'tipo': 'label', 'texto': row['artista'], 'descripcion': 'Orquesta',
+                         'frame': frames['Orquesta'], 'anchor': "w"},
+                        {'tipo': 'label', 'texto': row['cantor'], 'descripcion': 'Cantor', 'frame': frames['Cantor'],
+                         'anchor': "w"},
+                        {'tipo': 'label', 'texto': row['estilo'], 'descripcion': 'Estilo', 'frame': frames['Estilo'],
+                         'anchor': "w"},
+                        {'tipo': 'label', 'texto': row['fecha'], 'descripcion': 'Fecha', 'frame': frames['Fecha'],
+                         'anchor': "w"},
+                        {'tipo': 'button', 'frame': frames['Info'], 'row': counter, 'image': self.info_icon,
+                         'command': lambda r=row: self.show_popup_db(r)},
+                        {'tipo': 'play_button', 'frame': frames['Play_30'], 'link': link_to_music(row['audio30']), 'row': counter,
+                         'column': 0},
+                        {'tipo': 'play_button', 'frame': frames['Play_10'], 'link': link_to_music(row['audio10']), 'row': counter,
+                         'column': 0},
+                        {'tipo': 'stop_button', 'frame': frames['Pausa'], 'row': counter, 'column': 0},
                     ]
 
-                    # Añadir labels a los frames correspondientes
-                    for text, description, frame_columna, anchor in labels_data:
-                        self._crear_label_en_frame(
-                            frame_columna, text=text,
-                            font=fuente_10_bold if description == 'Titulo' else fuente_10,
-                            bg=color_de_fondo, anchor=anchor, row=counter, column=0
-                        )
-
-                    # Añadir botones de información, reproducción y parada
-                    self._crear_button_en_frame(
-                        frames['Info'], row=counter, image=self.info_icon,
-                        command=lambda r=row: self.show_popup_db(r), bg=color_de_fondo
-                    )
-                    self._crear_play_button_on_frame(
-                        frames['Play_30'], link_to_music(row['audio30']),
-                        row=counter, column=0, bg=color_de_fondo
-                    )
-                    self._crear_play_button_on_frame(
-                        frames['Play_10'], link_to_music(row['audio10']),
-                        row=counter, column=0, bg=color_de_fondo
-                    )
-                    self._crear_stop_button_on_frame(frames['Pausa'], row=counter, column=0, bg=color_de_fondo)
-
+                    # Añadir los elementos a los frames correspondientes
+                    for elemento in elementos:
+                        if elemento['tipo'] == 'label':
+                            self._crear_label_en_frame(
+                                elemento['frame'], text=elemento['texto'],
+                                font=fuente_10_bold if elemento['descripcion'] == 'Titulo' else fuente_10,
+                                bg=color_de_fondo, anchor=elemento['anchor'], row=counter, column=0
+                            )
+                        elif elemento['tipo'] == 'button':
+                            self._crear_button_en_frame(
+                                elemento['frame'], row=elemento['row'], image=elemento['image'],
+                                command=elemento['command'], bg=color_de_fondo
+                            )
+                        elif elemento['tipo'] == 'play_button':
+                            self._crear_play_button_on_frame(
+                                elemento['frame'], elemento['link'],
+                                row=elemento['row'], column=elemento['column'], bg=color_de_fondo
+                            )
+                        elif elemento['tipo'] == 'stop_button':
+                            self._crear_stop_button_on_frame(
+                                elemento['frame'], row=elemento['row'], column=elemento['column'], bg=color_de_fondo
+                            )
                 else:
                     print(f"Unexpected row format or missing columns: {row}")
 
             if self.hay_coincidencia_preferida:
                 self.activar_checkbox(self.coincidencia_preferida)
 
-        # Add the button to the 'Info' frame
-        if 'Info' in frames_archivo:
-            self._crear_button_en_frame(
-                frames_archivo['Info'],
-                image=self.info_icon,
-                command=self.show_popup_file,
-                bg=color_de_fondo
-            )
 
-        # Define data for the labels to be added to the file information frames
-        file_labels_data = [
-            (self.tags.title, 'Titulo', None),
-            (self.artists1, 'Orquesta', None),
-            (self.artists2, 'Cantor', None),
-            (self.tags.year, 'Fecha', 11),
+        # Definir los datos de las etiquetas para los frames de información de archivos
+        # Definir los elementos para los frames de archivo en la misma estructura que la variable 'elementos'
+        elementos_archivo = [
+            {'tipo': 'label', 'texto': self.tags.title, 'descripcion': 'Titulo', 'frame': frames_archivo.get('Titulo'),
+             'anchor': "w"},
+            {'tipo': 'label', 'texto': self.artists1, 'descripcion': 'Orquesta',
+             'frame': frames_archivo.get('Orquesta'), 'anchor': "w"},
+            {'tipo': 'label', 'texto': self.artists2, 'descripcion': 'Cantor', 'frame': frames_archivo.get('Cantor'),
+             'anchor': "w"},
+            {'tipo': 'label', 'texto': self.tags.year, 'descripcion': 'Fecha', 'frame': frames_archivo.get('Fecha'),
+             'anchor': "w"},
+            {'tipo': 'button', 'frame': frames_archivo.get('Info'), 'row': 0, 'image': self.info_icon,
+             'command': self.show_popup_file, 'bg': color_de_fondo},
+            {'tipo': 'play_button', 'frame': frames_archivo.get('Play'), 'link': self.ruta_archivo, 'row': 0,
+             'column': 0},
+            {'tipo': 'stop_button', 'frame': frames_archivo.get('Pausa'), 'row': 0, 'column': 0},
         ]
 
-        # Add labels to the corresponding frames
-        for text, description, char_width in file_labels_data:
-            if description in frames_archivo:
+        # Iterar sobre los elementos y añadirlos a los frames correspondientes
+        for elemento in elementos_archivo:
+            if elemento['tipo'] == 'label':
                 self._crear_label_en_frame(
-                    frames_archivo[description],
-                    text=text,
-                    font=fuente_10_bold if description == 'Titulo' else fuente_10,
-                    bg=color_de_fondo,
-                    anchor="w",
-                    row=0,
-                    column=0
+                    elemento['frame'], text=elemento['texto'],
+                    font=fuente_10_bold if elemento['descripcion'] == 'Titulo' else fuente_10,
+                    bg=color_de_fondo, anchor=elemento['anchor'],
+                    row=0, column=0
                 )
-
-    # Helper Methods
+            elif elemento['tipo'] == 'button':
+                self._crear_button_en_frame(
+                    elemento['frame'], row=elemento['row'], image=elemento['image'],
+                    command=elemento['command'], bg=elemento['bg']
+                )
+            elif elemento['tipo'] == 'play_button':
+                self._crear_play_button_on_frame(
+                    elemento['frame'], elemento['link'],
+                    row=elemento['row'], column=elemento['column'], bg=color_de_fondo
+                )
+            elif elemento['tipo'] == 'stop_button':
+                self._crear_stop_button_on_frame(
+                    elemento['frame'], row=elemento['row'], column=elemento['column'], bg=color_de_fondo
+                )
 
     def _crear_frame_columna(self, parent, row, col, width, colour):
         """Crea un frame con la altura fija especificada para la columna y un ancho fijo."""
-        frame = tk.Frame(parent, height=self.altura_frame, width=width, bg=colour)  # Set fixed width and height
-        frame.grid(row=row, column=col, sticky="nsew")
-        frame.grid_propagate(False)  # Prevent the frame from resizing to fit its contents
-        frame.pack_propagate(False)  # Additional protection to prevent resizing
+        frame = tk.Frame(parent, height=self.altura_frame, width=1000 if col==2 else width, bg=colour)  # Set fixed width and height
+        frame.grid(row=row, column=col, sticky="new")
+        frame.grid_propagate(True) if col==2 else frame.grid_propagate(False) # Prevent the frame from resizing to fit its contents
         return frame
 
     def _crear_label_en_frame(self, frame, text, font, bg, anchor, row=0, column=0):
         """Crea un label dentro del frame dado, utilizando grid."""
         label = tk.Label(frame, text=text, font=font, bg=bg, anchor=anchor)
-        label.grid(row=row, column=column, sticky="w", padx=5, pady=5)
+        label.grid(row=row, column=column, sticky="ew", padx=0, pady=0)
 
     def _crear_button_en_frame(self, frame, text=None, image=None, command=None, bg=None, row=0, column=0):
         """Crea un botón dentro del frame dado, utilizando grid."""
         button = tk.Button(frame, text=text, image=image, command=command, bg=bg)
-        button.grid(row=row, column=column, sticky="ew", padx=5, pady=5)
+        button.grid(row=row, column=column, sticky="ew", padx=0, pady=0)
 
     def _crear_checkbutton(self, parent, counter):
         var = tk.BooleanVar()
         self.vars.append(var)
         checkbutton = tk.Checkbutton(parent, variable=var, command=lambda i=counter: self.on_checkbox_toggle(i))
-        checkbutton.grid(row=counter, column=0, sticky="nw", padx=1, pady=1)
+        checkbutton.grid(row=counter, column=0, sticky="ew", padx=0, pady=0)
         self.checkbuttons.append(checkbutton)
 
     def _crear_play_button_on_frame(self, frame, music_link, row, column, bg):
         """Crea un botón de reproducción dentro del frame dado, utilizando grid."""
         play_button = tk.Button(frame, image=self.play_icon, relief=tk.FLAT,
                                 command=lambda: self.play_music(music_link), bg=bg)
-        play_button.grid(row=row, column=column, sticky="e", padx=1, pady=1)
+        play_button.grid(row=row, column=column, sticky="ew", padx=0, pady=0)
 
     def _crear_stop_button_on_frame(self, frame, row, column, bg):
         """Crea un botón de parada dentro del frame dado, utilizando grid."""
         stop_button = tk.Button(frame, image=self.stop_icon, relief=tk.FLAT,
                                 command=stop_music, bg=bg)
-        stop_button.grid(row=row, column=column, sticky="e", padx=1, pady=1)
-
-    def _crear_play_button_file(self, parent, archivo, counter, bg):
-        """Crea botones de reproducción y parada para un archivo."""
-        playmusic_button = tk.Button(parent, image=self.play_icon, relief=tk.FLAT,
-                                     command=lambda fp=archivo: self.play_music(fp), bg=bg)
-        playmusic_button.grid(row=0, column=counter, sticky="nw", padx=2, pady=2)
-        stopmusic_button = tk.Button(parent, image=self.stop_icon, relief=tk.FLAT, command=stop_music, bg=bg)
-        stopmusic_button.grid(row=0, column=counter + 1, sticky="nw", padx=2, pady=2)
+        stop_button.grid(row=row, column=column, sticky="ew", padx=0, pady=0)
 
     def leer_tags(self):
         self.tags = TinyTag.get(self.ruta_archivo)

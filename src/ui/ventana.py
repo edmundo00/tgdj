@@ -23,7 +23,7 @@ class Ventana:
 
 
         self.root.title("Tkinter Window with Menu, Icon, and Status Bar")
-        self.root.geometry('1500x800')
+        self.root.geometry('1700x800')
 
         # Setup layout configurations
         self.layout_configurations()
@@ -108,6 +108,32 @@ class Ventana:
             btn = tk.Button(self.icon_bar, image=icon, relief=tk.FLAT, command=command)
             btn.grid(row=0, column=i, padx=2, pady=2)
 
+    def configure_scrollable_frames(self):
+        """Configure all scrollable frames in self.scrollable_frame to expand and fill their canvases."""
+        for canvas, scrollable_frame in zip(self.canvas, self.scrollable_frame):
+            # Force update to ensure all pending tasks are completed
+            scrollable_frame.update_idletasks()
+
+            # Bind the <Configure> event to adjust the size dynamically when the window is resized
+            canvas.bind("<Configure>", lambda event, c=canvas, sf=scrollable_frame: self.adjust_canvas_width(c, sf))
+
+            # Initial adjustment to set the correct size
+            self.adjust_canvas_width(canvas, scrollable_frame)
+
+    def adjust_canvas_width(self, canvas, scrollable_frame):
+        """Adjust the canvas window width to match the canvas size."""
+        # Get the current width of the canvas
+        canvas_width = canvas.winfo_width()
+        if canvas_width > 0:
+            # Adjust the canvas window width to match the canvas width
+            canvas.itemconfig(self.canvas_window[self.canvas.index(canvas)], width=canvas_width)
+
+        # Ensure the grid inside the scrollable frame allows content to expand
+        scrollable_frame.grid_rowconfigure(0, weight=1)  # Ensuring the row expands
+        scrollable_frame.grid_columnconfigure(0, weight=1)  # Ensuring the column expands
+
+
+
     def create_title_frame(self):
         """Create the title frame with 'File Tags' and 'Database Tags' labels."""
         self.title_frame = tk.Frame(self.root, relief=tk.RAISED, bd=2)
@@ -156,45 +182,61 @@ class Ventana:
 
     def create_subframes(self):
         """Create subframes inside the main content area, ensuring they resize with the window."""
-        # Crear el primer subframe con expansión completa
-        self.subframe1 = tk.Frame(self.main_content, relief=tk.RAISED, bd=2, bg='lightblue')  # Color para subframe1
-        self.subframe1.grid(row=0, column=0, sticky="nsew")  # Asegurar que se expanda correctamente
+        # Initialize the list to hold scrollable frames
+        self.scrollable_frame = []
+        self.canvas = []
+        self.canvas_window = []
 
-        # Asegurar que el subframe1 se expanda correctamente
-        self.main_content.grid_rowconfigure(0, weight=1)
-        self.main_content.grid_columnconfigure(0, weight=1)
+        # Create and configure subframe1
+        self.create_and_configure_subframe(
+            subframe_bg='lightblue',
+            subframe_row=0,
+            subframe_column=0,
+            title_config=columnas_config['archivo'],
+            scrollable_bg='lightgreen',
+            frames_columnas=self.frames_columnas_archivo,
+            canvas_attr_name='canvas1'
+        )
+        self.configure_scrollable_frames()
 
-        # Crear fila fija de títulos para subframe1
-        self.crear_titulos(self.subframe1, columnas_config['archivo'])
+        # Create and configure subframe2
+        self.create_and_configure_subframe(
+            subframe_bg='lightcoral',
+            subframe_row=0,
+            subframe_column=1,
+            title_config=columnas_config['resultado'],
+            scrollable_bg='lightyellow',
+            frames_columnas=self.frames_columnas_resultado,
+            canvas_attr_name='canvas2'
+        )
+        self.configure_scrollable_frames()
 
-        # Crear área desplazable para los datos en subframe1 y asignar 'canvas1' como atributo
-        scrollable_frame1 = self.create_scrollable_area(self.subframe1, 'canvas1', bg='lightgreen')
 
-        # Crear frames dentro de subframe1 que correspondan con la configuración de 'archivo'
-        self.crear_frames_en_columnas(self.subframe1, columnas_config['archivo'], scrollable_frame1,
-                                      self.frames_columnas_archivo)
 
-        # Crear el segundo subframe con expansión completa
-        self.subframe2 = tk.Frame(self.main_content, relief=tk.RAISED, bd=2, bg='lightcoral')  # Color para subframe2
-        self.subframe2.grid(row=0, column=1, sticky="nsew")  # Asegurar que se expanda correctamente
+    def create_and_configure_subframe(self, subframe_bg, subframe_row, subframe_column, title_config, scrollable_bg,
+                                      frames_columnas, canvas_attr_name):
+        """Helper function to create and configure a subframe and its components."""
+        # Create the subframe
+        subframe = tk.Frame(self.main_content, relief=tk.RAISED, bd=2, bg=subframe_bg)
+        subframe.grid(row=subframe_row, column=subframe_column, sticky="nsew")
 
-        # Asegurar que el subframe2 se expanda correctamente
-        self.main_content.grid_rowconfigure(0, weight=1)
-        self.main_content.grid_columnconfigure(1, weight=1)
+        # Ensure the subframe expands correctly
+        self.main_content.grid_rowconfigure(subframe_row, weight=1)
+        self.main_content.grid_columnconfigure(subframe_column, weight=1)
 
-        # Crear fila fija de títulos para subframe2
-        self.crear_titulos(self.subframe2, columnas_config['resultado'])
+        # Create fixed title row for the subframe
+        self.crear_titulos(subframe, title_config)
 
-        # Crear área desplazable para los datos en subframe2 y asignar 'canvas2' como atributo
-        scrollable_frame2 = self.create_scrollable_area(self.subframe2, 'canvas2', bg='lightyellow')
+        # Create the scrollable area within the subframe
+        canvas_window, canvas, scrollable_frame = self.create_scrollable_area(subframe, canvas_attr_name, bg=scrollable_bg)
+        self.scrollable_frame.append(scrollable_frame)
+        self.canvas.append(canvas)
+        self.canvas_window.append(canvas_window)
 
-        # Crear frames dentro de subframe2 que correspondan con la configuración de 'resultado'
-        self.crear_frames_en_columnas(self.subframe2, columnas_config['resultado'], scrollable_frame2,
-                                      self.frames_columnas_resultado)
 
-    def update_scroll_region(self, event=None):
-        """Actualizar la región de desplazamiento del canvas para incluir todo el contenido de main_content."""
-        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
+        # Create frames inside the scrollable area according to the provided configuration
+        self.crear_frames_en_columnas(title_config, scrollable_frame, frames_columnas)
 
     def on_mouse_wheel(self, event):
         """Maneja el desplazamiento con la rueda del ratón en ambos canvas."""
@@ -203,78 +245,101 @@ class Ventana:
             self.canvas1.yview_scroll(int(-1 * (event.delta / 120)), "units")
             self.canvas2.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
-    def configurar_columnas(self, subframe, config):
-        """Configura las columnas de un subframe según la configuración proporcionada."""
-        for col_config in config:
-            subframe.grid_columnconfigure(col_config['col'], weight=col_config['weight'], minsize=col_config['minsize'])
-
     def crear_titulos(self, subframe, config):
         """
-        Crea una fila de títulos fija en la parte superior del subframe.
+        Crea una fila de títulos fija en la parte superior del subframe,
+        ajustando el ancho de cada columna según la configuración proporcionada.
         """
         titulo_frame = tk.Frame(subframe, relief=tk.RAISED, bd=1, bg='lightgray')
         titulo_frame.grid(row=0, column=0, sticky="ew", columnspan=len(config))  # Abarcar todas las columnas
 
+        # Configura las columnas del titulo_frame según la configuración proporcionada
         for col_config in config:
-            label = tk.Label(titulo_frame, text=col_config['description'], anchor="center",
-                             font=('Consolas', 10, 'bold'))
+            titulo_frame.grid_columnconfigure(col_config['col'], weight=col_config['weight'],
+                                              minsize=col_config['minsize'])
+
+        # Crea los labels para los títulos
+        for col_config in config:
+            label = tk.Label(titulo_frame,
+                             text=col_config['description'] if col_config['tipo'] == 'label' else '',
+                             anchor="center",
+                             font=('Consolas', 15, 'bold'),
+                             bg='lightgray')
             label.grid(row=0, column=col_config['col'], sticky="ew", padx=1, pady=5)
 
-    def crear_frames_en_columnas(self, subframe, config, scrollable_frame, frame_store):
-        """
-        Crea una serie de frames dentro del subframe de acuerdo a la configuración proporcionada.
-        Almacena los frames en un diccionario frame_store con un identificador.
-        """
+    def crear_frames_en_columnas(self, config, scrollable_frame, frame_store):
+        """Creates frames inside the scrollable frame according to the provided configuration."""
+        # Configure columns of the scrollable_frame to allow expansion
         for col_config in config:
-            frame = tk.Frame(scrollable_frame, relief=tk.RAISED, bd=1, bg='lightblue')
-            frame.grid(row=1, column=col_config['col'],
-                       sticky="nsew")  # Posiciona en la segunda fila para contenido desplazable
+            scrollable_frame.grid_columnconfigure(col_config['col'], weight=col_config['weight'],
+                                                  minsize=col_config['minsize'])
 
-            # Asigna un nombre al frame basado en la descripción de la columna
+        # Configure the row to expand as well (important for vertical alignment)
+        scrollable_frame.grid_rowconfigure(0, weight=1)  # Ensure vertical expansion for the content
+
+        # Create the frames based on the configuration
+        for col_config in config:
+            # Create a frame for each column
+            frame = tk.Frame(scrollable_frame, relief=tk.RAISED, bg='lightgreen', highlightbackground='green',
+                             highlightthickness=2)
+            frame.grid(row=0, column=col_config['col'], sticky="nsew", padx=1, pady=5)
+
+            # Assign a name to the frame based on the column description
             frame_name = col_config['description']
-            frame_store[frame_name] = frame  # Guarda el frame en el diccionario
+            frame_store[frame_name] = frame  # Store the frame in the dictionary
 
     def create_scrollable_area(self, subframe, canvas_attr_name, **kwargs):
-        """Crea un área desplazable dentro del subframe para los datos, debajo de los títulos fijos."""
-        # Crear un canvas para contener el área desplazable
-        canvas = tk.Canvas(subframe, **kwargs)
+        """Creates a scrollable area inside the subframe for data, below the fixed titles."""
+        # Filter out conflicting arguments from kwargs
+        canvas_kwargs = {k: v for k, v in kwargs.items() if
+                         k not in ['bg', 'highlightbackground', 'highlightthickness']}
+
+        # Create a canvas to contain the scrollable area with distinct colors for debugging
+        canvas = tk.Canvas(subframe, bg='pink', highlightbackground='red', highlightthickness=2, **canvas_kwargs)
         scrollbar = ttk.Scrollbar(subframe, orient="vertical", command=canvas.yview)
 
-        # Crear un frame interno para añadir widgets desplazables
-        scrollable_frame = tk.Frame(canvas)
+        # Create an internal frame to add scrollable widgets
+        scrollable_frame = tk.Frame(canvas, bg='lightblue', highlightbackground='blue', highlightthickness=2)
 
-        # Configurar el evento para ajustar la región de scroll
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(
-                scrollregion=canvas.bbox("all")
-            )
-        )
+        # Adjust the scroll region to encompass the entire frame
+        def on_frame_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
 
-        # Crear una ventana en el canvas para mostrar el frame desplazable
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
 
-        # Configurar el canvas para que funcione con la scrollbar
+        # Bind the configuration change event to the scrollable frame
+        scrollable_frame.bind("<Configure>", on_frame_configure)
+
+
+        # Create a window in the canvas to display the scrollable frame
+        canvas_window =  canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+
+        # Configure the canvas to work with the scrollbar
         canvas.configure(yscrollcommand=scrollbar.set)
 
-        # Configurar el layout dentro del subframe
-        canvas.grid(row=1, column=0, sticky="nsew")  # Asegurar que el canvas ocupe todo el espacio
+        # Layout configuration within the subframe
+        canvas.grid(row=1, column=0, sticky="nsew")  # Ensure the canvas occupies all space
         scrollbar.grid(row=1, column=1, sticky="ns")
 
-        # Asegurar que el subframe permita la expansión del canvas y scrollbar
-        subframe.grid_rowconfigure(1, weight=1)  # Asegurar expansión vertical
-        subframe.grid_columnconfigure(0, weight=1)  # Asegurar expansión horizontal
+        # Ensure the subframe allows the canvas and scrollbar to expand
+        subframe.grid_rowconfigure(1, weight=1)  # Ensure vertical expansion
+        subframe.grid_columnconfigure(0, weight=1)  # Ensure horizontal expansion
 
-        # Guardar el canvas en el atributo correspondiente de la clase
+        # Save the canvas in the corresponding class attribute
         setattr(self, canvas_attr_name, canvas)
 
-        # Vincular el evento de la rueda del ratón a ambos canvas
+        # Bind mouse wheel events to scroll both canvases
         canvas.bind_all("<MouseWheel>", self.on_mouse_wheel)
 
-        return scrollable_frame
+        # Assuming self.scrollable_frame is a list of frames you want to configure
+        # Configure all scrollable frames
+
+        # scrollable_frame.update_idletasks()
+        # canvas.itemconfig(canvas_window, width=canvas.winfo_width())
+        # scrollable_frame.grid_rowconfigure(0, weight=1)  # Ensuring the row expands
+        # scrollable_frame.grid_columnconfigure(0, weight=1)
 
 
-
+        return canvas_window, canvas, scrollable_frame
 
     def get_frames_columnas_archivo(self):
         """Devuelve los frames de columnas del subframe1 (archivo)."""
@@ -552,8 +617,8 @@ class Ventana:
         if file_path:
             # try:
             new_filetofind = FILETOFIND(
-                framefiles=self.subframe1,
-                framedatabase=self.subframe2,
+                framefiles=self.scrollable_frame[0],
+                framedatabase=self.scrollable_frame[1],
                 frames_columnas_archivo=self.frames_columnas_archivo,  # Pasar diccionario de frames de archivo
                 frames_columnas_resultado=self.frames_columnas_resultado,  # Pasar diccionario de frames de resultado
                 ruta_archivo=file_path,
@@ -590,8 +655,8 @@ class Ventana:
                     if line and not line.startswith("#"):
                         if os.path.exists(line):
                             new_filetofind = FILETOFIND(
-                                framefiles=self.subframe1,
-                                framedatabase=self.subframe2,
+                                framefiles=self.scrollable_frame[0],
+                                framedatabase=self.scrollable_frame[1],
                                 frames_columnas_archivo=self.frames_columnas_archivo,
                                 # Pasar diccionario de frames de archivo
                                 frames_columnas_resultado=self.frames_columnas_resultado,
@@ -606,8 +671,8 @@ class Ventana:
                             modified_path = dropbox_path + line.split("Dropbox", 1)[1]
                             if os.path.exists(modified_path):
                                 new_filetofind = FILETOFIND(
-                                    framefiles=self.subframe1,
-                                    framedatabase=self.subframe2,
+                                    framefiles=self.scrollable_frame[0],
+                                    framedatabase=self.scrollable_frame[1],
                                     frames_columnas_archivo=self.frames_columnas_archivo,
                                     # Pasar diccionario de frames de archivo
                                     frames_columnas_resultado=self.frames_columnas_resultado,
@@ -647,8 +712,8 @@ class Ventana:
                 if file_path:
                     # try:
                     new_filetofind = FILETOFIND(
-                        framefiles=self.subframe1,
-                        framedatabase=self.subframe2,
+                        framefiles=self.scrollable_frame[0],
+                        framedatabase=self.scrollable_frame[1],
                         frames_columnas_archivo=self.frames_columnas_archivo,
                         # Pasar diccionario de frames de archivo
                         frames_columnas_resultado=self.frames_columnas_resultado,

@@ -131,25 +131,25 @@ palabras_comunes_artista = [
 # Definición de la configuración de columnas para los subframes
 columnas_config = {
     'archivo': [
-        {'col': 1, 'weight': 0, 'minsize': 20, 'description': 'Info'},
-        {'col': 2, 'weight': 4, 'minsize': 200, 'description': 'Titulo'},
-        {'col': 3, 'weight': 3, 'minsize': 150, 'description': 'Orquesta'},
-        {'col': 4, 'weight': 3, 'minsize': 150, 'description': 'Cantor'},
-        {'col': 5, 'weight': 0, 'minsize': 100, 'description': 'Fecha'},
-        {'col': 6, 'weight': 0, 'minsize': 20, 'description': 'Play'},
-        {'col': 7, 'weight': 0, 'minsize': 20, 'description': 'Pausa'},
+        {'col': 1, 'weight': 0, 'minsize': 20, 'description': 'Info', 'tipo': 'button'},
+        {'col': 2, 'weight': 4, 'minsize': 240, 'description': 'Titulo', 'tipo': 'label'},
+        {'col': 3, 'weight': 3, 'minsize': 150, 'description': 'Orquesta', 'tipo': 'label'},
+        {'col': 4, 'weight': 3, 'minsize': 150, 'description': 'Cantor', 'tipo': 'label'},
+        {'col': 5, 'weight': 0, 'minsize': 100, 'description': 'Fecha', 'tipo': 'label'},
+        {'col': 6, 'weight': 0, 'minsize': 20, 'description': 'Play', 'tipo': 'play_button'},
+        {'col': 7, 'weight': 0, 'minsize': 20, 'description': 'Pausa', 'tipo': 'stop_button'},
     ],
     'resultado': [
-        {'col': 1, 'weight': 0, 'minsize': 20, 'description': 'Checkbox'},
-        {'col': 2, 'weight': 4, 'minsize': 200, 'description': 'Titulo'},
-        {'col': 3, 'weight': 3, 'minsize': 150, 'description': 'Orquesta'},
-        {'col': 4, 'weight': 3, 'minsize': 150, 'description': 'Cantor'},
-        {'col': 5, 'weight': 0, 'minsize': 100, 'description': 'Fecha'},  # Nueva columna 'Fecha' antes de 'Estilo'
-        {'col': 6, 'weight': 0, 'minsize': 100, 'description': 'Estilo'},
-        {'col': 7, 'weight': 0, 'minsize': 20, 'description': 'Info'},
-        {'col': 8, 'weight': 0, 'minsize': 20, 'description': 'Play_30'},
-        {'col': 9, 'weight': 0, 'minsize': 20, 'description': 'Play_10'},
-        {'col': 10, 'weight': 0, 'minsize': 20, 'description': 'Pausa'},
+        {'col': 1, 'weight': 0, 'minsize': 20, 'description': 'Checkbox', 'tipo': 'checkbox'},
+        {'col': 2, 'weight': 4, 'minsize': 240, 'description': 'Titulo', 'tipo': 'label'},
+        {'col': 3, 'weight': 3, 'minsize': 150, 'description': 'Orquesta', 'tipo': 'label'},
+        {'col': 4, 'weight': 3, 'minsize': 150, 'description': 'Cantor', 'tipo': 'label'},
+        {'col': 5, 'weight': 0, 'minsize': 100, 'description': 'Fecha', 'tipo': 'label'},
+        {'col': 6, 'weight': 0, 'minsize': 130, 'description': 'Estilo', 'tipo': 'label'},
+        {'col': 7, 'weight': 0, 'minsize': 20, 'description': 'Info', 'tipo': 'button'},
+        {'col': 8, 'weight': 0, 'minsize': 20, 'description': 'Play_30', 'tipo': 'play_button'},
+        {'col': 9, 'weight': 0, 'minsize': 20, 'description': 'Play_10', 'tipo': 'play_button'},
+        {'col': 10, 'weight': 0, 'minsize': 20, 'description': 'Pausa', 'tipo': 'stop_button'},
     ]
 }
 
