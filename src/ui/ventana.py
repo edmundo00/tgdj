@@ -16,6 +16,8 @@ class Ventana:
     def __init__(self, root):
         self.data_store = Database()
         self.root = root
+        self.colour = 'white'
+        self.pad = 0
 
         # Inicializar los diccionarios para almacenar los frames de columnas
         self.frames_columnas_archivo = {}
@@ -106,7 +108,7 @@ class Ventana:
 
         for i, (icon, command) in enumerate(buttons):
             btn = tk.Button(self.icon_bar, image=icon, relief=tk.FLAT, command=command)
-            btn.grid(row=0, column=i, padx=2, pady=2)
+            btn.grid(row=0, column=i, padx=self.pad, pady=self.pad)
 
     def configure_scrollable_frames(self):
         """Configure all scrollable frames in self.scrollable_frame to expand and fill their canvases."""
@@ -150,26 +152,26 @@ class Ventana:
             self.title_frame,
             text="File Tags",
             font=('Consolas', 12, 'bold'),
-            bg='lightblue',
+            bg=self.colour,
             relief=tk.SOLID,
             bd=1
         )
-        file_tags_label.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
+        file_tags_label.grid(row=0, column=0, padx=self.pad, pady=self.pad, sticky="nsew")
 
         database_tags_label = tk.Label(
             self.title_frame,
             text="Database Tags",
             font=('Consolas', 12, 'bold'),
-            bg='lightblue',
+            bg=self.colour,
             relief=tk.SOLID,
             bd=1
         )
-        database_tags_label.grid(row=0, column=1, padx=5, pady=5, sticky="nsew")
+        database_tags_label.grid(row=0, column=1, padx=self.pad, pady=self.pad, sticky="nsew")
 
     def create_main_content_area(self):
         """Create the main content area with two subframes occupying all available space."""
         # Crear el contenedor principal para los subframes
-        self.main_content = tk.Frame(self.root, bg='yellow')  # Color de fondo del main_content
+        self.main_content = tk.Frame(self.root, bg=self.colour)  # Color de fondo del main_content
         self.main_content.grid(row=self.main_content_row, column=0, columnspan=self.main_content_colspan, sticky="nsew")
 
         # Configuración para expandir el main_content
@@ -189,11 +191,11 @@ class Ventana:
 
         # Create and configure subframe1
         self.create_and_configure_subframe(
-            subframe_bg='lightblue',
+            subframe_bg=self.colour,
             subframe_row=0,
             subframe_column=0,
             title_config=columnas_config['archivo'],
-            scrollable_bg='lightgreen',
+            scrollable_bg=self.colour,
             frames_columnas=self.frames_columnas_archivo,
             canvas_attr_name='canvas1'
         )
@@ -201,11 +203,11 @@ class Ventana:
 
         # Create and configure subframe2
         self.create_and_configure_subframe(
-            subframe_bg='lightcoral',
+            subframe_bg=self.colour,
             subframe_row=0,
             subframe_column=1,
             title_config=columnas_config['resultado'],
-            scrollable_bg='lightyellow',
+            scrollable_bg=self.colour,
             frames_columnas=self.frames_columnas_resultado,
             canvas_attr_name='canvas2'
         )
@@ -250,7 +252,7 @@ class Ventana:
         Crea una fila de títulos fija en la parte superior del subframe,
         ajustando el ancho de cada columna según la configuración proporcionada.
         """
-        titulo_frame = tk.Frame(subframe, relief=tk.RAISED, bd=1, bg='lightgray')
+        titulo_frame = tk.Frame(subframe, relief=tk.RAISED, bd=1, bg=self.colour)
         titulo_frame.grid(row=0, column=0, sticky="ew", columnspan=len(config))  # Abarcar todas las columnas
 
         # Configura las columnas del titulo_frame según la configuración proporcionada
@@ -264,8 +266,8 @@ class Ventana:
                              text=col_config['description'] if col_config['tipo'] == 'label' else '',
                              anchor="center",
                              font=('Consolas', 15, 'bold'),
-                             bg='lightgray')
-            label.grid(row=0, column=col_config['col'], sticky="ew", padx=1, pady=5)
+                             bg=self.colour)
+            label.grid(row=0, column=col_config['col'], sticky="ew", padx=self.pad, pady=self.pad)
 
     def crear_frames_en_columnas(self, config, scrollable_frame, frame_store):
         """Creates frames inside the scrollable frame according to the provided configuration."""
@@ -280,9 +282,9 @@ class Ventana:
         # Create the frames based on the configuration
         for col_config in config:
             # Create a frame for each column
-            frame = tk.Frame(scrollable_frame, relief=tk.RAISED, bg='lightgreen', highlightbackground='green',
+            frame = tk.Frame(scrollable_frame, relief=tk.RAISED, bg=self.colour, highlightbackground=self.colour,
                              highlightthickness=2)
-            frame.grid(row=0, column=col_config['col'], sticky="nsew", padx=1, pady=5)
+            frame.grid(row=0, column=col_config['col'], sticky="nsew", padx=self.pad, pady=self.pad)
 
             # Assign a name to the frame based on the column description
             frame_name = col_config['description']
@@ -295,11 +297,11 @@ class Ventana:
                          k not in ['bg', 'highlightbackground', 'highlightthickness']}
 
         # Create a canvas to contain the scrollable area with distinct colors for debugging
-        canvas = tk.Canvas(subframe, bg='pink', highlightbackground='red', highlightthickness=2, **canvas_kwargs)
+        canvas = tk.Canvas(subframe, bg=self.colour, highlightbackground=self.colour, highlightthickness=2, **canvas_kwargs)
         scrollbar = ttk.Scrollbar(subframe, orient="vertical", command=canvas.yview)
 
         # Create an internal frame to add scrollable widgets
-        scrollable_frame = tk.Frame(canvas, bg='lightblue', highlightbackground='blue', highlightthickness=2)
+        scrollable_frame = tk.Frame(canvas, bg=self.colour, highlightbackground=self.colour, highlightthickness=2)
 
         # Adjust the scroll region to encompass the entire frame
         def on_frame_configure(event):
@@ -448,7 +450,7 @@ class Ventana:
 
         # Crear el botón para convertir la playlist
         convert_button = ttk.Button(popup, text="Convert Playlist", command=convert_and_save)
-        convert_button.pack(pady=10)
+        convert_button.pack(pady=self.pad)
 
         # Mostrar la ventana popup
         popup.transient(self.root)
@@ -522,38 +524,38 @@ class Ventana:
         tree_font_style = ('Helvetica', 12)
 
         # Filtro de Título
-        tk.Label(popup, text="Titulo:", font=font_style).grid(row=0, column=0, padx=10, pady=10, sticky="w")
+        tk.Label(popup, text="Titulo:", font=font_style).grid(row=0, column=0, padx=self.pad, pady=self.pad, sticky="w")
         title_entry = tk.Entry(popup, font=font_style)
-        title_entry.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
+        title_entry.grid(row=0, column=1, padx=self.pad, pady=self.pad, sticky="ew")
         title_entry.bind("<KeyRelease>", lambda event: update_table())
 
         # Filtro de Artista
-        tk.Label(popup, text="Artista:", font=font_style).grid(row=1, column=0, padx=10, pady=10, sticky="w")
+        tk.Label(popup, text="Artista:", font=font_style).grid(row=1, column=0, padx=self.pad, pady=self.pad, sticky="w")
         artist_var = tk.StringVar(popup)
         artist_var.set("Todos")
         artist_dropdown = ttk.Combobox(popup, textvariable=artist_var, font=font_style)
         artist_dropdown['values'] = ['Todos'] + sorted(self.data_store.get_db()['artista'].dropna().unique().tolist())
-        artist_dropdown.grid(row=1, column=1, padx=10, pady=10, sticky="ew")
+        artist_dropdown.grid(row=1, column=1, padx=self.pad, pady=self.pad, sticky="ew")
         artist_var.trace("w", update_cantor_dropdown)
 
         # Filtro de Cantor
-        tk.Label(popup, text="Cantor:", font=font_style).grid(row=2, column=0, padx=10, pady=10, sticky="w")
+        tk.Label(popup, text="Cantor:", font=font_style).grid(row=2, column=0, padx=self.pad, pady=self.pad, sticky="w")
         cantor_var = tk.StringVar(popup)
         cantor_var.set("Todos")
         cantor_dropdown = ttk.Combobox(popup, textvariable=cantor_var, font=font_style)
         cantor_dropdown['values'] = ['Todos'] + sorted(self.data_store.get_db()['cantor'].dropna().unique().tolist())
-        cantor_dropdown.grid(row=2, column=1, padx=10, pady=10, sticky="ew")
+        cantor_dropdown.grid(row=2, column=1, padx=self.pad, pady=self.pad, sticky="ew")
         cantor_var.trace("w", on_filter_change)
 
         # Filtro de Fecha
-        tk.Label(popup, text="Fecha desde:", font=font_style).grid(row=3, column=0, padx=10, pady=10, sticky="w")
+        tk.Label(popup, text="Fecha desde:", font=font_style).grid(row=3, column=0, padx=self.pad, pady=self.pad, sticky="w")
         start_date_entry = tk.Entry(popup, font=font_style)
-        start_date_entry.grid(row=3, column=1, padx=10, pady=10, sticky="ew")
+        start_date_entry.grid(row=3, column=1, padx=self.pad, pady=self.pad, sticky="ew")
         start_date_entry.bind("<KeyRelease>", lambda event: update_table())
 
-        tk.Label(popup, text="Fecha hasta:", font=font_style).grid(row=3, column=2, padx=10, pady=10, sticky="w")
+        tk.Label(popup, text="Fecha hasta:", font=font_style).grid(row=3, column=2, padx=self.pad, pady=self.pad, sticky="w")
         end_date_entry = tk.Entry(popup, font=font_style)
-        end_date_entry.grid(row=3, column=3, padx=10, pady=10, sticky="ew")
+        end_date_entry.grid(row=3, column=3, padx=self.pad, pady=self.pad, sticky="ew")
         end_date_entry.bind("<KeyRelease>", lambda event: update_table())
 
         # Crear canvas para scrollbar
@@ -699,7 +701,7 @@ class Ventana:
         # Create a Progressbar widget
         self.progress_var = tk.IntVar()
         self.progress_bar = ttk.Progressbar(self.status_bar, variable=self.progress_var, maximum=100, length=150)
-        self.progress_bar.pack(side=tk.RIGHT, padx=10)
+        self.progress_bar.pack(side=tk.RIGHT, padx=self.pad)
         contador_canciones = 0
 
         for filename in os.listdir(folder_path):

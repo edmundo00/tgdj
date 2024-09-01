@@ -26,6 +26,8 @@ class FILETOFIND:
         self.framedatabase = framedatabase
         self.frames_columnas_archivo = frames_columnas_archivo
         self.frames_columnas_resultado = frames_columnas_resultado  # Asegúrate
+        # In your class initialization or setup
+        self.sizebuttons = [20, 20]  # Set button width and height in text units
 
         self.leer_tags()
 
@@ -185,10 +187,15 @@ class FILETOFIND:
                 )
 
     def _crear_frame_columna(self, parent, row, col, width, colour):
-        """Crea un frame con la altura fija especificada para la columna y un ancho fijo."""
-        frame = tk.Frame(parent, height=self.altura_frame, width=1000 if col==2 else width, bg=colour)  # Set fixed width and height
-        frame.grid(row=row, column=col, sticky="new")
-        frame.grid_propagate(True) if col==2 else frame.grid_propagate(False) # Prevent the frame from resizing to fit its contents
+        """Create a frame with fixed height but flexible width that can expand with the window."""
+        frame = tk.Frame(parent, height=self.altura_frame, width=width, bg=colour)
+        frame.grid(row=row, column=col, sticky="nsew")  # Use sticky 'nsew' to expand in all directions
+
+        # Allow horizontal expansion by configuring column weight and setting propagate False if needed
+        frame.grid_propagate(False)  # Prevent resizing due to internal content
+        parent.grid_columnconfigure(col, weight=1)  # Set weight to allow expansion horizontally
+        parent.grid_rowconfigure(row, weight=1)  # Optional: allow vertical expansion
+
         return frame
 
     def _crear_label_en_frame(self, frame, text, font, bg, anchor, row=0, column=0):
@@ -198,26 +205,59 @@ class FILETOFIND:
 
     def _crear_button_en_frame(self, frame, text=None, image=None, command=None, bg=None, row=0, column=0):
         """Crea un botón dentro del frame dado, utilizando grid."""
-        button = tk.Button(frame, text=text, image=image, command=command, bg=bg)
+        # Use self.sizebuttons to set the width and height
+        button = tk.Button(
+            frame,
+            text=text,
+            image=image,
+            command=command,
+            bg=bg,
+            width=self.sizebuttons[0],  # Width from self.sizebuttons
+            height=self.sizebuttons[1]  # Height from self.sizebuttons
+        )
+
+        # Place the button in the grid
         button.grid(row=row, column=column, sticky="ew", padx=0, pady=0)
+
+        return button
 
     def _crear_checkbutton(self, parent, counter):
         var = tk.BooleanVar()
         self.vars.append(var)
-        checkbutton = tk.Checkbutton(parent, variable=var, command=lambda i=counter: self.on_checkbox_toggle(i))
-        checkbutton.grid(row=counter, column=0, sticky="ew", padx=0, pady=0)
+        checkbutton = tk.Checkbutton(
+            parent,
+            variable=var,
+            command=lambda i=counter: self.on_checkbox_toggle(i),
+            width=self.sizebuttons[0]  # Set width using self.sizebuttons
+        )
+        checkbutton.grid(row=counter, column=0, sticky="ew", padx=0,
+                         pady=(0, self.sizebuttons[1]))  # Adjust padding for visual height control
         self.checkbuttons.append(checkbutton)
 
     def _crear_play_button_on_frame(self, frame, music_link, row, column, bg):
         """Crea un botón de reproducción dentro del frame dado, utilizando grid."""
-        play_button = tk.Button(frame, image=self.play_icon, relief=tk.FLAT,
-                                command=lambda: self.play_music(music_link), bg=bg)
+        play_button = tk.Button(
+            frame,
+            image=self.play_icon,
+            relief=tk.FLAT,
+            command=lambda: self.play_music(music_link),
+            bg=bg,
+            width=self.sizebuttons[0],  # Width from self.sizebuttons
+            height=self.sizebuttons[1]  # Height from self.sizebuttons
+        )
         play_button.grid(row=row, column=column, sticky="ew", padx=0, pady=0)
 
     def _crear_stop_button_on_frame(self, frame, row, column, bg):
         """Crea un botón de parada dentro del frame dado, utilizando grid."""
-        stop_button = tk.Button(frame, image=self.stop_icon, relief=tk.FLAT,
-                                command=stop_music, bg=bg)
+        stop_button = tk.Button(
+            frame,
+            image=self.stop_icon,
+            relief=tk.FLAT,
+            command=stop_music,  # Assuming stop_music is a method of the class
+            bg=bg,
+            width=self.sizebuttons[0],  # Width from self.sizebuttons
+            height=self.sizebuttons[1]  # Height from self.sizebuttons
+        )
         stop_button.grid(row=row, column=column, sticky="ew", padx=0, pady=0)
 
     def leer_tags(self):
