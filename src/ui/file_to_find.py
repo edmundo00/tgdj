@@ -51,7 +51,6 @@ class FILETOFIND:
             5: 'red'
         }
 
-
         # Configura la altura del frame basado en el tipo de coincidencia
         self.altura_frame = 27 * (
             1 if self.tipo_de_coincidencia == 2 or len(self.coincidencias) == 0 else len(self.coincidencias)
@@ -64,75 +63,83 @@ class FILETOFIND:
         # Determinar la fila actual usando numero_canciones
         current_row = self.frame_number
 
+        # Crear frames una sola vez antes del bucle
+        frames = {}
+        for column in columnas_config['resultado']:
+            description = column['description']
+            frames[description] = self._crear_frame_columna(
+                self.frames_columnas_resultado.get(description, self.framedatabase), current_row, col=0, width=column['minsize'], colour=color_de_fondo)
+        frames_archivo = {}
+        for column in columnas_config['archivo']:
+            description = column['description']
+            frames_archivo[description] = self._crear_frame_columna(
+                self.frames_columnas_archivo.get(description, self.framefiles), current_row, col=0, width=column['minsize'], colour=color_de_fondo)
+
+
+
         # Manejar la visualización de coincidencias o "NADA ENCONTRADO"
         if self.coincidencias.empty:
-            # Lista de descripciones de columnas que necesitas rellenar
             columnas_resultado = ['Checkbox', 'Titulo', 'Orquesta', 'Cantor', 'Estilo', 'Fecha', 'Info', 'Play_30']
-
             for i, descripcion in enumerate(columnas_resultado):
-                # Crear el frame para cada columna, manteniendo la misma altura
-                frame_columna = self._crear_frame_columna(
-                    self.frames_columnas_resultado.get(descripcion, self.framedatabase), current_row, i)
+                text = "NADA ENCONTRADO" if descripcion == 'Titulo' else ""
+                self._crear_label_en_frame(frames_archivo['Titulo'], text=text, font=fuente_10, anchor='w', bg=color_de_fondo, row=0, column=0)
 
-                # Añadir un label vacío o con texto genérico según corresponda
-                if descripcion == 'Checkbox':
-                    # Ejemplo para la columna de checkbox, puedes ajustarlo según necesites
-                    self._crear_label_en_frame(frame_columna, text=self.frame_number, font=fuente_10, bg=color_de_fondo)
-                elif descripcion == 'Titulo':
-                    self._crear_label_en_frame(frame_columna, text="NADA ENCONTRADO", font=fuente_10, bg=color_de_fondo)
-                else:
-                    # Añadir un label vacío para otras columnas
-                    self._crear_label_en_frame(frame_columna, text="", font=fuente_10, bg=color_de_fondo)
 
-            # Esto asegura que todas las columnas están representadas con frames de la misma altura,
-            # incluso cuando no haya datos específicos para mostrar.
         else:
+            # Iterar sobre las coincidencias
             for counter, (_, row) in enumerate(self.coincidencias.iterrows()):
                 if isinstance(row, pd.Series) and 'audio30' in row and 'audio10' in row:
-                    # Crear frames y añadir checkbutton
-                    frame_checkbox = self._crear_frame_columna(
-                        self.frames_columnas_resultado.get('Checkbox', self.framedatabase), current_row, 0)
-                    self._crear_checkbutton(frame_checkbox, current_row)
+                    # Añadir checkbutton al frame correspondiente
+                    self._crear_checkbutton(frames['Checkbox'], counter)
 
                     # Datos de las labels para la fila de coincidencias
                     labels_data = [
-                        (row['titulo'], 'Titulo', None, "w"),
-                        (row['artista'], 'Orquesta', None, "w"),
-                        (row['cantor'], 'Cantor', None, "w"),
-                        (row['estilo'], 'Estilo', 11, "w"),
-                        (row['fecha'], 'Fecha', 10, "w"),
+                        (row['titulo'], 'Titulo', frames['Titulo'], "w"),
+                        (row['artista'], 'Orquesta', frames['Orquesta'], "w"),
+                        (row['cantor'], 'Cantor', frames['Cantor'], "w"),
+                        (row['estilo'], 'Estilo', frames['Estilo'], "w"),
+                        (row['fecha'], 'Fecha', frames['Fecha'], "w"),
                     ]
 
-                    # Crear frames y añadir labels para cada columna de coincidencias
-                    for text, description, char_width, anchor in labels_data:
-                        if description in self.frames_columnas_resultado:
-                            frame_columna = self._crear_frame_columna(self.frames_columnas_resultado[description],
-                                                                      current_row, 0)
-                            self._crear_label_en_frame(frame_columna, text=text,
-                                                       font=fuente_10_bold if description == 'Titulo' else fuente_10,
-                                                       bg=color_de_fondo, anchor=anchor)
+                    # Añadir labels a los frames correspondientes
+                    for text, description, frame_columna, anchor in labels_data:
+                        self._crear_label_en_frame(
+                            frame_columna, text=text,
+                            font=fuente_10_bold if description == 'Titulo' else fuente_10,
+                            bg=color_de_fondo, anchor=anchor, row=counter, column=0
+                        )
 
-                    # Crear frame y añadir botón de información
-                    frame_info = self._crear_frame_columna(
-                        self.frames_columnas_resultado.get('Info', self.framedatabase), current_row, 2)
-                    self._crear_button_en_frame(frame_info, image=self.info_icon,
-                                                command=lambda r=row: self.show_popup_db(r), bg=color_de_fondo)
+                    # Añadir botones de información, reproducción y parada
+                    self._crear_button_en_frame(
+                        frames['Info'], row=counter, image=self.info_icon,
+                        command=lambda r=row: self.show_popup_db(r), bg=color_de_fondo
+                    )
+                    self._crear_play_button_on_frame(
+                        frames['Play_30'], link_to_music(row['audio30']),
+                        row=counter, column=0, bg=color_de_fondo
+                    )
+                    self._crear_play_button_on_frame(
+                        frames['Play_10'], link_to_music(row['audio10']),
+                        row=counter, column=0, bg=color_de_fondo
+                    )
+                    self._crear_stop_button_on_frame(frames['Pausa'], row=counter, column=0, bg=color_de_fondo)
 
-                    # Crear frames y añadir botones de reproducción
-                    self._crear_play_buttons(self.frames_columnas_resultado.get('Play_30', self.framedatabase), row,
-                                             current_row, bg=color_de_fondo)
                 else:
                     print(f"Unexpected row format or missing columns: {row}")
 
             if self.hay_coincidencia_preferida:
                 self.activar_checkbox(self.coincidencia_preferida)
 
-        # Crear frames y widgets para la información del archivo
-        frame_info_archivo = self._crear_frame_columna(self.frames_columnas_archivo.get('Info', self.framefiles),
-                                                       current_row, 0)
-        self._crear_button_en_frame(frame_info_archivo, image=self.info_icon, command=self.show_popup_file,
-                                    bg=color_de_fondo)
+        # Add the button to the 'Info' frame
+        if 'Info' in frames_archivo:
+            self._crear_button_en_frame(
+                frames_archivo['Info'],
+                image=self.info_icon,
+                command=self.show_popup_file,
+                bg=color_de_fondo
+            )
 
+        # Define data for the labels to be added to the file information frames
         file_labels_data = [
             (self.tags.title, 'Titulo', None),
             (self.artists1, 'Orquesta', None),
@@ -140,36 +147,38 @@ class FILETOFIND:
             (self.tags.year, 'Fecha', 11),
         ]
 
-        # Crear frames y añadir labels para cada columna de información del archivo
+        # Add labels to the corresponding frames
         for text, description, char_width in file_labels_data:
-            if description in self.frames_columnas_archivo:
-                frame_columna_archivo = self._crear_frame_columna(self.frames_columnas_archivo[description],
-                                                                  current_row, 0)
-                self._crear_label_en_frame(frame_columna_archivo, text=text,
-                                           font=fuente_10_bold if description == 'Titulo' else fuente_10,
-                                           bg=color_de_fondo)
+            if description in frames_archivo:
+                self._crear_label_en_frame(
+                    frames_archivo[description],
+                    text=text,
+                    font=fuente_10_bold if description == 'Titulo' else fuente_10,
+                    bg=color_de_fondo,
+                    anchor="w",
+                    row=0,
+                    column=0
+                )
 
-        # Crear frame y añadir botón de reproducción para el archivo
-        frame_play_archivo = self._crear_frame_columna(self.frames_columnas_archivo.get('Play', self.framefiles),
-                                                       current_row, 1)
-        self._crear_play_button_file(frame_play_archivo, self.tags._filename, current_row, bg=color_de_fondo)
+    # Helper Methods
 
-    def _crear_frame_columna(self, parent, row, col):
-        """Crea un frame con la altura especificada para la columna."""
-        frame = tk.Frame(parent, height=self.altura_frame, bg='white')  # Fondo blanco o el color que prefieras
+    def _crear_frame_columna(self, parent, row, col, width, colour):
+        """Crea un frame con la altura fija especificada para la columna y un ancho fijo."""
+        frame = tk.Frame(parent, height=self.altura_frame, width=width, bg=colour)  # Set fixed width and height
         frame.grid(row=row, column=col, sticky="nsew")
-        frame.grid_propagate(False)  # Evita que el frame cambie de tamaño con su contenido
+        frame.grid_propagate(False)  # Prevent the frame from resizing to fit its contents
+        frame.pack_propagate(False)  # Additional protection to prevent resizing
         return frame
 
-    def _crear_label_en_frame(self, frame, text, font, bg, anchor='w'):
-        """Crea un label dentro del frame dado."""
+    def _crear_label_en_frame(self, frame, text, font, bg, anchor, row=0, column=0):
+        """Crea un label dentro del frame dado, utilizando grid."""
         label = tk.Label(frame, text=text, font=font, bg=bg, anchor=anchor)
-        label.pack(fill='both', expand=True, padx=5, pady=5)  # Usa pack para expandir dentro del frame
+        label.grid(row=row, column=column, sticky="w", padx=5, pady=5)
 
-    def _crear_button_en_frame(self, frame, text=None, image=None, command=None, bg=None):
-        """Crea un botón dentro del frame dado."""
+    def _crear_button_en_frame(self, frame, text=None, image=None, command=None, bg=None, row=0, column=0):
+        """Crea un botón dentro del frame dado, utilizando grid."""
         button = tk.Button(frame, text=text, image=image, command=command, bg=bg)
-        button.pack(fill='both', expand=True, padx=5, pady=5)
+        button.grid(row=row, column=column, sticky="ew", padx=5, pady=5)
 
     def _crear_checkbutton(self, parent, counter):
         var = tk.BooleanVar()
@@ -178,34 +187,24 @@ class FILETOFIND:
         checkbutton.grid(row=counter, column=0, sticky="nw", padx=1, pady=1)
         self.checkbuttons.append(checkbutton)
 
-    def _crear_play_buttons(self, parent, row, counter, bg):
-        if isinstance(row, pd.Series):  # Ensure row is a pandas Series
-            play_buttons = [
-                (link_to_music(row['audio30']), 8),
-                (link_to_music(row['audio10']), 9)
-            ]
+    def _crear_play_button_on_frame(self, frame, music_link, row, column, bg):
+        """Crea un botón de reproducción dentro del frame dado, utilizando grid."""
+        play_button = tk.Button(frame, image=self.play_icon, relief=tk.FLAT,
+                                command=lambda: self.play_music(music_link), bg=bg)
+        play_button.grid(row=row, column=column, sticky="e", padx=1, pady=1)
 
-            for fp, col in play_buttons:
-                play_button = tk.Button(parent, image=self.play_icon, relief=tk.FLAT,
-                                        command=lambda sp=fp: self.play_music(sp), bg=bg)
-                play_button.grid(row=counter, column=col, sticky="e", padx=1, pady=1)
-
-            stop_button = tk.Button(parent, image=self.stop_icon, relief=tk.FLAT, command=stop_music, bg=bg)
-            stop_button.grid(row=counter, column=10, sticky="e", padx=1, pady=1)
-
-    import tkinter as tk
-    from tkinter import PhotoImage
-
-
-
+    def _crear_stop_button_on_frame(self, frame, row, column, bg):
+        """Crea un botón de parada dentro del frame dado, utilizando grid."""
+        stop_button = tk.Button(frame, image=self.stop_icon, relief=tk.FLAT,
+                                command=stop_music, bg=bg)
+        stop_button.grid(row=row, column=column, sticky="e", padx=1, pady=1)
 
     def _crear_play_button_file(self, parent, archivo, counter, bg):
-
+        """Crea botones de reproducción y parada para un archivo."""
         playmusic_button = tk.Button(parent, image=self.play_icon, relief=tk.FLAT,
                                      command=lambda fp=archivo: self.play_music(fp), bg=bg)
         playmusic_button.grid(row=0, column=counter, sticky="nw", padx=2, pady=2)
-        stopmusic_button = tk.Button(parent, image=self.stop_icon, relief=tk.FLAT, command=stop_music,
-                                     bg=bg)
+        stopmusic_button = tk.Button(parent, image=self.stop_icon, relief=tk.FLAT, command=stop_music, bg=bg)
         stopmusic_button.grid(row=0, column=counter + 1, sticky="nw", padx=2, pady=2)
 
     def leer_tags(self):

@@ -131,25 +131,25 @@ palabras_comunes_artista = [
 # Definición de la configuración de columnas para los subframes
 columnas_config = {
     'archivo': [
-        {'col': 1, 'weight': 0, 'minsize': 10, 'description': 'Info'},
-        {'col': 2, 'weight': 4, 'minsize': 100, 'description': 'Titulo'},
-        {'col': 3, 'weight': 3, 'minsize': 75, 'description': 'Orquesta'},
-        {'col': 4, 'weight': 3, 'minsize': 75, 'description': 'Cantor'},
-        {'col': 5, 'weight': 0, 'minsize': 50, 'description': 'Fecha'},
-        {'col': 6, 'weight': 0, 'minsize': 10, 'description': 'Play'},
-        {'col': 7, 'weight': 0, 'minsize': 10, 'description': 'Pausa'},
+        {'col': 1, 'weight': 0, 'minsize': 20, 'description': 'Info'},
+        {'col': 2, 'weight': 4, 'minsize': 200, 'description': 'Titulo'},
+        {'col': 3, 'weight': 3, 'minsize': 150, 'description': 'Orquesta'},
+        {'col': 4, 'weight': 3, 'minsize': 150, 'description': 'Cantor'},
+        {'col': 5, 'weight': 0, 'minsize': 100, 'description': 'Fecha'},
+        {'col': 6, 'weight': 0, 'minsize': 20, 'description': 'Play'},
+        {'col': 7, 'weight': 0, 'minsize': 20, 'description': 'Pausa'},
     ],
     'resultado': [
-        {'col': 1, 'weight': 0, 'minsize': 10, 'description': 'Checkbox'},
-        {'col': 2, 'weight': 4, 'minsize': 100, 'description': 'Titulo'},
-        {'col': 3, 'weight': 3, 'minsize': 75, 'description': 'Orquesta'},
-        {'col': 4, 'weight': 3, 'minsize': 75, 'description': 'Cantor'},
-        {'col': 5, 'weight': 0, 'minsize': 50, 'description': 'Fecha'},  # Nueva columna 'Fecha' antes de 'Estilo'
-        {'col': 6, 'weight': 0, 'minsize': 50, 'description': 'Estilo'},
-        {'col': 7, 'weight': 0, 'minsize': 10, 'description': 'Info'},
-        {'col': 8, 'weight': 0, 'minsize': 10, 'description': 'Play_30'},
-        {'col': 9, 'weight': 0, 'minsize': 10, 'description': 'Play_10'},
-        {'col': 10, 'weight': 0, 'minsize': 10, 'description': 'Pausa'},
+        {'col': 1, 'weight': 0, 'minsize': 20, 'description': 'Checkbox'},
+        {'col': 2, 'weight': 4, 'minsize': 200, 'description': 'Titulo'},
+        {'col': 3, 'weight': 3, 'minsize': 150, 'description': 'Orquesta'},
+        {'col': 4, 'weight': 3, 'minsize': 150, 'description': 'Cantor'},
+        {'col': 5, 'weight': 0, 'minsize': 100, 'description': 'Fecha'},  # Nueva columna 'Fecha' antes de 'Estilo'
+        {'col': 6, 'weight': 0, 'minsize': 100, 'description': 'Estilo'},
+        {'col': 7, 'weight': 0, 'minsize': 20, 'description': 'Info'},
+        {'col': 8, 'weight': 0, 'minsize': 20, 'description': 'Play_30'},
+        {'col': 9, 'weight': 0, 'minsize': 20, 'description': 'Play_10'},
+        {'col': 10, 'weight': 0, 'minsize': 20, 'description': 'Pausa'},
     ]
 }
 
