@@ -143,9 +143,8 @@ class Ventana:
         self.title_frame.grid_propagate(True)  # Allow resizing to content
 
         # Set weights and minsize explicitly for the title columns
-        self.title_frame.grid_columnconfigure(0, weight=47, minsize=200)  # Control size for "File Tags"
-        self.title_frame.grid_columnconfigure(1, weight=53, minsize=200)  # Control size for "Database Tags"
-        self.title_frame.grid_columnconfigure(2, weight=0, minsize=30)  # Dummy space to account for scrollbar width
+        self.title_frame.grid_columnconfigure(0, weight=435, minsize=200)  # Control size for "File Tags"
+        self.title_frame.grid_columnconfigure(1, weight=565, minsize=200)  # Control size for "Database Tags"
 
         # Create the labels
         file_tags_label = tk.Label(

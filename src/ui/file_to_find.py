@@ -25,6 +25,8 @@ class FILETOFIND:
         self.frames_columnas_resultado = frames_columnas_resultado  # Asegúrate
         # In your class initialization or setup
         self.sizebuttons = [20, 20]  # Set button width and height in text units
+        self.padx = 0
+        self.pady = 0
 
         self.leer_tags()
 
@@ -198,7 +200,7 @@ class FILETOFIND:
     def _crear_label_en_frame(self, frame, text, font, bg, anchor, row=0, column=0):
         """Crea un label dentro del frame dado, utilizando grid."""
         label = tk.Label(frame, text=text, font=font, bg=bg, anchor=anchor)
-        label.grid(row=row, column=column, sticky="ew", padx=0, pady=0)
+        label.grid(row=row, column=column, sticky="ew", padx=self.padx, pady=self.pady)
 
     def _crear_button_en_frame(self, frame, text=None, image=None, command=None, bg=None, row=0, column=0):
         """Crea un botón dentro del frame dado, utilizando grid."""
@@ -214,7 +216,7 @@ class FILETOFIND:
         )
 
         # Place the button in the grid
-        button.grid(row=row, column=column, sticky="ew", padx=0, pady=0)
+        button.grid(row=row, column=column, sticky="ew", padx=self.padx, pady=self.pady)
 
         return button
 
@@ -227,8 +229,8 @@ class FILETOFIND:
             command=lambda i=counter: self.on_checkbox_toggle(i),
             width=self.sizebuttons[0]  # Set width using self.sizebuttons
         )
-        checkbutton.grid(row=counter, column=0, sticky="ew", padx=0,
-                         pady=(0, self.sizebuttons[1]))  # Adjust padding for visual height control
+        checkbutton.grid(row=counter, column=0, sticky="ew", padx=self.padx,
+                         pady=(self.pady, self.sizebuttons[1]))  # Adjust padding for visual height control
         self.checkbuttons.append(checkbutton)
 
     def _crear_play_button_on_frame(self, frame, music_link, row, column, bg):
@@ -242,7 +244,7 @@ class FILETOFIND:
             width=self.sizebuttons[0],  # Width from self.sizebuttons
             height=self.sizebuttons[1]  # Height from self.sizebuttons
         )
-        play_button.grid(row=row, column=column, sticky="ew", padx=0, pady=0)
+        play_button.grid(row=row, column=column, sticky="ew", padx=self.padx, pady=self.pady)
 
     def _crear_stop_button_on_frame(self, frame, row, column, bg):
         """Crea un botón de parada dentro del frame dado, utilizando grid."""
@@ -255,7 +257,7 @@ class FILETOFIND:
             width=self.sizebuttons[0],  # Width from self.sizebuttons
             height=self.sizebuttons[1]  # Height from self.sizebuttons
         )
-        stop_button.grid(row=row, column=column, sticky="ew", padx=0, pady=0)
+        stop_button.grid(row=row, column=column, sticky="ew", padx=self.padx, pady=self.pady)
 
     def leer_tags(self):
         self.tags = TinyTag.get(self.ruta_archivo)
@@ -355,15 +357,15 @@ class FILETOFIND:
             # Create label for the tag name
             label_etiqueta = tk.Label(popup, text=etiqueta + ": ", anchor="w", justify="left",
                                       font=("Helvetica", 12, "bold"))
-            label_etiqueta.grid(row=i, column=0, padx=5, pady=2, sticky="w")
+            label_etiqueta.grid(row=i, column=0, padx=self.padx, pady=self.pady, sticky="w")
 
             # Create label for the tag data
             label_dato = tk.Label(popup, text=dato, anchor="w", justify="left", font=("Helvetica", 12))
-            label_dato.grid(row=i, column=1, padx=5, pady=2, sticky="w")
+            label_dato.grid(row=i, column=1, padx=self.padx, pady=self.pady, sticky="w")
 
         # Add a button to close the popup
         close_button = tk.Button(popup, text="Close", command=popup.destroy)
-        close_button.grid(row=len(etiquetas_datos), column=0, padx=5, pady=2, sticky="w")
+        close_button.grid(row=len(etiquetas_datos), column=0, padx=self.padx, pady=self.pady, sticky="w")
 
     def show_popup_file(self):
         tags = self.tags
@@ -389,7 +391,7 @@ class FILETOFIND:
             # Create label for the tag name
             label_etiqueta = tk.Label(popup, text=etiqueta + ": ", anchor="w", justify="left",
                                       font=("Helvetica", 12, "bold"))
-            label_etiqueta.grid(row=i, column=0, padx=5, pady=2, sticky="w")
+            label_etiqueta.grid(row=i, column=0, padx=self.padx, pady=self.pady, sticky="w")
 
             # Ensure dato is a string, or convert it if necessary
             if dato is None:
@@ -400,19 +402,19 @@ class FILETOFIND:
             # Create entry for the tag data
             entry_dato = tk.Entry(popup, justify="left", font=("Helvetica", 12), width=100)
             entry_dato.insert(0, dato)  # Insert text into the entry
-            entry_dato.grid(row=i, column=1, padx=5, pady=2, sticky="w")
+            entry_dato.grid(row=i, column=1, padx=self.padx, pady=self.pady, sticky="w")
             self.entry_dato_lista.append(entry_dato)
 
         # Add a button to close the popup
         close_button = tk.Button(popup, text="Close", command=popup.destroy)
-        close_button.grid(row=len(etiquetas_datos), column=0, padx=5, pady=2, sticky="w")
+        close_button.grid(row=len(etiquetas_datos), column=0, padx=self.padx, pady=self.pady, sticky="w")
 
         update_tags_button = tk.Button(popup, text="Update tags", command=lambda: self.leer_entredas_y_tagear(popup))
-        update_tags_button.grid(row=len(etiquetas_datos), column=1, padx=5, pady=2, sticky="w")
+        update_tags_button.grid(row=len(etiquetas_datos), column=1, padx=self.padx, pady=self.pady, sticky="w")
 
         # Crear un marco inferior con un color de fondo diferente y borde grueso usando grid
         bottom_frame = tk.Frame(popup, bg="#e0e0e0", bd=5, relief="ridge")
-        bottom_frame.grid(row=len(etiquetas_datos) + 1, column=0, columnspan=2, pady=20, padx=10, sticky="nsew")
+        bottom_frame.grid(row=len(etiquetas_datos) + 1, column=0, columnspan=2, padx=self.padx, pady=self.pady, sticky="nsew")
 
         # Expandir el bottom_frame al cambiar el tamaño del popup
         popup.grid_rowconfigure(len(etiquetas_datos) + 1, weight=1)
@@ -421,7 +423,7 @@ class FILETOFIND:
 
         # Encabezado dentro del bottom_frame
         header_label = tk.Label(bottom_frame, text="Base de Datos", font=("Helvetica", 14, "bold"), bg="#e0e0e0")
-        header_label.grid(row=0, column=0, columnspan=4, pady=10)
+        header_label.grid(row=0, column=0, columnspan=4, padx = self.padx, pady=self.pady)
 
         def searchdb():
             def update_table():
@@ -477,43 +479,43 @@ class FILETOFIND:
             tree_font_style = ('Helvetica', 12)
 
             # Filtro de Título
-            tk.Label(bottom_frame, text="Titulo:", font=font_style, bg="#e0e0e0").grid(row=1, column=0, padx=10,
-                                                                                       pady=10, sticky="w")
+            tk.Label(bottom_frame, text="Titulo:", font=font_style, bg="#e0e0e0").grid(row=1, column=0, padx=self.padx,
+                                                                                       pady=self.pady, sticky="w")
             title_entry = tk.Entry(bottom_frame, font=font_style)
-            title_entry.grid(row=1, column=1, padx=10, pady=10, sticky="ew")
+            title_entry.grid(row=1, column=1, padx=self.padx, pady=self.pady, sticky="ew")
             title_entry.bind("<KeyRelease>", lambda event: update_table())
 
             # Filtro de Artista
-            tk.Label(bottom_frame, text="Artista:", font=font_style, bg="#e0e0e0").grid(row=2, column=0, padx=10,
-                                                                                        pady=10, sticky="w")
+            tk.Label(bottom_frame, text="Artista:", font=font_style, bg="#e0e0e0").grid(row=2, column=0, padx=self.padx,
+                                                                                        pady=self.pady, sticky="w")
             artist_var = tk.StringVar(bottom_frame)
             artist_var.set("Todos")
             artist_dropdown = ttk.Combobox(bottom_frame, textvariable=artist_var, font=font_style)
             artist_dropdown['values'] = ['Todos'] + sorted(db['artista'].dropna().unique().tolist())
-            artist_dropdown.grid(row=2, column=1, padx=10, pady=10, sticky="ew")
+            artist_dropdown.grid(row=2, column=1, padx=self.padx, pady=self.pady, sticky="ew")
             artist_var.trace("w", update_cantor_dropdown)
 
             # Filtro de Cantor
-            tk.Label(bottom_frame, text="Cantor:", font=font_style, bg="#e0e0e0").grid(row=3, column=0, padx=10,
-                                                                                       pady=10, sticky="w")
+            tk.Label(bottom_frame, text="Cantor:", font=font_style, bg="#e0e0e0").grid(row=3, column=0, padx=self.padx,
+                                                                                       pady=self.pady, sticky="w")
             cantor_var = tk.StringVar(bottom_frame)
             cantor_var.set("Todos")
             cantor_dropdown = ttk.Combobox(bottom_frame, textvariable=cantor_var, font=font_style)
             cantor_dropdown['values'] = ['Todos'] + sorted(db['cantor'].dropna().unique().tolist())
-            cantor_dropdown.grid(row=3, column=1, padx=10, pady=10, sticky="ew")
+            cantor_dropdown.grid(row=3, column=1, padx=self.padx, pady=self.pady, sticky="ew")
             cantor_var.trace("w", on_filter_change)
 
             # Filtro de Fecha
-            tk.Label(bottom_frame, text="Fecha desde:", font=font_style, bg="#e0e0e0").grid(row=4, column=0, padx=10,
-                                                                                            pady=10, sticky="w")
+            tk.Label(bottom_frame, text="Fecha desde:", font=font_style, bg="#e0e0e0").grid(row=4, column=0, padx=self.padx,
+                                                                                            pady=self.pady, sticky="w")
             start_date_entry = tk.Entry(bottom_frame, font=font_style)
-            start_date_entry.grid(row=4, column=1, padx=10, pady=10, sticky="ew")
+            start_date_entry.grid(row=4, column=1, padx=self.padx, pady=self.pady, sticky="ew")
             start_date_entry.bind("<KeyRelease>", lambda event: update_table())
 
-            tk.Label(bottom_frame, text="Fecha hasta:", font=font_style, bg="#e0e0e0").grid(row=4, column=2, padx=10,
-                                                                                            pady=10, sticky="w")
+            tk.Label(bottom_frame, text="Fecha hasta:", font=font_style, bg="#e0e0e0").grid(row=4, column=2, padx=self.padx,
+                                                                                            pady=self.pady, sticky="w")
             end_date_entry = tk.Entry(bottom_frame, font=font_style)
-            end_date_entry.grid(row=4, column=3, padx=10, pady=10, sticky="ew")
+            end_date_entry.grid(row=4, column=3, padx=self.padx, pady=self.pady, sticky="ew")
             end_date_entry.bind("<KeyRelease>", lambda event: update_table())
 
             # Crear canvas para scrollbar
