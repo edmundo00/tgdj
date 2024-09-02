@@ -272,9 +272,9 @@ class FILETOFIND:
 
     def buscar(self):
         tag = self.tags
+        self.hay_coincidencia_preferida = True
         self.coincidencia_preferida = 0
-        self.hay_coincidencia_preferida = False
-        self.tipo_de_coincidencia = 5
+        self.tipo_de_coincidencia = 0
         artista_original, cantor_original = separar_artistas(tag.artist)
         artista_buscar  = unidecode(artista_original).lower()
         
@@ -290,7 +290,7 @@ class FILETOFIND:
             self.coincidencias = self.db.iloc[0:0]
             return
 
-        artist_songs = self.dic_art[artista_key]
+        artist_songs = self.dic_art[artista_key] #DEVULEVE LA BASE DE DATOS CON TODAS LAS COMLUMNAS QUE CORRENSPONDEN A LA ORQUESTA
         
         # Get a dictionary of boolean matches for all tags
         coincidencias = compare_tags(artist_songs, tag)
