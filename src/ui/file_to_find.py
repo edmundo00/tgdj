@@ -65,15 +65,15 @@ class FILETOFIND:
         current_row = self.frame_number
 
         # Crear frames una sola vez antes del bucle
-        frames = {}
+        self.frames_resultado = {}
         for column in columnas_config['resultado']:
             description = column['description']
-            frames[description] = self._crear_frame_columna(
+            self.frames_resultado[description] = self._crear_frame_columna(
                 self.frames_columnas_resultado.get(description, self.framedatabase), current_row, col=0, width=column['minsize'], colour=color_de_fondo)
-        frames_archivo = {}
+        self.frames_archivo = {}
         for column in columnas_config['archivo']:
             description = column['description']
-            frames_archivo[description] = self._crear_frame_columna(
+            self.frames_archivo[description] = self._crear_frame_columna(
                 self.frames_columnas_archivo.get(description, self.framefiles), current_row, col=0, width=column['minsize'], colour=color_de_fondo)
 
 
@@ -83,7 +83,7 @@ class FILETOFIND:
             columnas_resultado = ['Checkbox', 'Titulo', 'Orquesta', 'Cantor', 'Estilo', 'Fecha', 'Info', 'Play_30']
             for i, descripcion in enumerate(columnas_resultado):
                 text = "NADA ENCONTRADO" if descripcion == 'Titulo' else ""
-                self._crear_label_en_frame(frames_archivo['Titulo'], text=text, font=fuente_10, anchor='w', bg=color_de_fondo, row=0, column=0)
+                self._crear_label_en_frame(self.frames_archivo['Titulo'], text=text, font=fuente_10, anchor='w', bg=color_de_fondo, row=0, column=0)
 
 
         else:
@@ -91,27 +91,27 @@ class FILETOFIND:
             for counter, (_, row) in enumerate(self.coincidencias.iterrows()):
                 if isinstance(row, pd.Series) and 'audio30' in row and 'audio10' in row:
                     # Añadir checkbutton al frame correspondiente
-                    self._crear_checkbutton(frames['Checkbox'], counter)
+                    self._crear_checkbutton(self.frames_resultado['Checkbox'], counter)
 
                     # Configuración para los elementos a añadir (labels y botones)
                     elementos = [
-                        {'tipo': 'label', 'texto': row['titulo'], 'descripcion': 'Titulo', 'frame': frames['Titulo'],
+                        {'tipo': 'label', 'texto': row['titulo'], 'descripcion': 'Titulo', 'frame': self.frames_resultado['Titulo'],
                          'anchor': "w"},
                         {'tipo': 'label', 'texto': row['artista'], 'descripcion': 'Orquesta',
-                         'frame': frames['Orquesta'], 'anchor': "w"},
-                        {'tipo': 'label', 'texto': row['cantor'], 'descripcion': 'Cantor', 'frame': frames['Cantor'],
+                         'frame': self.frames_resultado['Orquesta'], 'anchor': "w"},
+                        {'tipo': 'label', 'texto': row['cantor'], 'descripcion': 'Cantor', 'frame': self.frames_resultado['Cantor'],
                          'anchor': "w"},
-                        {'tipo': 'label', 'texto': row['estilo'], 'descripcion': 'Estilo', 'frame': frames['Estilo'],
+                        {'tipo': 'label', 'texto': row['estilo'], 'descripcion': 'Estilo', 'frame': self.frames_resultado['Estilo'],
                          'anchor': "w"},
-                        {'tipo': 'label', 'texto': row['fecha'], 'descripcion': 'Fecha', 'frame': frames['Fecha'],
+                        {'tipo': 'label', 'texto': row['fecha'], 'descripcion': 'Fecha', 'frame': self.frames_resultado['Fecha'],
                          'anchor': "w"},
-                        {'tipo': 'button', 'frame': frames['Info'], 'row': counter, 'image': self.info_icon,
+                        {'tipo': 'button', 'frame': self.frames_resultado['Info'], 'row': counter, 'image': self.info_icon,
                          'command': lambda r=row: self.show_popup_db(r)},
-                        {'tipo': 'play_button', 'frame': frames['Play_30'], 'link': link_to_music(row['audio30']), 'row': counter,
+                        {'tipo': 'play_button', 'frame': self.frames_resultado['Play_30'], 'link': link_to_music(row['audio30']), 'row': counter,
                          'column': 0},
-                        {'tipo': 'play_button', 'frame': frames['Play_10'], 'link': link_to_music(row['audio10']), 'row': counter,
+                        {'tipo': 'play_button', 'frame': self.frames_resultado['Play_10'], 'link': link_to_music(row['audio10']), 'row': counter,
                          'column': 0},
-                        {'tipo': 'stop_button', 'frame': frames['Pausa'], 'row': counter, 'column': 0},
+                        {'tipo': 'stop_button', 'frame': self.frames_resultado['Pausa'], 'row': counter, 'column': 0},
                     ]
 
                     # Añadir los elementos a los frames correspondientes
@@ -146,19 +146,19 @@ class FILETOFIND:
         # Definir los datos de las etiquetas para los frames de información de archivos
         # Definir los elementos para los frames de archivo en la misma estructura que la variable 'elementos'
         elementos_archivo = [
-            {'tipo': 'label', 'texto': self.tags.title, 'descripcion': 'Titulo', 'frame': frames_archivo.get('Titulo'),
+            {'tipo': 'label', 'texto': self.tags.title, 'descripcion': 'Titulo', 'frame': self.frames_archivo.get('Titulo'),
              'anchor': "w"},
             {'tipo': 'label', 'texto': self.artists1, 'descripcion': 'Orquesta',
-             'frame': frames_archivo.get('Orquesta'), 'anchor': "w"},
-            {'tipo': 'label', 'texto': self.artists2, 'descripcion': 'Cantor', 'frame': frames_archivo.get('Cantor'),
+             'frame': self.frames_archivo.get('Orquesta'), 'anchor': "w"},
+            {'tipo': 'label', 'texto': self.artists2, 'descripcion': 'Cantor', 'frame': self.frames_archivo.get('Cantor'),
              'anchor': "w"},
-            {'tipo': 'label', 'texto': self.tags.year, 'descripcion': 'Fecha', 'frame': frames_archivo.get('Fecha'),
+            {'tipo': 'label', 'texto': self.tags.year, 'descripcion': 'Fecha', 'frame': self.frames_archivo.get('Fecha'),
              'anchor': "w"},
-            {'tipo': 'button', 'frame': frames_archivo.get('Info'), 'row': 0, 'image': self.info_icon,
+            {'tipo': 'button', 'frame': self.frames_archivo.get('Info'), 'row': 0, 'image': self.info_icon,
              'command': self.show_popup_file, 'bg': color_de_fondo},
-            {'tipo': 'play_button', 'frame': frames_archivo.get('Play'), 'link': self.ruta_archivo, 'row': 0,
+            {'tipo': 'play_button', 'frame': self.frames_archivo.get('Play'), 'link': self.ruta_archivo, 'row': 0,
              'column': 0},
-            {'tipo': 'stop_button', 'frame': frames_archivo.get('Pausa'), 'row': 0, 'column': 0},
+            {'tipo': 'stop_button', 'frame': self.frames_archivo.get('Pausa'), 'row': 0, 'column': 0},
         ]
 
         # Iterar sobre los elementos y añadirlos a los frames correspondientes
@@ -442,12 +442,12 @@ class FILETOFIND:
                 end_date = end_date_entry.get()
 
                 # Filtrar datos
-                filtered_db = db[
-                    db['titulo'].str.lower().str.contains(title_filter, na=False) &
-                    (db['artista'] == artist_filter if artist_filter != 'Todos' else True) &
-                    (db['cantor'] == cantor_filter if cantor_filter != 'Todos' else True) &
-                    (db['fecha'] >= start_date if start_date else True) &
-                    (db['fecha'] <= end_date if end_date else True)
+                filtered_db = self.db[
+                    self.db['titulo'].str.lower().str.contains(title_filter, na=False) &
+                    (self.db['artista'] == artist_filter if artist_filter != 'Todos' else True) &
+                    (self.db['cantor'] == cantor_filter if cantor_filter != 'Todos' else True) &
+                    (self.db['fecha'] >= start_date if start_date else True) &
+                    (self.db['fecha'] <= end_date if end_date else True)
                     ]
 
                 # Limpiar tabla
@@ -498,7 +498,7 @@ class FILETOFIND:
             artist_var = tk.StringVar(bottom_frame)
             artist_var.set("Todos")
             artist_dropdown = ttk.Combobox(bottom_frame, textvariable=artist_var, font=font_style)
-            artist_dropdown['values'] = ['Todos'] + sorted(db['artista'].dropna().unique().tolist())
+            artist_dropdown['values'] = ['Todos'] + sorted(self.db['artista'].dropna().unique().tolist())
             artist_dropdown.grid(row=2, column=1, padx=self.padx, pady=self.pady, sticky="ew")
             artist_var.trace("w", update_cantor_dropdown)
 
@@ -508,7 +508,7 @@ class FILETOFIND:
             cantor_var = tk.StringVar(bottom_frame)
             cantor_var.set("Todos")
             cantor_dropdown = ttk.Combobox(bottom_frame, textvariable=cantor_var, font=font_style)
-            cantor_dropdown['values'] = ['Todos'] + sorted(db['cantor'].dropna().unique().tolist())
+            cantor_dropdown['values'] = ['Todos'] + sorted(self.db['cantor'].dropna().unique().tolist())
             cantor_dropdown.grid(row=3, column=1, padx=self.padx, pady=self.pady, sticky="ew")
             cantor_var.trace("w", on_filter_change)
 
@@ -625,6 +625,18 @@ class FILETOFIND:
             print(f"Error playing {file_path}: {e}")
 
     def destroy(self):
-        # Destroy all widgets within this object's frame
-        self.frame_coincidencias.destroy()
-        self.frame_archivo.destroy()
+
+        # Destruir frames en 'archivo'
+        for column in columnas_config['archivo']:
+            description = str(column['description'])
+            self.frames_archivo[description].destroy()
+
+        # Destruir frames en 'resultado'
+        for column in columnas_config['resultado']:
+            description = str(column['description'])
+            self.frames_resultado[description].destroy()
+
+
+
+            
+
