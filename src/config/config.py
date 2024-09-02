@@ -16,10 +16,10 @@ def load_resources_paths():
         'archivo': os.path.join(ICON_FOLDER, 'album.png'),
         'directorio': os.path.join(ICON_FOLDER, 'album-list.png'),
         'correr': os.path.join(ICON_FOLDER, 'search-window.png'),
-        'play': os.path.join(ICON_FOLDER, 'play_resize.png'),
-        'stop': os.path.join(ICON_FOLDER, 'pause_resize.png'),
+        'play': os.path.join(ICON_FOLDER, 'play.png'),
+        'stop': os.path.join(ICON_FOLDER, 'pause.png'),
         'transfer': os.path.join(ICON_FOLDER, 'transfer.png'),
-        'info': os.path.join(ICON_FOLDER, 'info-circle_resize.png'),
+        'info': os.path.join(ICON_FOLDER, 'info-circle.png'),
         'trash': os.path.join(ICON_FOLDER, 'trash.png'),
         'searchdb': os.path.join(ICON_FOLDER, 'searchdb.png'),
         'presentacion': os.path.join(ICON_FOLDER, 'presentation.png'),
@@ -131,13 +131,13 @@ palabras_comunes_artista = [
 # Definición de la configuración de columnas para los subframes
 columnas_config = {
     'archivo': [
-        {'col': 1, 'weight': 0, 'minsize': 20, 'description': 'Info', 'tipo': 'button'},
+        {'col': 1, 'weight': 0, 'minsize': 25, 'description': 'Info', 'tipo': 'button'},
         {'col': 2, 'weight': 4, 'minsize': 240, 'description': 'Titulo', 'tipo': 'label'},
         {'col': 3, 'weight': 3, 'minsize': 150, 'description': 'Orquesta', 'tipo': 'label'},
         {'col': 4, 'weight': 3, 'minsize': 150, 'description': 'Cantor', 'tipo': 'label'},
         {'col': 5, 'weight': 0, 'minsize': 100, 'description': 'Fecha', 'tipo': 'label'},
-        {'col': 6, 'weight': 0, 'minsize': 20, 'description': 'Play', 'tipo': 'play_button'},
-        {'col': 7, 'weight': 0, 'minsize': 20, 'description': 'Pausa', 'tipo': 'stop_button'},
+        {'col': 6, 'weight': 0, 'minsize': 25, 'description': 'Play', 'tipo': 'play_button'},
+        {'col': 7, 'weight': 0, 'minsize': 25, 'description': 'Pausa', 'tipo': 'stop_button'},
     ],
     'resultado': [
         {'col': 1, 'weight': 0, 'minsize': 20, 'description': 'Checkbox', 'tipo': 'checkbox'},
@@ -146,10 +146,10 @@ columnas_config = {
         {'col': 4, 'weight': 3, 'minsize': 150, 'description': 'Cantor', 'tipo': 'label'},
         {'col': 5, 'weight': 0, 'minsize': 100, 'description': 'Fecha', 'tipo': 'label'},
         {'col': 6, 'weight': 0, 'minsize': 130, 'description': 'Estilo', 'tipo': 'label'},
-        {'col': 7, 'weight': 0, 'minsize': 20, 'description': 'Info', 'tipo': 'button'},
-        {'col': 8, 'weight': 0, 'minsize': 20, 'description': 'Play_30', 'tipo': 'play_button'},
-        {'col': 9, 'weight': 0, 'minsize': 20, 'description': 'Play_10', 'tipo': 'play_button'},
-        {'col': 10, 'weight': 0, 'minsize': 20, 'description': 'Pausa', 'tipo': 'stop_button'},
+        {'col': 7, 'weight': 0, 'minsize': 25, 'description': 'Info', 'tipo': 'button'},
+        {'col': 8, 'weight': 0, 'minsize': 25, 'description': 'Play_30', 'tipo': 'play_button'},
+        {'col': 9, 'weight': 0, 'minsize': 25, 'description': 'Play_10', 'tipo': 'play_button'},
+        {'col': 10, 'weight': 0, 'minsize': 25, 'description': 'Pausa', 'tipo': 'stop_button'},
     ]
 }
 

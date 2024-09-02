@@ -24,7 +24,7 @@ class FILETOFIND:
         self.frames_columnas_archivo = frames_columnas_archivo
         self.frames_columnas_resultado = frames_columnas_resultado  # Asegúrate
         # In your class initialization or setup
-        self.sizebuttons = [20, 20]  # Set button width and height in text units
+        self.sizebuttons = [25, 25]  # Set button width and height in text units
         self.padx = 0
         self.pady = 0
 
@@ -53,7 +53,7 @@ class FILETOFIND:
         }
 
         # Configura la altura del frame basado en el tipo de coincidencia
-        self.altura_frame = 27 * (
+        self.altura_frame = 25 * (
             1 if self.tipo_de_coincidencia == 2 or len(self.coincidencias) == 0 else len(self.coincidencias)
         )
 
@@ -209,6 +209,9 @@ class FILETOFIND:
             frame,
             text=text,
             image=image,
+            borderwidth=0,  # Eliminar borde
+            highlightthickness=0,  # Eliminar borde de resaltado
+            relief="flat",  # Sin relieve
             command=command,
             bg=bg,
             width=self.sizebuttons[0],  # Width from self.sizebuttons
@@ -216,7 +219,7 @@ class FILETOFIND:
         )
 
         # Place the button in the grid
-        button.grid(row=row, column=column, sticky="ew", padx=self.padx, pady=self.pady)
+        button.grid(row=row, column=column, sticky="ne", padx=self.padx, pady=self.pady)
 
         return button
 
@@ -227,37 +230,41 @@ class FILETOFIND:
             parent,
             variable=var,
             command=lambda i=counter: self.on_checkbox_toggle(i),
-            width=self.sizebuttons[0]  # Set width using self.sizebuttons
         )
         checkbutton.grid(row=counter, column=0, sticky="ew", padx=self.padx,
-                         pady=(self.pady, self.sizebuttons[1]))  # Adjust padding for visual height control
+                         pady=self.pady)  # Adjust padding for visual height control
         self.checkbuttons.append(checkbutton)
+        # Ensure the GUI is updated to get the correct size
 
     def _crear_play_button_on_frame(self, frame, music_link, row, column, bg):
         """Crea un botón de reproducción dentro del frame dado, utilizando grid."""
         play_button = tk.Button(
             frame,
             image=self.play_icon,
-            relief=tk.FLAT,
+            borderwidth=0,  # Eliminar borde
+            highlightthickness=0,  # Eliminar borde de resaltado
+            relief="flat",  # Sin relieve
             command=lambda: self.play_music(music_link),
             bg=bg,
             width=self.sizebuttons[0],  # Width from self.sizebuttons
             height=self.sizebuttons[1]  # Height from self.sizebuttons
         )
-        play_button.grid(row=row, column=column, sticky="ew", padx=self.padx, pady=self.pady)
+        play_button.grid(row=row, column=column, sticky="ne", padx=self.padx, pady=self.pady)
 
     def _crear_stop_button_on_frame(self, frame, row, column, bg):
         """Crea un botón de parada dentro del frame dado, utilizando grid."""
         stop_button = tk.Button(
             frame,
             image=self.stop_icon,
-            relief=tk.FLAT,
+            borderwidth=0,  # Eliminar borde
+            highlightthickness=0,  # Eliminar borde de resaltado
+            relief="flat",  # Sin relieve
             command=stop_music,  # Assuming stop_music is a method of the class
             bg=bg,
             width=self.sizebuttons[0],  # Width from self.sizebuttons
             height=self.sizebuttons[1]  # Height from self.sizebuttons
         )
-        stop_button.grid(row=row, column=column, sticky="ew", padx=self.padx, pady=self.pady)
+        stop_button.grid(row=row, column=column, sticky="ne", padx=self.padx, pady=self.pady)
 
     def leer_tags(self):
         self.tags = TinyTag.get(self.ruta_archivo)
