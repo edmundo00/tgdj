@@ -1,8 +1,5 @@
-import pandas as pd
 from tinytag import TinyTag
-import tkinter as tk
 from tkinter import ttk
-import pygame
 from src.utils.utils import *
 from src.config.database import Database
 

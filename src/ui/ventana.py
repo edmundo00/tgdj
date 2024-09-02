@@ -1,5 +1,3 @@
-import pandas as pd
-import tkinter as tk
 from tkinter import filedialog, messagebox
 from tkinter import ttk
 from datetime import datetime
@@ -7,9 +5,7 @@ from presentation_app import PresentationApp
 from src.ui.file_to_find import FILETOFIND
 from src.utils.utils import *
 from src.config.database import Database
-import src.config.config as config
 from src.config.config import columnas_config
-
 import tkinter as tk
 
 class Ventana:
@@ -29,6 +25,10 @@ class Ventana:
 
         # Setup layout configurations
         self.layout_configurations()
+
+        # Inicialización previa
+        self.presentation_window = None  # Inicializar a None
+        # El resto de la inicialización
 
         # Create UI components
         self.create_menu_bar()
@@ -458,12 +458,15 @@ class Ventana:
         self.root.wait_window(popup)
 
     def open_presentation_popup(self):
+        # Inicializa la ventana si no existe o si ha sido destruida
         if self.presentation_window is None or not tk.Toplevel.winfo_exists(self.presentation_window):
             self.presentation_window = tk.Toplevel(self.root)
-            self.presentation_window.title("Create Presentation")
+            self.presentation_window.title("Presentation Window")
+            # Añade más configuración para la ventana si es necesario
             app = PresentationApp(self.presentation_window)
         else:
             self.presentation_window.lift()
+
 
     def searchdb(self):
         def update_table():
