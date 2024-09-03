@@ -67,21 +67,21 @@ def convertir_segundos(segundos, formato='x\'x\'\''):
 # print(convertir_segundos(segundos_con_decimales, "h:m:s"))  # Salida: "1:02:06"
 
 
-
 def separar_artistas(artistas):
-
-    # Define regex pattern to capture different cases
+    # Define regex pattern to capture the first match of " / ", " feat. ", or " canta: "
     pattern = re.compile(r" / | feat\. | canta: ")
-    
-    # Split the input string using the defined pattern
-    artists = re.split(pattern, artistas)
-    if artists[1] == "":
-        artists[0] = artistas
-    
+
+    # Split the input string using the defined pattern, with maxsplit=1 to split only at the first occurrence
+    artists = re.split(pattern, artistas, maxsplit=1)
+
+    # If the second element exists but is empty, treat as if there's no split needed
+    if len(artists) > 1 and artists[1].strip() == "":
+        return artistas, ""
+
     # Assign artists based on the length of the split result
     artists1 = artists[0]  # Main artist
     artists2 = artists[1] if len(artists) > 1 else ""  # Second artist, if any
-    
+
     return artists1, artists2
 
 
@@ -326,29 +326,25 @@ def get_file_name_without_extension(file_path):
 
 
 def buscar_titulo(database, tag):
-
-    titulo_original = ftfy.fix_text(tag.title).strip()
-    if titulo_original is None or titulo_original == "":
+    # Corregir y limpiar el título original
+    titulo_original = ftfy.fix_text(tag.title).strip() if tag.title else ""
+    if not titulo_original:
         titulo_original = get_file_name_without_extension(tag._file_name)
     titulo_buscar_min = unidecode(convert_numbers_to_words(titulo_original)).lower().strip()
 
-    coincidencias = None
-
     # Primera búsqueda: coincidencia exacta
-    coincidencias = database["titulo"] == tag.title
+    coincidencias = (database["titulo"] == titulo_original)
     titulo_coincidencia = 3
 
-    # Si no hay coincidencias (todos False), buscar con contiene
+    # Si no hay coincidencias (todos False), buscar con 'contains'
     if not coincidencias.any():
         coincidencias = database["titulo_min"].str.contains(titulo_buscar_min, case=False, na=False, regex=False)
         titulo_coincidencia = 2
 
-    # Si aún no hay coincidencias, buscar con la función contain_most_words
+    # Si aún no hay coincidencias, usar la función 'contain_most_words'
     if not coincidencias.any():
-        coincidencias = contain_most_words(database, titulo_buscar_min, "titulo_min")
-        titulo_coincidencia = 1
-
-    if not coincidencias.any():
+        # Asegúrate de que contain_most_words devuelva una Serie booleana
+        coincidencias = pd.Series(contain_most_words(database, titulo_buscar_min, "titulo_min"))
         titulo_coincidencia = 1
 
     # Filtrar el DataFrame para incluir solo las filas que coinciden
