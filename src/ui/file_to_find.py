@@ -270,79 +270,79 @@ class FILETOFIND:
         self.tags = TinyTag.get(self.ruta_archivo)
         self.artists1, self.artists2 = separar_artistas(self.tags.artist)
 
-    def buscar(self):
-        tag = self.tags
-        self.hay_coincidencia_preferida = True
-        self.coincidencia_preferida = 0
-        self.tipo_de_coincidencia = 0
-        artista_original, cantor_original = separar_artistas(tag.artist)
-        artista_buscar  = unidecode(artista_original).lower()
-        
-        # First, try to find an exact match
-        artista_key = next((key for key in self.dic_art if key == artista_buscar), None)
-
-        # If no exact match is found, try to find a partial match
-        if not artista_key:
-            artista_key = next((key for key in self.dic_art if artista_buscar in key), None)
-        
-        if not artista_key:
-            self.resultado = 'Artista no encontrado'
-            self.coincidencias = self.db.iloc[0:0]
-            return
-
-        artist_songs = self.dic_art[artista_key] #DEVULEVE LA BASE DE DATOS CON TODAS LAS COMLUMNAS QUE CORRENSPONDEN A LA ORQUESTA
-        
-        # Get a dictionary of boolean matches for all tags
-        coincidencias = compare_tags(artist_songs, tag)
-
-        # Check for title match
-        if coincidencias[TagLabels.TITULO].any() == True:
-            self.resultado = 'Titulo encontrado'
-            self.tipo_de_coincidencia = 0
-            dbet = artist_songs[coincidencias[TagLabels.TITULO]]
-
-            # Check for year match
-            if coincidencias[TagLabels.ANO].any() == True:
-                self.resultado = 'Año encontrado'
-                self.tipo_de_coincidencia = 1
-                self.coincidencia_preferida = dbet.index[coincidencias[TagLabels.ANO]].min()
-                self.hay_coincidencia_preferida = True
-            else:
-                self.resultado = 'Año no encontrado'
-
-        # Check for partial title word matches (is a list with the index of rows with common words)
-        elif coincidencias[TagLabels.TITULO_PALABRAS]:
-            self.resultado = 'Palabras del titulo encontrado'
-            self.tipo_de_coincidencia = 3
-            dbet = artist_songs.loc[coincidencias[TagLabels.TITULO_PALABRAS]]
-
-            # Check for year match in the filtered data
-            if coincidencias[TagLabels.ANO].any():
-                self.resultado = 'Año encontrado'
-                self.tipo_de_coincidencia = 4
-                self.coincidencia_preferida = dbet.index[coincidencias[TagLabels.ANO]].min()
-                self.hay_coincidencia_preferida = True
-            else:
-                self.resultado = 'Año no encontrado'
-        else:
-            self.resultado = 'Titulo o palabras del titulo no encontrado'
-            self.coincidencias = self.db.iloc[0:0]
-            return
-
-        # If we found a year match and the whole tag matches exactly, update the coincidence type
-        if self.tipo_de_coincidencia == 1 and coincidencias[TagLabels.TODO].any() == True:
-            dbet = dbet[coincidencias[TagLabels.TODO]]
-            if len(dbet) == 1:
-                self.tipo_de_coincidencia = 2
-                self.hay_coincidencia_preferida = False
-
-        # If the title is the only match and there's exactly one match, set the preferred match
-        if self.tipo_de_coincidencia == 0 and len(dbet) == 1:
-            self.hay_coincidencia_preferida = True
-            self.coincidencia_preferida = dbet.index[0]
-
-        # Set the filtered matches as the final coincidences
-        self.coincidencias = dbet
+    # def buscar(self):
+    #     tag = self.tags
+    #     self.hay_coincidencia_preferida = True
+    #     self.coincidencia_preferida = 0
+    #     self.tipo_de_coincidencia = 0
+    #     artista_original, cantor_original = separar_artistas(tag.artist)
+    #     artista_buscar  = unidecode(artista_original).lower()
+    #
+    #     # First, try to find an exact match
+    #     artista_key = next((key for key in self.dic_art if key == artista_buscar), None)
+    #
+    #     # If no exact match is found, try to find a partial match
+    #     if not artista_key:
+    #         artista_key = next((key for key in self.dic_art if artista_buscar in key), None)
+    #
+    #     if not artista_key:
+    #         self.resultado = 'Artista no encontrado'
+    #         self.coincidencias = self.db.iloc[0:0]
+    #         return
+    #
+    #     artist_songs = self.dic_art[artista_key] #DEVULEVE LA BASE DE DATOS CON TODAS LAS COMLUMNAS QUE CORRENSPONDEN A LA ORQUESTA
+    #
+    #     # Get a dictionary of boolean matches for all tags
+    #     coincidencias = compare_tags(artist_songs, tag)
+    #
+    #     # Check for title match
+    #     if coincidencias[TagLabels.TITULO].any() == True:
+    #         self.resultado = 'Titulo encontrado'
+    #         self.tipo_de_coincidencia = 0
+    #         dbet = artist_songs[coincidencias[TagLabels.TITULO]]
+    #
+    #         # Check for year match
+    #         if coincidencias[TagLabels.ANO].any() == True:
+    #             self.resultado = 'Año encontrado'
+    #             self.tipo_de_coincidencia = 1
+    #             self.coincidencia_preferida = dbet.index[coincidencias[TagLabels.ANO]].min()
+    #             self.hay_coincidencia_preferida = True
+    #         else:
+    #             self.resultado = 'Año no encontrado'
+    #
+    #     # Check for partial title word matches (is a list with the index of rows with common words)
+    #     elif coincidencias[TagLabels.TITULO_PALABRAS]:
+    #         self.resultado = 'Palabras del titulo encontrado'
+    #         self.tipo_de_coincidencia = 3
+    #         dbet = artist_songs.loc[coincidencias[TagLabels.TITULO_PALABRAS]]
+    #
+    #         # Check for year match in the filtered data
+    #         if coincidencias[TagLabels.ANO].any():
+    #             self.resultado = 'Año encontrado'
+    #             self.tipo_de_coincidencia = 4
+    #             self.coincidencia_preferida = dbet.index[coincidencias[TagLabels.ANO]].min()
+    #             self.hay_coincidencia_preferida = True
+    #         else:
+    #             self.resultado = 'Año no encontrado'
+    #     else:
+    #         self.resultado = 'Titulo o palabras del titulo no encontrado'
+    #         self.coincidencias = self.db.iloc[0:0]
+    #         return
+    #
+    #     # If we found a year match and the whole tag matches exactly, update the coincidence type
+    #     if self.tipo_de_coincidencia == 1 and coincidencias[TagLabels.TODO].any() == True:
+    #         dbet = dbet[coincidencias[TagLabels.TODO]]
+    #         if len(dbet) == 1:
+    #             self.tipo_de_coincidencia = 2
+    #             self.hay_coincidencia_preferida = False
+    #
+    #     # If the title is the only match and there's exactly one match, set the preferred match
+    #     if self.tipo_de_coincidencia == 0 and len(dbet) == 1:
+    #         self.hay_coincidencia_preferida = True
+    #         self.coincidencia_preferida = dbet.index[0]
+    #
+    #     # Set the filtered matches as the final coincidences
+    #     self.coincidencias = dbet
 
     def buscar2(self):
         tag = self.tags
@@ -350,79 +350,88 @@ class FILETOFIND:
         self.coincidencia_preferida = 0
         self.tipo_de_coincidencia = 0
         artista_original, cantor_original = separar_artistas(tag.artist)
-        artista_buscar = unidecode(artista_original).lower()
+        artista_buscar_min = unidecode(artista_original).lower()
 
         # First, try to find an exact match
-        artista_key = next((key for key in self.dic_art if key == artista_buscar), None)
+        artista_key = next((key for key in self.dic_art if key == artista_original), None)
+        artista_coincidencia = 3
+
+        if not artista_key:
+            # First, try to find an good match
+            artista_key = next((key for key in self.dic_art if key == artista_buscar_min), None)
+            artista_coincidencia = 2
 
         # If no exact match is found, try to find a partial match
         if not artista_key:
-            artista_key = next((key for key in self.dic_art if artista_buscar in key), None)
+            artista_key = next((key for key in self.dic_art if artista_buscar_min in key), None)
+            artista_coincidencia = 1
 
         if not artista_key:
-            self.resultado = 'Artista no encontrado'
-            self.coincidencias = self.db.iloc[0:0]
-            return
+            artista_key = contain_most_words_in_dic(self.dic_art, artista_buscar_min)
+            if artista_key is not None:
+                artista_coincidencia = 1
+            else:
+                artista_coincidencia = 0
+                self.resultado = 'Artista no encontrado'
+                self.coincidencias = self.db.iloc[0:0]
+                return
 
         # DEVULEVE LA BASE DE DATOS CON TODAS LAS COMLUMNAS QUE CORRENSPONDEN A LA ORQUESTA
-        artist_songs = self.dic_art[artista_key]
+
+        if isinstance(artista_key, str):
+            # If it's a string, take the single DataFrame
+            artist_songs = self.dic_art[artista_key]
+        elif isinstance(artista_key, list):
+            # If it's a list of strings, concatenate the DataFrames
+            artist_songs = pd.concat([self.dic_art[key] for key in artista_key if key in self.dic_art])
+        else:
+            # Handle unexpected types (optional)
+            raise ValueError("artista_key must be a string or a list of strings")
 
 
+        titulo_coincidencia, database_titulo = buscar_titulo(artist_songs, tag)
 
+        if titulo_coincidencia==0:
+            self.resultado = 'Titulo no encontrado'
+            self.coincidencias = self.db.iloc[0:0]
+            return
 
 
 
         # Get a dictionary of boolean matches for all tags
-        coincidencias = compare_tags(artist_songs, tag)
+        coincidencias = compare_tags(artista_coincidencia, titulo_coincidencia, database_titulo, tag)
 
-        # Check for title match
-        if coincidencias[TagLabels.TITULO].any() == True:
-            self.resultado = 'Titulo encontrado'
-            self.tipo_de_coincidencia = 0
-            dbet = artist_songs[coincidencias[TagLabels.TITULO]]
-
-            # Check for year match
-            if coincidencias[TagLabels.ANO].any() == True:
-                self.resultado = 'Año encontrado'
-                self.tipo_de_coincidencia = 1
-                self.coincidencia_preferida = dbet.index[coincidencias[TagLabels.ANO]].min()
-                self.hay_coincidencia_preferida = True
-            else:
-                self.resultado = 'Año no encontrado'
-
-        # Check for partial title word matches (is a list with the index of rows with common words)
-        elif coincidencias[TagLabels.TITULO_PALABRAS]:
-            self.resultado = 'Palabras del titulo encontrado'
-            self.tipo_de_coincidencia = 3
-            dbet = artist_songs.loc[coincidencias[TagLabels.TITULO_PALABRAS]]
-
-            # Check for year match in the filtered data
-            if coincidencias[TagLabels.ANO].any():
-                self.resultado = 'Año encontrado'
-                self.tipo_de_coincidencia = 4
-                self.coincidencia_preferida = dbet.index[coincidencias[TagLabels.ANO]].min()
-                self.hay_coincidencia_preferida = True
-            else:
-                self.resultado = 'Año no encontrado'
-        else:
-            self.resultado = 'Titulo o palabras del titulo no encontrado'
-            self.coincidencias = self.db.iloc[0:0]
-            return
-
-        # If we found a year match and the whole tag matches exactly, update the coincidence type
-        if self.tipo_de_coincidencia == 1 and coincidencias[TagLabels.TODO].any() == True:
-            dbet = dbet[coincidencias[TagLabels.TODO]]
-            if len(dbet) == 1:
-                self.tipo_de_coincidencia = 2
-                self.hay_coincidencia_preferida = False
-
-        # If the title is the only match and there's exactly one match, set the preferred match
-        if self.tipo_de_coincidencia == 0 and len(dbet) == 1:
-            self.hay_coincidencia_preferida = True
-            self.coincidencia_preferida = dbet.index[0]
+        # # Check for title match
+        # # Check for year match
+        # if coincidencias[TagLabels.FECHA].any():
+        #     self.resultado = 'Año encontrado'
+        #     self.tipo_de_coincidencia = 1
+        #     self.coincidencia_preferida = dbet.index[coincidencias[TagLabels.FECHA]].min()
+        #     self.hay_coincidencia_preferida = True
+        # else:
+        #     self.resultado = 'Año no encontrado'
+        #
+        #
+        #
+        #
+        #
+        # # If we found a year match and the whole tag matches exactly, update the coincidence type
+        # if self.tipo_de_coincidencia == 1 and coincidencias[TagLabels.TODO].any() == True:
+        #     dbet = dbet[coincidencias[TagLabels.TODO]]
+        #     if len(dbet) == 1:
+        #         self.tipo_de_coincidencia = 2
+        #         self.hay_coincidencia_preferida = False
+        #
+        # # If the title is the only match and there's exactly one match, set the preferred match
+        # if self.tipo_de_coincidencia == 0 and len(dbet) == 1:
+        #     self.hay_coincidencia_preferida = True
+        #     self.coincidencia_preferida = dbet.index[0]
 
         # Set the filtered matches as the final coincidences
-        self.coincidencias = dbet
+        # self.coincidencias = dbet
+
+
+        self.coincidencias =database_titulo
 
     def show_popup_db(self, row):
 

@@ -69,16 +69,18 @@ def convertir_segundos(segundos, formato='x\'x\'\''):
 
 
 def separar_artistas(artistas):
-    artistas = ftfy.fix_text(convert_numbers_to_words(artistas))
+
     # Define regex pattern to capture different cases
     pattern = re.compile(r" / | feat\. | canta: ")
     
     # Split the input string using the defined pattern
     artists = re.split(pattern, artistas)
+    if artists[1] == "":
+        artists[0] = artistas
     
     # Assign artists based on the length of the split result
-    artists1 = artists[0].strip()  # Main artist
-    artists2 = artists[1].strip() if len(artists) > 1 else ""  # Second artist, if any
+    artists1 = artists[0]  # Main artist
+    artists2 = artists[1] if len(artists) > 1 else ""  # Second artist, if any
     
     return artists1, artists2
 
@@ -242,6 +244,51 @@ def convert_numbers_to_words(text):
     return text
 
 
+def contain_most_words_in_dic(dictionary, text):
+    # Limpia y prepara el texto
+    text = unidecode(convert_numbers_to_words(text)).lower().strip()
+    text = re.sub(r"[()]", "", text)  # Elimina paréntesis
+    text_words = set(text.split())
+
+    lista_numero_palabras_comun = []
+
+    for key in dictionary:
+        words = key
+        words = re.sub(r"[()]", "", words)  # Limpia la clave
+        words_words = set(words.lower().split())
+
+        # Encuentra las palabras comunes entre el texto y la clave del diccionario
+        common_words = text_words.intersection(words_words)
+        numero_de_palabras_en_comun = len(common_words)
+
+        # Agrega la clave y el número de palabras comunes
+        lista_numero_palabras_comun.append((key, numero_de_palabras_en_comun))
+
+    # Encuentra el máximo número de palabras en común
+    maximo_palabras = max(lista_numero_palabras_comun, key=lambda x: x[1])[1]
+
+    # Encuentra las claves que tienen ese máximo número de palabras en común
+    if maximo_palabras > 1:
+        keys_mas_palabras = [key for key, value in lista_numero_palabras_comun if value == maximo_palabras]
+        return keys_mas_palabras
+    else:
+        return None
+
+
+
+
+
+
+    # Encuentra los índices que tienen ese máximo número de palabras en común
+    indices_mas_palabras = [index for index, value in lista_numero_palabras_comun if value == maximo_palabras]
+
+    # Si hay exactamente una coincidencia, devuelve la cadena correspondiente
+    if len(indices_mas_palabras) == 1 and maximo_palabras > 0:
+        return list(dictionary.keys())[indices_mas_palabras[0]]
+    else:
+        return None  # Si hay más de una coincidencia o ninguna, no devuelve nada
+
+
 def contain_most_words(database, text, columna):
     text = unidecode(convert_numbers_to_words(text)).lower().strip()
     text = text.replace("(", "").replace(")", "")
@@ -277,58 +324,131 @@ def get_file_name_without_extension(file_path):
     file_name, _ = os.path.splitext(file_name_with_ext)
     return file_name
 
-def compare_tags(database, tag):
-    coincidencias = {}
-    
-    artista_original, cantor_original = separar_artistas(tag.artist)
+
+def buscar_titulo(database, tag):
+
     titulo_original = ftfy.fix_text(tag.title).strip()
-    if titulo_original is None:
+    if titulo_original is None or titulo_original == "":
         titulo_original = get_file_name_without_extension(tag._file_name)
-    artista_buscar  = unidecode(artista_original).lower()
+    titulo_buscar_min = unidecode(convert_numbers_to_words(titulo_original)).lower().strip()
+
+    coincidencias = None
+
+    # Primera búsqueda: coincidencia exacta
+    coincidencias = database["titulo"] == tag.title
+    titulo_coincidencia = 3
+
+    # Si no hay coincidencias (todos False), buscar con contiene
+    if not coincidencias.any():
+        coincidencias = database["titulo_min"].str.contains(titulo_buscar_min, case=False, na=False, regex=False)
+        titulo_coincidencia = 2
+
+    # Si aún no hay coincidencias, buscar con la función contain_most_words
+    if not coincidencias.any():
+        coincidencias = contain_most_words(database, titulo_buscar_min, "titulo_min")
+        titulo_coincidencia = 1
+
+    if not coincidencias.any():
+        titulo_coincidencia = 1
+
+    # Filtrar el DataFrame para incluir solo las filas que coinciden
+    return titulo_coincidencia, database[coincidencias].copy()
+
+
+def compare_tags(artista_coincidencia, titulo_coincidencia, database, tag):
+
+    coincidencias = {}
+    artista_original, cantor_original = separar_artistas(tag.artist)
     cantor_buscar = unidecode(cantor_original).lower()
-    titulo_buscar = unidecode(convert_numbers_to_words(titulo_original)).lower().strip()
 
-    #Check all the tags in the database
-    coincidencias[TagLabels.TITULO] = database["titulo_min"].str.contains(titulo_buscar, case=False, na=False, regex=False)
-    coincidencias[TagLabels.TITULO_EXACTO] = database["titulo"] == titulo_original
-    coincidencias[TagLabels.TITULO_PALABRAS] = contain_most_words(database, titulo_buscar, "titulo_min")
+    database_length = len(database)
 
-    # Handle cases where artist or cantor might be None or empty
-    if artista_original:
-        coincidencias[TagLabels.ARTISTA] = database["artista_min"].str.contains(artista_buscar, case=False, na=False, regex=False)
-        coincidencias[TagLabels.ARTISTA_EXACTO] = database["artista"] == artista_original
-        
+    # Check all the tags in the database
+    if artista_coincidencia == 3:
+        coincidencias[TagLabels.ORQUESTA_EXACTA] = pd.Series([True] * database_length, index=database.index)
     else:
-        coincidencias[TagLabels.ARTISTA] = False
-        coincidencias[TagLabels.ARTISTA_EXACTO] = False
+        coincidencias[TagLabels.ORQUESTA_EXACTA] = pd.Series([False] * database_length, index=database.index)
 
-    if cantor_original:
-        coincidencias[TagLabels.CANTOR] = database["cantor_min"].str.contains(cantor_buscar, case=False, na=False, regex=False)
-        coincidencias[TagLabels.CANTOR_EXACTO] = database["cantor"] == cantor_original
+    if artista_coincidencia == 2:
+        coincidencias[TagLabels.ORQUESTA] = pd.Series([True] * database_length, index=database.index)
     else:
-        coincidencias[TagLabels.CANTOR] = False
-        coincidencias[TagLabels.CANTOR_EXACTO] = False
+        coincidencias[TagLabels.ORQUESTA] = pd.Series([False] * database_length, index=database.index)
+
+    if artista_coincidencia == 1:
+        coincidencias[TagLabels.ORQUESTA_PARCIAL] = pd.Series([True] * database_length, index=database.index)
+    else:
+        coincidencias[TagLabels.ORQUESTA_PARCIAL] = pd.Series([False] * database_length, index=database.index)
+
+    if artista_coincidencia == 0:
+        coincidencias[TagLabels.ORQUESTA_NEGATIVO] = pd.Series([True] * database_length, index=database.index)
+    else:
+        coincidencias[TagLabels.ORQUESTA_NEGATIVO] = pd.Series([False] * database_length, index=database.index)
+
+    if titulo_coincidencia == 3:
+        coincidencias[TagLabels.TITULO_EXACTO] = pd.Series([True] * database_length, index=database.index)
+    else:
+        coincidencias[TagLabels.TITULO_EXACTO] = pd.Series([False] * database_length, index=database.index)
+
+    if titulo_coincidencia == 2:
+        coincidencias[TagLabels.TITULO] = pd.Series([True] * database_length, index=database.index)
+    else:
+        coincidencias[TagLabels.TITULO] = pd.Series([False] * database_length, index=database.index)
+
+    if titulo_coincidencia == 1:
+        coincidencias[TagLabels.TITULO_PARCIAL] = pd.Series([True] * database_length, index=database.index)
+    else:
+        coincidencias[TagLabels.TITULO_PARCIAL] = pd.Series([False] * database_length, index=database.index)
+
+    if titulo_coincidencia == 0:
+        coincidencias[TagLabels.TITULO_NEGATIVO] = pd.Series([True] * database_length, index=database.index)
+    else:
+        coincidencias[TagLabels.TITULO_NEGATIVO] = pd.Series([False] * database_length, index=database.index)
+
+    # Coincidencias para cantor: comparar cada elemento de "cantor" con "cantor_original"
+    coincidencias[TagLabels.CANTOR_EXACTO] = (database["cantor"] == cantor_original)
+
+    # Coincidencias para cantor_min: usar str.contains y manejar valores vacíos correctamente
+    coincidencias[TagLabels.CANTOR] = database["cantor_min"].str.contains(
+        cantor_buscar, case=False, na=False, regex=False
+    )
+
+    # Coincidencias parciales y negativas para cantor
+    if cantor_buscar == "":
+        coincidencias[TagLabels.CANTOR_PARCIAL] = pd.Series([True] * database_length, index=database.index)
+    else:
+        coincidencias[TagLabels.CANTOR_PARCIAL] = pd.Series([False] * database_length, index=database.index)
+
+    coincidencias[TagLabels.CANTOR_NEGATIVO] = pd.Series([True] * database_length, index=database.index)
 
     # Check year (fecha and ano)
     if tag.year is None:
         tag.year = ""
     
-    coincidencias[TagLabels.FECHA] = database["fecha"] == tag.year
-    coincidencias[TagLabels.ANO] = database["fecha_ano"] == extraer_cuatro_numeros(tag.year)
+    coincidencias[TagLabels.FECHA_EXACTA] = database["fecha"] == tag.year
+    coincidencias[TagLabels.FECHA] = database["fecha_ano"] == extraer_cuatro_numeros(tag.year)
+    coincidencias[TagLabels.FECHA_PARCIAL] = pd.Series([False] * database_length, index=database.index)
+    coincidencias[TagLabels.FECHA_NEGATIVA] = database["fecha_ano"] != extraer_cuatro_numeros(tag.year)
     
     # Check genre (genero)
+    coincidencias[TagLabels.GENERO_EXACTO] = database["estilo"] == tag.genre
     coincidencias[TagLabels.GENERO] = database.estilo.str.contains(tag.genre, case=False, na=False, regex=False) if tag.genre else False
+    coincidencias[TagLabels.GENERO_PARCIAL] = pd.Series([False] * database_length, index=database.index)
+    coincidencias[TagLabels.GENERO_NEGATIVO] = pd.Series([False] * database_length, index=database.index)
 
     # Check composer/author (compositor_autor)
-    coincidencias[TagLabels.COMPOSITOR_AUTOR] = database["compositor_autor"] == tag.composer
+    coincidencias[TagLabels.COMPOSITOR_AUTOR_EXACTO] = database["compositor_autor"] == tag.composer
+    coincidencias[TagLabels.COMPOSITOR_AUTOR] = pd.Series([False] * database_length, index=database.index)
+    coincidencias[TagLabels.COMPOSITOR_AUTOR_PARCIAL] = pd.Series([False] * database_length, index=database.index)
+    coincidencias[TagLabels.COMPOSITOR_AUTOR_NEGATIVO] = pd.Series([False] * database_length, index=database.index)
 
     # Check all fields (todo)
-    coincidencias[TagLabels.TODO] = coincidencias[TagLabels.TITULO]  & \
-                            (coincidencias[TagLabels.ARTISTA_EXACTO]) & \
+    coincidencias[TagLabels.TODO] = coincidencias[TagLabels.TITULO_EXACTO]  & \
+                            (coincidencias[TagLabels.ORQUESTA_EXACTA]) & \
                             (coincidencias[TagLabels.CANTOR_EXACTO]) & \
-                            (coincidencias[TagLabels.FECHA] | coincidencias[TagLabels.ANO]) & \
-                            (coincidencias[TagLabels.GENERO]) & \
-                            (coincidencias[TagLabels.COMPOSITOR_AUTOR])
+                            (coincidencias[TagLabels.FECHA_NEGATIVA]) & \
+                            (coincidencias[TagLabels.GENERO_EXACTO]) & \
+                            (coincidencias[TagLabels.COMPOSITOR_AUTOR_EXACTO])
+
     return coincidencias
 
 
