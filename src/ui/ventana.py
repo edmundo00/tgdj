@@ -240,11 +240,13 @@ class Ventana:
         self.crear_frames_en_columnas(title_config, scrollable_frame, frames_columnas)
 
     def on_mouse_wheel(self, event):
-        """Maneja el desplazamiento con la rueda del ratón en ambos canvas."""
-        # Verifica que ambos canvas existan antes de intentar desplazarlos
-        if hasattr(self, 'canvas1') and hasattr(self, 'canvas2'):
-            self.canvas1.yview_scroll(int(-1 * (event.delta / 120)), "units")
-            self.canvas2.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        """Handle mouse wheel scrolling only when the window is on top and focused."""
+        # Check if the root window is focused
+        if self.root.focus_get() is not None:
+            # Scroll both canvases
+            if hasattr(self, 'canvas1') and hasattr(self, 'canvas2'):
+                self.canvas1.yview_scroll(int(-1 * (event.delta / 120)), "units")
+                self.canvas2.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
     def crear_titulos(self, subframe, config):
         """
@@ -292,6 +294,8 @@ class Ventana:
     def create_scrollable_area(self, subframe, canvas_attr_name, **kwargs):
         """Creates a scrollable area inside the subframe for data, below the fixed titles."""
         # Filter out conflicting arguments from kwargs
+        self.root.bind_all("<MouseWheel>", self.on_mouse_wheel)
+
         canvas_kwargs = {k: v for k, v in kwargs.items() if
                          k not in ['bg', 'highlightbackground', 'highlightthickness']}
 

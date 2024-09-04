@@ -290,32 +290,36 @@ def contain_most_words_in_dic(dictionary, text):
 
 
 def contain_most_words(database, text, columna):
+    # Normalize and preprocess the input text
     text = unidecode(convert_numbers_to_words(text)).lower().strip()
     text = text.replace("(", "").replace(")", "")
     text_words = set(text.lower().split())
+
+    # Lists to store counts of common words
     lista_numero_palabras_comun = []
-    words_filas = []
 
     for index, row in database.iterrows():
+        # Normalize and preprocess the row text
         words = row[columna]
         words = words.replace("(", "").replace(")", "")
         words_words = set(words.lower().split())
-        words_filas.append([index, words_words])
+
+        # Calculate the number of common words
         common_words = text_words.intersection(words_words)
         numero_de_palabras_en_comun = len(common_words)
         lista_numero_palabras_comun.append((index, numero_de_palabras_en_comun))
 
-    # Encuentra el máximo número de palabras en común
+    # Find the maximum number of common words
     maximo_palabras = max(lista_numero_palabras_comun, key=lambda x: x[1])[1]
 
-    # Encuentra los índices que tienen ese máximo número de palabras en común
+    # Create a boolean Series aligned with the DataFrame's index
+    coincidencias = pd.Series(False, index=database.index)
     if maximo_palabras > 0:
+        # Find indices with the maximum number of common words
         indices_mas_palabras = [index for index, value in lista_numero_palabras_comun if value == maximo_palabras]
-    else:
-        indices_mas_palabras = []
+        coincidencias.loc[indices_mas_palabras] = True
 
-    return indices_mas_palabras
-
+    return coincidencias
 
 def get_file_name_without_extension(file_path):
     # Extract the file name with extension
@@ -327,6 +331,7 @@ def get_file_name_without_extension(file_path):
 
 def buscar_titulo(database, tag):
     # Corregir y limpiar el título original
+    length_of_database = len(database)
     titulo_original = ftfy.fix_text(tag.title).strip() if tag.title else ""
     if not titulo_original:
         titulo_original = get_file_name_without_extension(tag._file_name)
@@ -346,6 +351,13 @@ def buscar_titulo(database, tag):
         # Asegúrate de que contain_most_words devuelva una Serie booleana
         coincidencias = pd.Series(contain_most_words(database, titulo_buscar_min, "titulo_min"))
         titulo_coincidencia = 1
+
+    # Si aún no hay coincidencias, usar la función 'contain_most_words'
+    if not coincidencias.any():
+        # Asegúrate de que contain_most_words devuelva una Serie booleana
+        coincidencias = pd.Series([False] * len(database), index=database.index)
+        titulo_coincidencia = 0
+
 
     # Filtrar el DataFrame para incluir solo las filas que coinciden
     return titulo_coincidencia, database[coincidencias].copy()
