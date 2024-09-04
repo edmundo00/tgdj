@@ -147,13 +147,14 @@ class FILETOFIND:
         """Representa las coincidencias en los frames correspondientes."""
         fuente_10_bold = ('Consolas', 12, "bold")
         fuente_10 = ('Consolas', 12)
-        for counter, (_, row) in enumerate(self.coincidencias.iterrows()):
-            if isinstance(row, pd.Series) and 'audio30' in row and 'audio10' in row:
+        for counter, ((_, row_coincidencia), (_, row_color)) in enumerate(
+                zip(self.coincidencias.iterrows(), self.colores_labels.iterrows())):
+            if isinstance(row_coincidencia, pd.Series) and 'audio30' in row_coincidencia and 'audio10' in row_coincidencia:
                 # Añadir checkbutton
                 self._crear_checkbutton(self.frames_resultado['Checkbox'], counter)
 
                 # Agregar elementos a los frames
-                elementos = self.obtener_elementos_coincidencia(row, counter)
+                elementos = self.obtener_elementos_coincidencia(row_coincidencia, counter)
                 self.agregar_elementos_a_frames(self.frames_resultado, elementos, color_de_fondo)
 
         if self.hay_coincidencia_preferida:
@@ -161,17 +162,20 @@ class FILETOFIND:
 
     def obtener_elementos_coincidencia(self, row, counter):
         """Obtiene los elementos a representar por cada coincidencia."""
+
+        colores = self.colores_labels.iloc[counter]
+
         return [
             {'tipo': 'label', 'texto': row['titulo'], 'row': counter,'descripcion': 'Titulo', 'frame': self.frames_resultado['Titulo'],
-             'anchor': "w"},
+             'anchor': "w", 'colour': colores['TITULO']},
             {'tipo': 'label', 'texto': row['artista'],'row': counter, 'descripcion': 'Orquesta',
-             'frame': self.frames_resultado['Orquesta'], 'anchor': "w"},
+             'frame': self.frames_resultado['Orquesta'], 'anchor': "w", 'colour': colores['ORQUESTA']},
             {'tipo': 'label', 'texto': row['cantor'], 'row': counter,'descripcion': 'Cantor', 'frame': self.frames_resultado['Cantor'],
-             'anchor': "w"},
+             'anchor': "w", 'colour': colores['CANTOR']},
             {'tipo': 'label', 'texto': row['estilo'],'row': counter, 'descripcion': 'Estilo', 'frame': self.frames_resultado['Estilo'],
-             'anchor': "w"},
+             'anchor': "w", 'colour': colores['ESTILO']},
             {'tipo': 'label', 'texto': row['fecha'],'row': counter, 'descripcion': 'Fecha', 'frame': self.frames_resultado['Fecha'],
-             'anchor': "w"},
+             'anchor': "w", 'colour': colores['FECHA']},
             {'tipo': 'button', 'frame': self.frames_resultado['Info'], 'row': counter, 'image': self.info_icon,
              'command': lambda r=row: self.show_popup_db(r)},
             {'tipo': 'play_button', 'frame': self.frames_resultado['Play_30'], 'link': link_to_music(row['audio30']),
@@ -187,13 +191,13 @@ class FILETOFIND:
             {'tipo': 'button', 'frame': self.frames_archivo.get('Info'), 'row': 0, 'image': self.info_icon,
              'command': self.show_popup_file},
             {'tipo': 'label', 'texto': self.tags.title, 'row': 0, 'descripcion': 'Titulo',
-             'frame': self.frames_archivo.get('Titulo'), 'anchor': "w"},
+             'frame': self.frames_archivo.get('Titulo'), 'anchor': "w", 'colour' : self.color_de_fondo},
             {'tipo': 'label', 'texto': self.artists1, 'row': 0, 'descripcion': 'Orquesta',
-             'frame': self.frames_archivo.get('Orquesta'), 'anchor': "w"},
+             'frame': self.frames_archivo.get('Orquesta'), 'anchor': "w", 'colour' : self.color_de_fondo},
             {'tipo': 'label', 'texto': self.artists2, 'row': 0, 'descripcion': 'Cantor',
-             'frame': self.frames_archivo.get('Cantor'), 'anchor': "w"},
+             'frame': self.frames_archivo.get('Cantor'), 'anchor': "w", 'colour' : self.color_de_fondo},
             {'tipo': 'label', 'texto': self.tags.year, 'row': 0, 'descripcion': 'Fecha',
-             'frame': self.frames_archivo.get('Fecha'), 'anchor': "w"},
+             'frame': self.frames_archivo.get('Fecha'), 'anchor': "w", 'colour' : self.color_de_fondo},
             {'tipo': 'play_button', 'frame': self.frames_archivo.get('Play'), 'link': self.ruta_archivo, 'row': 0,
              'column': 0},
             {'tipo': 'stop_button', 'frame': self.frames_archivo.get('Pausa'), 'row': 0, 'column': 0},
@@ -201,12 +205,13 @@ class FILETOFIND:
 
     def agregar_elementos_a_frames(self, frames, elementos, color_de_fondo):
         """Agrega los elementos a los frames correspondientes."""
+
         for elemento in elementos:
             if elemento['tipo'] == 'label':
                 self._crear_label_en_frame(
                     elemento['frame'], text=elemento['texto'],
                     font=('Consolas', 12, "bold") if elemento['descripcion'] == 'Titulo' else ('Consolas', 12),
-                    bg=color_de_fondo, anchor=elemento['anchor'], row=elemento['row'],
+                    bg=elemento['colour'], anchor=elemento['anchor'], row=elemento['row'],
                     column=elemento.get('column', 0)
                 )
             elif elemento['tipo'] == 'button':
@@ -369,7 +374,10 @@ class FILETOFIND:
         # Get a dictionary of boolean matches for all tags
         self.bool_coincidencias , self.perfect_match = compare_tags(self.artista_coincidencia, self.titulo_coincidencia, database_titulo, tag)
 
+        self.colores_labels = coincidencias_a_colores(self.bool_coincidencias)
+
         self.coincidencias = database_titulo
+
 
 
     def show_popup_db(self, row):

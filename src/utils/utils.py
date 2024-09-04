@@ -137,6 +137,52 @@ def convert_date_format(date_str):
 
     return new_date_str
 
+def coincidencias_a_colores(bool_coincidencias):
+    # Definir colores para cada tipo de coincidencia
+    colores = {
+        'EXACTO': 'lightgreen',
+        'COINCIDENCIA': 'yellow',
+        'PARCIAL': 'orange',
+        'NEGATIVO': 'red'
+    }
+
+    # Crear un DataFrame vacío basado en los índices de los Series en bool_coincidencias
+    indices = next(iter(bool_coincidencias.values())).index
+    df_colores = pd.DataFrame(index=indices)
+
+    # Mapear los colores para cada categoría relevante
+    mapping = {
+        'ORQUESTA': [TagLabels.ORQUESTA_EXACTA, TagLabels.ORQUESTA, TagLabels.ORQUESTA_PARCIAL, TagLabels.ORQUESTA_NEGATIVO],
+        'TITULO': [TagLabels.TITULO_EXACTO, TagLabels.TITULO, TagLabels.TITULO_PARCIAL, TagLabels.TITULO_NEGATIVO],
+        'CANTOR': [TagLabels.CANTOR_EXACTO, TagLabels.CANTOR, TagLabels.CANTOR_PARCIAL, TagLabels.CANTOR_NEGATIVO],
+        'FECHA': [TagLabels.FECHA_EXACTA, TagLabels.FECHA, TagLabels.FECHA_PARCIAL, TagLabels.FECHA_NEGATIVA],
+        'ESTILO': [TagLabels.ESTILO_EXACTO, TagLabels.ESTILO, TagLabels.ESTILO_PARCIAL, TagLabels.ESTILO_NEGATIVO],
+        'COMPOSITOR': [TagLabels.COMPOSITOR_AUTOR_EXACTO, TagLabels.COMPOSITOR_AUTOR, TagLabels.COMPOSITOR_AUTOR_PARCIAL, TagLabels.COMPOSITOR_AUTOR_NEGATIVO]
+    }
+
+    # Procesar cada grupo de coincidencias
+    for categoria, etiquetas in mapping.items():
+        exacta, normal, parcial, negativo = etiquetas
+
+        # Inicializar con el color de "Ninguna Coincidencia"
+        df_colores[categoria] = colores['NEGATIVO']  # Asignar por defecto
+
+        # Aplicar colores basados en las coincidencias
+        for i in indices:
+            if bool_coincidencias[exacta][i]:
+                df_colores.at[i, categoria] = colores['EXACTO']
+            elif bool_coincidencias[normal][i]:
+                df_colores.at[i, categoria] = colores['COINCIDENCIA']
+            elif bool_coincidencias[parcial][i]:
+                df_colores.at[i, categoria] = colores['PARCIAL']
+            elif bool_coincidencias[negativo][i]:
+                df_colores.at[i, categoria] = colores['NEGATIVO']
+
+    return df_colores
+
+# Ejemplo de uso con self.bool_coincidencias
+# resultado = coincidencias_a_colores(self.bool_coincidencias)
+# print(resultado)
 
 def update_tags(file_path, title=None, artist=None, year=None, genre=None, composer=None):
     # Get the file extension
@@ -436,10 +482,10 @@ def compare_tags(artista_coincidencia, titulo_coincidencia, database, tag):
     coincidencias[TagLabels.FECHA_NEGATIVA] = database["fecha_ano"] != extraer_cuatro_numeros(tag.year)
     
     # Check genre (genero)
-    coincidencias[TagLabels.GENERO_EXACTO] = database["estilo"] == tag.genre
-    coincidencias[TagLabels.GENERO] = database.estilo.str.contains(tag.genre, case=False, na=False, regex=False) if tag.genre else False
-    coincidencias[TagLabels.GENERO_PARCIAL] = pd.Series([False] * database_length, index=database.index)
-    coincidencias[TagLabels.GENERO_NEGATIVO] = pd.Series([False] * database_length, index=database.index)
+    coincidencias[TagLabels.ESTILO_EXACTO] = database["estilo"] == tag.genre
+    coincidencias[TagLabels.ESTILO] = database.estilo.str.contains(tag.genre, case=False, na=False, regex=False) if tag.genre else False
+    coincidencias[TagLabels.ESTILO_PARCIAL] = pd.Series([False] * database_length, index=database.index)
+    coincidencias[TagLabels.ESTILO_NEGATIVO] = pd.Series([False] * database_length, index=database.index)
 
     # Check composer/author (compositor_autor)
     coincidencias[TagLabels.COMPOSITOR_AUTOR_EXACTO] = database["compositor_autor"] == tag.composer
@@ -447,12 +493,14 @@ def compare_tags(artista_coincidencia, titulo_coincidencia, database, tag):
     coincidencias[TagLabels.COMPOSITOR_AUTOR_PARCIAL] = pd.Series([False] * database_length, index=database.index)
     coincidencias[TagLabels.COMPOSITOR_AUTOR_NEGATIVO] = pd.Series([False] * database_length, index=database.index)
 
+
+
     # Check all fields (todo)
     coincidencias[TagLabels.TODO] = coincidencias[TagLabels.TITULO_EXACTO]  & \
                             (coincidencias[TagLabels.ORQUESTA_EXACTA]) & \
                             (coincidencias[TagLabels.CANTOR_EXACTO]) & \
                             (coincidencias[TagLabels.FECHA_NEGATIVA]) & \
-                            (coincidencias[TagLabels.GENERO_EXACTO]) & \
+                            (coincidencias[TagLabels.ESTILO_EXACTO]) & \
                             (coincidencias[TagLabels.COMPOSITOR_AUTOR_EXACTO])
 
     if database_length==1 & coincidencias[TagLabels.TODO].iloc[0]:
