@@ -30,9 +30,22 @@ class FILETOFIND:
 
         self.leer_tags()
 
-        self.buscar2()
+        self.buscar()
+        self.representa()
 
-        self.representar_datos()
+    def representa(self):
+        if self.artista_coincidencia==0:
+            self.representar_datos()
+            self.nextframe = self.frame_number + 1
+        elif self.titulo_coincidencia==0:
+            self.representar_datos()
+            self.nextframe = self.frame_number + 1
+        elif self.perfect_match:
+            self.representar_datos()
+            self.nextframe = self.frame_number + 1
+        else:
+            self.representar_datos()
+            self.nextframe = self.frame_number + 1
 
     def representar_datos(self):
         """
@@ -42,138 +55,120 @@ class FILETOFIND:
         # Determinar color de fondo basado en el número de frame
         color_de_fondo = 'whitesmoke' if es_par(self.frame_number) else 'lightgrey'
 
-        # Definir colores para diferentes tipos de coincidencias
-        colores_por_coincidencia = {
-            0: 'palegreen',
-            1: 'lime',
-            2: 'darkgray',
-            3: 'gold',
-            4: 'aquamarine',
-            5: 'red'
-        }
+        # Configurar la altura del frame
+        self.configurar_altura_frame()
 
-        # Configura la altura del frame basado en el tipo de coincidencia
+        # Crear frames para archivo y resultado
+        self.frames_archivo = self.crear_frames_columnas(self.frames_columnas_archivo, columnas_config['archivo'],
+                                                         color_de_fondo, self.framefiles)
+        self.frames_resultado = self.crear_frames_columnas(self.frames_columnas_resultado, columnas_config['resultado'],
+                                                           color_de_fondo, self.framedatabase)
+
+        # Representar coincidencias o mostrar "NADA ENCONTRADO"
+        if self.coincidencias.empty:
+            self.mostrar_nada_encontrado(color_de_fondo)
+        else:
+            self.representar_coincidencias(color_de_fondo)
+
+        # Agregar elementos a los frames de archivo
+        self.agregar_elementos_a_frames(self.frames_archivo, self.obtener_elementos_archivo(), color_de_fondo)
+
+    def configurar_altura_frame(self):
+        """Configura la altura del frame según el tipo de coincidencia."""
         self.altura_frame = 25 * (
             1 if self.tipo_de_coincidencia == 2 or len(self.coincidencias) == 0 else len(self.coincidencias)
         )
 
-        # Estilos de fuente
+    def crear_frames_columnas(self, frames_columnas, columnas_config, color_de_fondo, default_frame):
+        """Crea los frames para cada columna basado en la configuración dada."""
+        frames = {}
+        for column in columnas_config:
+            description = column['description']
+            frames[description] = self._crear_frame_columna(
+                frames_columnas.get(description, default_frame), self.frame_number, col=0, width=column['minsize'],
+                colour=color_de_fondo)
+        return frames
+
+    def mostrar_nada_encontrado(self, color_de_fondo):
+        """Muestra 'NADA ENCONTRADO' en las columnas correspondientes."""
+        columnas_resultado = ['Checkbox', 'Titulo', 'Orquesta', 'Cantor', 'Estilo', 'Fecha', 'Info', 'Play_30']
+        fuente_10 = ('Consolas', 12)
+        for descripcion in columnas_resultado:
+            text = "NADA ENCONTRADO" if descripcion == 'Titulo' else ""
+            self._crear_label_en_frame(self.frames_archivo['Titulo'], text=text, font=fuente_10, anchor='w',
+                                       bg=color_de_fondo, row=0, column=0)
+
+    def representar_coincidencias(self, color_de_fondo):
+        """Representa las coincidencias en los frames correspondientes."""
         fuente_10_bold = ('Consolas', 12, "bold")
         fuente_10 = ('Consolas', 12)
+        for counter, (_, row) in enumerate(self.coincidencias.iterrows()):
+            if isinstance(row, pd.Series) and 'audio30' in row and 'audio10' in row:
+                # Añadir checkbutton
+                self._crear_checkbutton(self.frames_resultado['Checkbox'], counter)
 
-        # Determinar la fila actual usando numero_canciones
-        current_row = self.frame_number
+                # Agregar elementos a los frames
+                elementos = self.obtener_elementos_coincidencia(row, counter)
+                self.agregar_elementos_a_frames(self.frames_resultado, elementos, color_de_fondo)
 
-        # Crear frames una sola vez antes del bucle
-        self.frames_resultado = {}
-        for column in columnas_config['resultado']:
-            description = column['description']
-            self.frames_resultado[description] = self._crear_frame_columna(
-                self.frames_columnas_resultado.get(description, self.framedatabase), current_row, col=0, width=column['minsize'], colour=color_de_fondo)
-        self.frames_archivo = {}
-        for column in columnas_config['archivo']:
-            description = column['description']
-            self.frames_archivo[description] = self._crear_frame_columna(
-                self.frames_columnas_archivo.get(description, self.framefiles), current_row, col=0, width=column['minsize'], colour=color_de_fondo)
+        if self.hay_coincidencia_preferida:
+            self.activar_checkbox(self.coincidencia_preferida)
 
-
-
-        # Manejar la visualización de coincidencias o "NADA ENCONTRADO"
-        if self.coincidencias.empty:
-            columnas_resultado = ['Checkbox', 'Titulo', 'Orquesta', 'Cantor', 'Estilo', 'Fecha', 'Info', 'Play_30']
-            for i, descripcion in enumerate(columnas_resultado):
-                text = "NADA ENCONTRADO" if descripcion == 'Titulo' else ""
-                self._crear_label_en_frame(self.frames_archivo['Titulo'], text=text, font=fuente_10, anchor='w', bg=color_de_fondo, row=0, column=0)
-
-
-        else:
-            # Iterar sobre las coincidencias
-            for counter, (_, row) in enumerate(self.coincidencias.iterrows()):
-                if isinstance(row, pd.Series) and 'audio30' in row and 'audio10' in row:
-                    # Añadir checkbutton al frame correspondiente
-                    self._crear_checkbutton(self.frames_resultado['Checkbox'], counter)
-
-                    # Configuración para los elementos a añadir (labels y botones)
-                    elementos = [
-                        {'tipo': 'label', 'texto': row['titulo'], 'descripcion': 'Titulo', 'frame': self.frames_resultado['Titulo'],
-                         'anchor': "w"},
-                        {'tipo': 'label', 'texto': row['artista'], 'descripcion': 'Orquesta',
-                         'frame': self.frames_resultado['Orquesta'], 'anchor': "w"},
-                        {'tipo': 'label', 'texto': row['cantor'], 'descripcion': 'Cantor', 'frame': self.frames_resultado['Cantor'],
-                         'anchor': "w"},
-                        {'tipo': 'label', 'texto': row['estilo'], 'descripcion': 'Estilo', 'frame': self.frames_resultado['Estilo'],
-                         'anchor': "w"},
-                        {'tipo': 'label', 'texto': row['fecha'], 'descripcion': 'Fecha', 'frame': self.frames_resultado['Fecha'],
-                         'anchor': "w"},
-                        {'tipo': 'button', 'frame': self.frames_resultado['Info'], 'row': counter, 'image': self.info_icon,
-                         'command': lambda r=row: self.show_popup_db(r)},
-                        {'tipo': 'play_button', 'frame': self.frames_resultado['Play_30'], 'link': link_to_music(row['audio30']), 'row': counter,
-                         'column': 0},
-                        {'tipo': 'play_button', 'frame': self.frames_resultado['Play_10'], 'link': link_to_music(row['audio10']), 'row': counter,
-                         'column': 0},
-                        {'tipo': 'stop_button', 'frame': self.frames_resultado['Pausa'], 'row': counter, 'column': 0},
-                    ]
-
-                    # Añadir los elementos a los frames correspondientes
-                    for elemento in elementos:
-                        if elemento['tipo'] == 'label':
-                            self._crear_label_en_frame(
-                                elemento['frame'], text=elemento['texto'],
-                                font=fuente_10_bold if elemento['descripcion'] == 'Titulo' else fuente_10,
-                                bg=color_de_fondo, anchor=elemento['anchor'], row=counter, column=0
-                            )
-                        elif elemento['tipo'] == 'button':
-                            self._crear_button_en_frame(
-                                elemento['frame'], row=elemento['row'], image=elemento['image'],
-                                command=elemento['command'], bg=color_de_fondo
-                            )
-                        elif elemento['tipo'] == 'play_button':
-                            self._crear_play_button_on_frame(
-                                elemento['frame'], elemento['link'],
-                                row=elemento['row'], column=elemento['column'], bg=color_de_fondo
-                            )
-                        elif elemento['tipo'] == 'stop_button':
-                            self._crear_stop_button_on_frame(
-                                elemento['frame'], row=elemento['row'], column=elemento['column'], bg=color_de_fondo
-                            )
-                else:
-                    print(f"Unexpected row format or missing columns: {row}")
-
-            if self.hay_coincidencia_preferida:
-                self.activar_checkbox(self.coincidencia_preferida)
-
-
-        # Definir los datos de las etiquetas para los frames de información de archivos
-        # Definir los elementos para los frames de archivo en la misma estructura que la variable 'elementos'
-        elementos_archivo = [
-            {'tipo': 'label', 'texto': self.tags.title, 'descripcion': 'Titulo', 'frame': self.frames_archivo.get('Titulo'),
+    def obtener_elementos_coincidencia(self, row, counter):
+        """Obtiene los elementos a representar por cada coincidencia."""
+        return [
+            {'tipo': 'label', 'texto': row['titulo'], 'row': counter,'descripcion': 'Titulo', 'frame': self.frames_resultado['Titulo'],
              'anchor': "w"},
-            {'tipo': 'label', 'texto': self.artists1, 'descripcion': 'Orquesta',
+            {'tipo': 'label', 'texto': row['artista'],'row': counter, 'descripcion': 'Orquesta',
+             'frame': self.frames_resultado['Orquesta'], 'anchor': "w"},
+            {'tipo': 'label', 'texto': row['cantor'], 'row': counter,'descripcion': 'Cantor', 'frame': self.frames_resultado['Cantor'],
+             'anchor': "w"},
+            {'tipo': 'label', 'texto': row['estilo'],'row': counter, 'descripcion': 'Estilo', 'frame': self.frames_resultado['Estilo'],
+             'anchor': "w"},
+            {'tipo': 'label', 'texto': row['fecha'],'row': counter, 'descripcion': 'Fecha', 'frame': self.frames_resultado['Fecha'],
+             'anchor': "w"},
+            {'tipo': 'button', 'frame': self.frames_resultado['Info'], 'row': counter, 'image': self.info_icon,
+             'command': lambda r=row: self.show_popup_db(r)},
+            {'tipo': 'play_button', 'frame': self.frames_resultado['Play_30'], 'link': link_to_music(row['audio30']),
+             'row': counter, 'column': 0},
+            {'tipo': 'play_button', 'frame': self.frames_resultado['Play_10'], 'link': link_to_music(row['audio10']),
+             'row': counter, 'column': 0},
+            {'tipo': 'stop_button', 'frame': self.frames_resultado['Pausa'], 'row': counter, 'column': 0},
+        ]
+
+    def obtener_elementos_archivo(self):
+        """Obtiene los elementos a representar para los frames de archivo."""
+        return [
+            {'tipo': 'label', 'texto': self.tags.title, 'row': 0, 'descripcion': 'Titulo',
+             'frame': self.frames_archivo.get('Titulo'), 'anchor': "w"},
+            {'tipo': 'label', 'texto': self.artists1, 'row': 0, 'descripcion': 'Orquesta',
              'frame': self.frames_archivo.get('Orquesta'), 'anchor': "w"},
-            {'tipo': 'label', 'texto': self.artists2, 'descripcion': 'Cantor', 'frame': self.frames_archivo.get('Cantor'),
-             'anchor': "w"},
-            {'tipo': 'label', 'texto': self.tags.year, 'descripcion': 'Fecha', 'frame': self.frames_archivo.get('Fecha'),
-             'anchor': "w"},
+            {'tipo': 'label', 'texto': self.artists2, 'row': 0, 'descripcion': 'Cantor',
+             'frame': self.frames_archivo.get('Cantor'), 'anchor': "w"},
+            {'tipo': 'label', 'texto': self.tags.year, 'row': 0, 'descripcion': 'Fecha',
+             'frame': self.frames_archivo.get('Fecha'), 'anchor': "w"},
             {'tipo': 'button', 'frame': self.frames_archivo.get('Info'), 'row': 0, 'image': self.info_icon,
-             'command': self.show_popup_file, 'bg': color_de_fondo},
+             'command': self.show_popup_file, 'bg': 'whitesmoke'},
             {'tipo': 'play_button', 'frame': self.frames_archivo.get('Play'), 'link': self.ruta_archivo, 'row': 0,
              'column': 0},
             {'tipo': 'stop_button', 'frame': self.frames_archivo.get('Pausa'), 'row': 0, 'column': 0},
         ]
 
-        # Iterar sobre los elementos y añadirlos a los frames correspondientes
-        for elemento in elementos_archivo:
+    def agregar_elementos_a_frames(self, frames, elementos, color_de_fondo):
+        """Agrega los elementos a los frames correspondientes."""
+        for elemento in elementos:
             if elemento['tipo'] == 'label':
                 self._crear_label_en_frame(
                     elemento['frame'], text=elemento['texto'],
-                    font=fuente_10_bold if elemento['descripcion'] == 'Titulo' else fuente_10,
-                    bg=color_de_fondo, anchor=elemento['anchor'],
-                    row=0, column=0
+                    font=('Consolas', 12, "bold") if elemento['descripcion'] == 'Titulo' else ('Consolas', 12),
+                    bg=color_de_fondo, anchor=elemento['anchor'], row=elemento['row'],
+                    column=elemento.get('column', 0)
                 )
+                print()
             elif elemento['tipo'] == 'button':
                 self._crear_button_en_frame(
                     elemento['frame'], row=elemento['row'], image=elemento['image'],
-                    command=elemento['command'], bg=elemento['bg']
+                    command=elemento['command'], bg=elemento.get('bg', color_de_fondo)
                 )
             elif elemento['tipo'] == 'play_button':
                 self._crear_play_button_on_frame(
@@ -184,7 +179,6 @@ class FILETOFIND:
                 self._crear_stop_button_on_frame(
                     elemento['frame'], row=elemento['row'], column=elemento['column'], bg=color_de_fondo
                 )
-
     def _crear_frame_columna(self, parent, row, col, width, colour):
         """Create a frame with fixed height but flexible width that can expand with the window."""
         frame = tk.Frame(parent, height=self.altura_frame, width=width, bg=colour)
@@ -271,7 +265,7 @@ class FILETOFIND:
         self.artists1, self.artists2 = separar_artistas(self.tags.artist)
 
 
-    def buscar2(self):
+    def buscar(self):
         tag = self.tags
         self.hay_coincidencia_preferida = False
         self.coincidencia_preferida = 0
@@ -281,24 +275,24 @@ class FILETOFIND:
 
         # First, try to find an exact match
         artista_key = next((key for key in self.dic_art if key == artista_original), None)
-        artista_coincidencia = 3
+        self.artista_coincidencia = 3
 
         if not artista_key:
             # First, try to find an good match
             artista_key = next((key for key in self.dic_art if key == artista_buscar_min), None)
-            artista_coincidencia = 2
+            self.artista_coincidencia = 2
 
         # If no exact match is found, try to find a partial match
         if not artista_key:
             artista_key = next((key for key in self.dic_art if artista_buscar_min in key), None)
-            artista_coincidencia = 1
+            self.artista_coincidencia = 1
 
         if not artista_key:
             artista_key = contain_most_words_in_dic(self.dic_art, artista_buscar_min)
             if artista_key is not None:
                 artista_coincidencia = 1
             else:
-                artista_coincidencia = 0
+                self.artista_coincidencia = 0
                 self.resultado = 'Artista no encontrado'
                 self.coincidencias = self.db.iloc[0:0]
                 return
@@ -316,9 +310,9 @@ class FILETOFIND:
             raise ValueError("artista_key must be a string or a list of strings")
 
 
-        titulo_coincidencia, database_titulo = buscar_titulo(artist_songs, tag)
+        self.titulo_coincidencia, database_titulo = buscar_titulo(artist_songs, tag)
 
-        if titulo_coincidencia==0:
+        if self.titulo_coincidencia==0:
             self.resultado = 'Titulo no encontrado'
             self.coincidencias = self.db.iloc[0:0]
             return
@@ -326,39 +320,10 @@ class FILETOFIND:
 
 
         # Get a dictionary of boolean matches for all tags
-        coincidencias = compare_tags(artista_coincidencia, titulo_coincidencia, database_titulo, tag)
+        self.bool_coincidencias , self.perfect_match = compare_tags(self.artista_coincidencia, self.titulo_coincidencia, database_titulo, tag)
 
-        # # Check for title match
-        # # Check for year match
-        # if coincidencias[TagLabels.FECHA].any():
-        #     self.resultado = 'Año encontrado'
-        #     self.tipo_de_coincidencia = 1
-        #     self.coincidencia_preferida = dbet.index[coincidencias[TagLabels.FECHA]].min()
-        #     self.hay_coincidencia_preferida = True
-        # else:
-        #     self.resultado = 'Año no encontrado'
-        #
-        #
-        #
-        #
-        #
-        # # If we found a year match and the whole tag matches exactly, update the coincidence type
-        # if self.tipo_de_coincidencia == 1 and coincidencias[TagLabels.TODO].any() == True:
-        #     dbet = dbet[coincidencias[TagLabels.TODO]]
-        #     if len(dbet) == 1:
-        #         self.tipo_de_coincidencia = 2
-        #         self.hay_coincidencia_preferida = False
-        #
-        # # If the title is the only match and there's exactly one match, set the preferred match
-        # if self.tipo_de_coincidencia == 0 and len(dbet) == 1:
-        #     self.hay_coincidencia_preferida = True
-        #     self.coincidencia_preferida = dbet.index[0]
+        self.coincidencias = database_titulo
 
-        # Set the filtered matches as the final coincidences
-        # self.coincidencias = dbet
-
-
-        self.coincidencias =database_titulo
 
     def show_popup_db(self, row):
 
@@ -612,7 +577,7 @@ class FILETOFIND:
 
         self.leer_tags()
 
-        self.buscar2()
+        self.buscar()
 
         for archivos in filetofind_list:
             archivos.destroy()

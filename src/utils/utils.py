@@ -293,7 +293,7 @@ def contain_most_words(database, text, columna):
     # Normalize and preprocess the input text
     text = unidecode(convert_numbers_to_words(text)).lower().strip()
     text = text.replace("(", "").replace(")", "")
-    text_words = set(text.lower().split())
+    text_words = set(word for word in text.lower().split() if word not in articulos_preposiciones_comunes)
 
     # Lists to store counts of common words
     lista_numero_palabras_comun = []
@@ -372,10 +372,8 @@ def compare_tags(artista_coincidencia, titulo_coincidencia, database, tag):
     database_length = len(database)
 
     # Check all the tags in the database
-    if artista_coincidencia == 3:
-        coincidencias[TagLabels.ORQUESTA_EXACTA] = pd.Series([True] * database_length, index=database.index)
-    else:
-        coincidencias[TagLabels.ORQUESTA_EXACTA] = pd.Series([False] * database_length, index=database.index)
+    # Coincidencias para cantor: comparar cada elemento de "cantor" con "cantor_original"
+    coincidencias[TagLabels.ORQUESTA_EXACTA] = (database["artista"] == artista_original)
 
     if artista_coincidencia == 2:
         coincidencias[TagLabels.ORQUESTA] = pd.Series([True] * database_length, index=database.index)
@@ -457,7 +455,12 @@ def compare_tags(artista_coincidencia, titulo_coincidencia, database, tag):
                             (coincidencias[TagLabels.GENERO_EXACTO]) & \
                             (coincidencias[TagLabels.COMPOSITOR_AUTOR_EXACTO])
 
-    return coincidencias
+    if database_length==1 & coincidencias[TagLabels.TODO].iloc[0]:
+        perfect_match = True
+    else:
+        perfect_match = False
+
+    return coincidencias, perfect_match
 
 
 def stop_music():

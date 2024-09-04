@@ -634,7 +634,7 @@ class Ventana:
                 root=self.root
             )
 
-            numero_canciones += 1
+            numero_canciones = new_filetofind.nextframe
             filetofind_list.append(new_filetofind)
             # except Exception as error:
             #     messagebox.showerror("Error", f"Error al leer el archivo musica:\n{error}")
@@ -673,7 +673,7 @@ class Ventana:
                                 frame_number=numero_canciones,
                                 root=self.root
                             )
-                            numero_canciones += 1
+                            numero_canciones = new_filetofind.nextframe
                             filetofind_list.append(new_filetofind)
                         else:
                             modified_path = dropbox_path + line.split("Dropbox", 1)[1]
@@ -690,7 +690,7 @@ class Ventana:
                                     root=self.root
                                 )
 
-                                numero_canciones += 1
+                                numero_canciones = new_filetofind.nextframe
                                 filetofind_list.append(new_filetofind)
                                 # self.m3u_audio_files.append(modified_path)
                                 # tags = self.read_audio_tags(modified_path)
@@ -731,7 +731,8 @@ class Ventana:
                         root=self.root
                     )
 
-                    numero_canciones += 1
+                    numero_canciones = new_filetofind.nextframe
+
                     filetofind_list.append(new_filetofind)
                     # except Exception as error:
                     #     messagebox.showerror("Error", f"Error al leer el archivo musica:\n{error}")
