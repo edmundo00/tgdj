@@ -34,44 +34,80 @@ class FILETOFIND:
         self.representa()
 
     def representa(self):
-        if self.artista_coincidencia==0:
-            self.representar_datos()
-            self.nextframe = self.frame_number + 1
-        elif self.titulo_coincidencia==0:
-            self.representar_datos()
-            self.nextframe = self.frame_number + 1
-        elif self.perfect_match:
-            self.representar_datos()
-            self.nextframe = self.frame_number + 1
-        else:
-            self.representar_datos()
-            self.nextframe = self.frame_number + 1
-
-    def representar_datos(self):
-        """
-        Representa los datos en la interfaz creando frames para cada columna
-        con la altura especificada y colocando los widgets dentro.
-        """
         # Determinar color de fondo basado en el número de frame
-        color_de_fondo = 'whitesmoke' if es_par(self.frame_number) else 'lightgrey'
-
+        self.color_de_fondo = 'whitesmoke' if es_par(self.frame_number) else 'lightgrey'
         # Configurar la altura del frame
         self.configurar_altura_frame()
 
-        # Crear frames para archivo y resultado
-        self.frames_archivo = self.crear_frames_columnas(self.frames_columnas_archivo, columnas_config['archivo'],
-                                                         color_de_fondo, self.framefiles)
-        self.frames_resultado = self.crear_frames_columnas(self.frames_columnas_resultado, columnas_config['resultado'],
-                                                           color_de_fondo, self.framedatabase)
-
-        # Representar coincidencias o mostrar "NADA ENCONTRADO"
-        if self.coincidencias.empty:
-            self.mostrar_nada_encontrado(color_de_fondo)
+        if self.artista_coincidencia==0:
+            self.representar_datos_archivo()
+            self.representar_datos_sin_resultado("NO ARTISTA", "red")
+            self.nextframe = self.frame_number + 1
+        elif self.titulo_coincidencia==0:
+            self.representar_datos_archivo()
+            self.representar_datos_sin_resultado("NO TITULO", "blue")
+            self.nextframe = self.frame_number + 1
+        elif self.perfect_match:
+            self.representar_datos_archivo()
+            self.representar_datos_perfect_match()
+            self.nextframe = self.frame_number + 1
         else:
-            self.representar_coincidencias(color_de_fondo)
+            self.representar_datos_archivo()
+            self.representar_datos_resultado()
+            self.nextframe = self.frame_number + 1
+
+    def representar_datos_archivo(self):
+        """
+        Representa los datos del archivo en la interfaz creando frames para cada columna
+        con la altura especificada y colocando los widgets dentro.
+        """
+        # Crear frames para archivo
+        self.frames_archivo = self.crear_frames_columnas(
+            self.frames_columnas_archivo, columnas_config['archivo'], self.color_de_fondo, self.framefiles
+        )
 
         # Agregar elementos a los frames de archivo
-        self.agregar_elementos_a_frames(self.frames_archivo, self.obtener_elementos_archivo(), color_de_fondo)
+        elementos_archivo = self.obtener_elementos_archivo()
+        self.agregar_elementos_a_frames(self.frames_archivo, elementos_archivo, self.color_de_fondo)
+
+    def representar_datos_resultado(self):
+        """
+        Representa los datos de los resultados en la interfaz creando frames para cada columna
+        con la altura especificada y colocando los widgets dentro.
+        """
+        # Crear frames para resultados
+        self.frames_resultado = self.crear_frames_columnas(
+            self.frames_columnas_resultado, columnas_config['resultado'], self.color_de_fondo, self.framedatabase
+        )
+
+        # Agregar elementos a los frames de resultados
+        self.representar_coincidencias(self.color_de_fondo)
+
+    def representar_datos_perfect_match(self):
+        """
+        Representa los datos de los resultados en la interfaz creando frames para cada columna
+        con la altura especificada y colocando los widgets dentro.
+        """
+        # Crear frames para resultados
+        self.frames_resultado = self.crear_frames_columnas(
+            self.frames_columnas_resultado, columnas_config['resultado'], self.color_de_fondo, self.framedatabase
+        )
+
+        # Agregar elementos a los frames de resultados
+        self.representar_coincidencias(self.color_de_fondo)
+
+    def representar_datos_sin_resultado(self, texto, color_de_fondo):
+        """
+        Representa los datos de los resultados en la interfaz creando frames para cada columna
+        con la altura especificada y colocando los widgets dentro.
+        """
+        # Crear frames para resultados
+        self.frames_resultado = self.crear_frames_columnas(
+            self.frames_columnas_resultado, columnas_config['resultado'], self.color_de_fondo, self.framedatabase
+        )
+
+        self.mostrar_nada_encontrado(texto, color_de_fondo)
+
 
     def configurar_altura_frame(self):
         """Configura la altura del frame según el tipo de coincidencia."""
@@ -89,14 +125,23 @@ class FILETOFIND:
                 colour=color_de_fondo)
         return frames
 
-    def mostrar_nada_encontrado(self, color_de_fondo):
+    def mostrar_nada_encontrado(self, texto, color_de_fondo):
         """Muestra 'NADA ENCONTRADO' en las columnas correspondientes."""
-        columnas_resultado = ['Checkbox', 'Titulo', 'Orquesta', 'Cantor', 'Estilo', 'Fecha', 'Info', 'Play_30']
+        columnas_resultado = ['Titulo', 'Orquesta', 'Cantor', 'Fecha', 'Estilo']
+        textos = [texto, '', '', '', '']
         fuente_10 = ('Consolas', 12)
-        for descripcion in columnas_resultado:
-            text = "NADA ENCONTRADO" if descripcion == 'Titulo' else ""
-            self._crear_label_en_frame(self.frames_archivo['Titulo'], text=text, font=fuente_10, anchor='w',
-                                       bg=color_de_fondo, row=0, column=0)
+
+        # Corrected the syntax for the zip and loop
+        for descripcion, text in zip(columnas_resultado, textos):
+            self._crear_label_en_frame(
+                self.frames_resultado[descripcion],
+                text=text,
+                font=fuente_10,
+                anchor='w',
+                bg=color_de_fondo,
+                row=0,
+                column=0
+            )
 
     def representar_coincidencias(self, color_de_fondo):
         """Representa las coincidencias en los frames correspondientes."""
@@ -139,6 +184,8 @@ class FILETOFIND:
     def obtener_elementos_archivo(self):
         """Obtiene los elementos a representar para los frames de archivo."""
         return [
+            {'tipo': 'button', 'frame': self.frames_archivo.get('Info'), 'row': 0, 'image': self.info_icon,
+             'command': self.show_popup_file},
             {'tipo': 'label', 'texto': self.tags.title, 'row': 0, 'descripcion': 'Titulo',
              'frame': self.frames_archivo.get('Titulo'), 'anchor': "w"},
             {'tipo': 'label', 'texto': self.artists1, 'row': 0, 'descripcion': 'Orquesta',
@@ -147,8 +194,6 @@ class FILETOFIND:
              'frame': self.frames_archivo.get('Cantor'), 'anchor': "w"},
             {'tipo': 'label', 'texto': self.tags.year, 'row': 0, 'descripcion': 'Fecha',
              'frame': self.frames_archivo.get('Fecha'), 'anchor': "w"},
-            {'tipo': 'button', 'frame': self.frames_archivo.get('Info'), 'row': 0, 'image': self.info_icon,
-             'command': self.show_popup_file, 'bg': 'whitesmoke'},
             {'tipo': 'play_button', 'frame': self.frames_archivo.get('Play'), 'link': self.ruta_archivo, 'row': 0,
              'column': 0},
             {'tipo': 'stop_button', 'frame': self.frames_archivo.get('Pausa'), 'row': 0, 'column': 0},
@@ -164,7 +209,6 @@ class FILETOFIND:
                     bg=color_de_fondo, anchor=elemento['anchor'], row=elemento['row'],
                     column=elemento.get('column', 0)
                 )
-                print()
             elif elemento['tipo'] == 'button':
                 self._crear_button_en_frame(
                     elemento['frame'], row=elemento['row'], image=elemento['image'],
@@ -195,6 +239,9 @@ class FILETOFIND:
         """Crea un label dentro del frame dado, utilizando grid."""
         label = tk.Label(frame, text=text, font=font, bg=bg, anchor=anchor)
         label.grid(row=row, column=column, sticky="ew", padx=self.padx, pady=self.pady)
+        texto_debug = f'creando label en fila {row} columna {column} con el texto {text}'
+        # Configure the frame's grid to expand the column
+        frame.grid_columnconfigure(column, weight=1)
 
     def _crear_button_en_frame(self, frame, text=None, image=None, command=None, bg=None, row=0, column=0):
         """Crea un botón dentro del frame dado, utilizando grid."""
