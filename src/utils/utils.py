@@ -472,26 +472,34 @@ def compare_tags(artista_coincidencia, titulo_coincidencia, database, tag):
 
     coincidencias[TagLabels.CANTOR_NEGATIVO] = pd.Series([True] * database_length, index=database.index)
 
-    # Check year (fecha and ano)
-    if tag.year is None:
-        tag.year = ""
+    tag.year = tag.year or ""
+    tag.genre = tag.genre or ""
+    tag.composer = tag.composer or ""
+
+    if extraer_cuatro_numeros(tag.year):
+        ano =  int(extraer_cuatro_numeros(tag.year))
+    else:
+        ano=""
     
     coincidencias[TagLabels.FECHA_EXACTA] = database["fecha"] == tag.year
-    coincidencias[TagLabels.FECHA] = database["fecha_ano"] == extraer_cuatro_numeros(tag.year)
+    coincidencias[TagLabels.FECHA] = database["fecha_ano"] == ano
     coincidencias[TagLabels.FECHA_PARCIAL] = pd.Series([False] * database_length, index=database.index)
     coincidencias[TagLabels.FECHA_NEGATIVA] = database["fecha_ano"] != extraer_cuatro_numeros(tag.year)
+
     
     # Check genre (genero)
     coincidencias[TagLabels.ESTILO_EXACTO] = database["estilo"] == tag.genre
-    coincidencias[TagLabels.ESTILO] = database.estilo.str.contains(tag.genre, case=False, na=False, regex=False) if tag.genre else False
+    coincidencias[TagLabels.ESTILO] =pd.Series([False] * database_length, index=database.index)
     coincidencias[TagLabels.ESTILO_PARCIAL] = pd.Series([False] * database_length, index=database.index)
-    coincidencias[TagLabels.ESTILO_NEGATIVO] = pd.Series([False] * database_length, index=database.index)
+    coincidencias[TagLabels.ESTILO_NEGATIVO] = pd.Series([True] * database_length, index=database.index)
+
+
 
     # Check composer/author (compositor_autor)
     coincidencias[TagLabels.COMPOSITOR_AUTOR_EXACTO] = database["compositor_autor"] == tag.composer
     coincidencias[TagLabels.COMPOSITOR_AUTOR] = pd.Series([False] * database_length, index=database.index)
     coincidencias[TagLabels.COMPOSITOR_AUTOR_PARCIAL] = pd.Series([False] * database_length, index=database.index)
-    coincidencias[TagLabels.COMPOSITOR_AUTOR_NEGATIVO] = pd.Series([False] * database_length, index=database.index)
+    coincidencias[TagLabels.COMPOSITOR_AUTOR_NEGATIVO] = pd.Series([True] * database_length, index=database.index)
 
 
 
