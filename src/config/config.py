@@ -3,6 +3,8 @@ import configparser
 import tkinter as tk
 from PIL import ImageFont
 
+
+
 def get_average_char_width(font_path, font_size):
     # Cargar la fuente desde la ruta especificada
     font = ImageFont.truetype(font_path, font_size)
@@ -153,28 +155,16 @@ columnas_config = {
     ]
 }
 
-# def load_resources():
-#     # Load Icons
-#     icons = {
-#         'archivo': tk.PhotoImage(file=os.path.join(ICON_FOLDER, 'album.png')),
-#         'directorio': tk.PhotoImage(file=os.path.join(ICON_FOLDER, 'album-list.png')),
-#         'correr': tk.PhotoImage(file=os.path.join(ICON_FOLDER, 'search-window.png')),
-#         'play': tk.PhotoImage(file=os.path.join(ICON_FOLDER, 'play_resize.png')),
-#         'stop': tk.PhotoImage(file=os.path.join(ICON_FOLDER, 'pause_resize.png')),
-#         'transfer': tk.PhotoImage(file=os.path.join(ICON_FOLDER, 'transfer.png')),
-#         'info': tk.PhotoImage(file=os.path.join(ICON_FOLDER, 'info-circle_resize.png')),
-#         'trash': tk.PhotoImage(file=os.path.join(ICON_FOLDER, 'trash.png')),
-#         'searchdb': tk.PhotoImage(file=os.path.join(ICON_FOLDER, 'searchdb.png')),
-#         'presentacion': tk.PhotoImage(file=os.path.join(ICON_FOLDER, 'presentation.png')),
-#         'playlist': tk.PhotoImage(file=os.path.join(ICON_FOLDER, 'playlist.png')),
-#         'convert_playlist': tk.PhotoImage(file=os.path.join(ICON_FOLDER, 'convert_playlist.png'))
-#     } 
+default_milonga_data = {
+    'nombre': "Glorieta de los miércoles",
+    'fecha': "4 de Septiembre de 2024",
+    'hora_inicio': '20:00',
+    'hora_final': '22:00'
+}
 
-#     # Load Images
-#     images = {
-#         'background': tk.PhotoImage(file=os.path.join(IMAGE_FOLDER, 'background_tango.png'))
-#         # Add more images if needed
-#     }
 
-#     return icons, images
-
+path_map = {
+    "WINDOW-COMPUTER": "E:\\Dropbox",
+    "CAD065": "D:\\Dropbox",
+    "LAPTOP-ABRSCER9": "C:\\Users\\diana\\Dropbox"
+}

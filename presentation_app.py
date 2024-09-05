@@ -11,7 +11,7 @@ from pptx.enum.shapes import MSO_CONNECTOR
 from unidecode import unidecode
 import os
 from os.path import join
-from src.config.config import dropbox_path, image_folder, m3u_start_path, background_image_path, data_folder, output_folder, orchestra_folder, background_image_folder, merged_images_folder, DEFAULT_FONT_NAME, background_tango_degradado
+from src.config.config import dropbox_path, image_folder, m3u_start_path, background_image_path, data_folder, output_folder, orchestra_folder, background_image_folder, merged_images_folder, DEFAULT_FONT_NAME, background_tango_degradado, default_milonga_data
 from src.utils.utils import extract_year, separar_artistas, obtener_autores, convertir_segundos, obtener_intervalo_anos
 from src.utils.funciones_para_diapos import *
 # add_text_to_slide, calculate_positions, adjust_text_size
@@ -130,24 +130,24 @@ class PresentationApp:
         tk.Label(root, text="Nombre de la Milonga:").grid(row=0, column=0, padx=10, pady=10, sticky="w")
         self.nombre_milonga_entry = tk.Entry(root, width=50)
         self.nombre_milonga_entry.grid(row=0, column=1, columnspan=3, padx=10, pady=10, sticky="ew")
-        self.nombre_milonga_entry.insert(0, "Milonga de la Fuente")
+        self.nombre_milonga_entry.insert(0, default_milonga_data['nombre'])
 
         # Entrada de la Fecha
         tk.Label(root, text="Fecha:").grid(row=1, column=0, padx=10, pady=10, sticky="w")
         self.fecha_entry = tk.Entry(root, width=50)
         self.fecha_entry.grid(row=1, column=1, columnspan=3, padx=10, pady=10, sticky="ew")
-        self.fecha_entry.insert(0, "24 de Agosto de 2024")
+        self.fecha_entry.insert(0, default_milonga_data['fecha'])
 
         # Entradas de Hora de Inicio, Finalización y Duración en la misma fila
         tk.Label(root, text="Inicio:").grid(row=2, column=0, padx=10, pady=10, sticky="w")
         self.hora_inicio_entry = tk.Entry(root, width=10)
         self.hora_inicio_entry.grid(row=2, column=1, padx=10, pady=10)
-        self.hora_inicio_entry.insert(0, "21:00")  # Hora por defecto
+        self.hora_inicio_entry.insert(0, default_milonga_data['hora_inicio'])  # Hora por defecto
 
         tk.Label(root, text="Final:").grid(row=2, column=2, padx=10, pady=10, sticky="w")
         self.hora_fin_entry = tk.Entry(root, width=10)
         self.hora_fin_entry.grid(row=2, column=3, padx=10, pady=10)
-        self.hora_fin_entry.insert(0, "00:00")  # Hora por defecto
+        self.hora_fin_entry.insert(0, default_milonga_data['hora_final'])  # Hora por defecto
 
         tk.Label(root, text="Duración:").grid(row=2, column=4, padx=10, pady=10, sticky="w")
         self.duracion_label = tk.Label(root, text="", width=20, bg="white", relief="sunken", anchor='w', padx=2, pady=2)
