@@ -316,68 +316,84 @@ class FILETOFIND:
         self.tags = TinyTag.get(self.ruta_archivo)
         self.artists1, self.artists2 = separar_artistas(self.tags.artist)
 
-
     def buscar(self):
-        tag = self.tags
+        # Inicialización de variables
         self.hay_coincidencia_preferida = False
         self.coincidencia_preferida = 0
         self.tipo_de_coincidencia = 0
-        artista_original, cantor_original = separar_artistas(tag.artist)
-        artista_buscar_min = unidecode(artista_original).lower()
 
-        # First, try to find an exact match
-        artista_key = next((key for key in self.dic_art if key == artista_original), None)
-        self.artista_coincidencia = 3
+        # Buscar al artista
+        artista_original, cantor_original = separar_artistas(self.tags.artist)
+        artista_key, self.artista_coincidencia = self.buscar_artista(artista_original)
 
         if not artista_key:
-            # First, try to find an good match
-            artista_key = next((key for key in self.dic_art if key == artista_buscar_min), None)
-            self.artista_coincidencia = 2
-
-        # If no exact match is found, try to find a partial match
-        if not artista_key:
-            artista_key = next((key for key in self.dic_art if artista_buscar_min in key), None)
-            self.artista_coincidencia = 1
-
-        if not artista_key:
-            artista_key = contain_most_words_in_dic(self.dic_art, artista_buscar_min)
-            if artista_key is not None:
-                artista_coincidencia = 1
-            else:
-                self.artista_coincidencia = 0
-                self.resultado = 'Artista no encontrado'
-                self.coincidencias = self.db.iloc[0:0]
-                return
-
-        # DEVULEVE LA BASE DE DATOS CON TODAS LAS COMLUMNAS QUE CORRENSPONDEN A LA ORQUESTA
-
-        if isinstance(artista_key, str):
-            # If it's a string, take the single DataFrame
-            artist_songs = self.dic_art[artista_key]
-        elif isinstance(artista_key, list):
-            # If it's a list of strings, concatenate the DataFrames
-            artist_songs = pd.concat([self.dic_art[key] for key in artista_key if key in self.dic_art])
-        else:
-            # Handle unexpected types (optional)
-            raise ValueError("artista_key must be a string or a list of strings")
-
-
-        self.titulo_coincidencia, database_titulo = buscar_titulo(artist_songs, tag)
-
-        if self.titulo_coincidencia==0:
-            self.resultado = 'Titulo no encontrado'
+            self.resultado = 'Artista no encontrado'
             self.coincidencias = self.db.iloc[0:0]
+            self.hay_coincidencia_preferida = False
+            self.coincidencia_preferida = 0
             return
 
+        # Obtener las canciones del artista
+        artist_songs = self.obtener_canciones_artista(artista_key)
 
+        # Buscar el título
+        self.titulo_coincidencia, database_titulo = buscar_titulo(artist_songs, self.tags)
 
-        # Get a dictionary of boolean matches for all tags
-        self.bool_coincidencias , self.perfect_match = compare_tags(self.artista_coincidencia, self.titulo_coincidencia, database_titulo, tag)
+        if self.titulo_coincidencia == 0:
+            self.resultado = 'Titulo no encontrado'
+            self.coincidencias = self.db.iloc[0:0]
+            self.hay_coincidencia_preferida = False
+            self.coincidencia_preferida = 0
+            return
 
+        # Comparar tags y generar coincidencias
+        self.bool_coincidencias, self.perfect_match = compare_tags(
+            self.artista_coincidencia, self.titulo_coincidencia, database_titulo, self.tags
+        )
+
+        self.hay_coincidencia_preferida, self.coincidencia_preferida = buscar_preferencias (self.bool_coincidencias)
+
+        # Generar colores para los labels
         self.colores_labels = coincidencias_a_colores(self.bool_coincidencias)
 
+        # Guardar coincidencias
         self.coincidencias = database_titulo
 
+    def buscar_artista(self, artista_original):
+        artista_buscar_min = unidecode(artista_original).lower()
+
+        # Búsqueda exacta
+        artista_key = next((key for key in self.dic_art if key == artista_original), None)
+        if artista_key:
+            return artista_key, 3
+
+        # Búsqueda aproximada
+        artista_key = next((key for key in self.dic_art if key == artista_buscar_min), None)
+        if artista_key:
+            return artista_key, 2
+
+        # Búsqueda parcial
+        artista_key = next((key for key in self.dic_art if artista_buscar_min in key), None)
+        if artista_key:
+            return artista_key, 1
+
+        # Búsqueda por palabras
+        artista_key = contain_most_words_in_dic(self.dic_art, artista_buscar_min)
+        if artista_key is not None:
+            return artista_key, 1
+
+        return None, 0
+
+    def obtener_canciones_artista(self, artista_key):
+        if isinstance(artista_key, str):
+            # Si es una cadena, toma el DataFrame único
+            return self.dic_art[artista_key]
+        elif isinstance(artista_key, list):
+            # Si es una lista de cadenas, concatena los DataFrames
+            return pd.concat([self.dic_art[key] for key in artista_key if key in self.dic_art])
+        else:
+            # Manejo de tipos inesperados
+            raise ValueError("artista_key must be a string or a list of strings")
 
 
     def show_popup_db(self, row):
@@ -618,7 +634,7 @@ class FILETOFIND:
 
         values = [entry.get() for entry in self.entry_dato_lista]
 
-        artista_nuevo = f'{self.entry_dato_lista[2].get()} / {self.entry_dato_lista[3].get()}'
+        artista_nuevo = unir_artistas(self.entry_dato_lista[2].get(),self.entry_dato_lista[3].get(), " / ")
 
         etiquetas_actualizadas = [self.tags._filename,
                                   self.entry_dato_lista[1].get(),
@@ -638,7 +654,7 @@ class FILETOFIND:
             archivos.destroy()
 
         for archivos in filetofind_list:
-            archivos.representar_datos()
+            self.representa()
 
     def activar_checkbox(self, valor):
         for i, check in enumerate(self.vars):

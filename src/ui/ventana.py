@@ -744,10 +744,8 @@ class Ventana:
         for archivos in filetofind_list:
             for index, check in enumerate(archivos.vars):
                 if check.get():
-                    if archivos.coincidencias.cantor.iloc[index] != "":
-                        artist = f'{archivos.coincidencias.artista.iloc[index]} / {archivos.coincidencias.cantor.iloc[index]}'
-                    else:
-                        artist = f'{archivos.coincidencias.artista.iloc[index]}'
+                    artist=unir_artistas(archivos.coincidencias.artista.iloc[index],archivos.coincidencias.cantor.iloc[index], " / " )
+
 
                     update_tags(
                         archivos.ruta_archivo,

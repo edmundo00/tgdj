@@ -4,7 +4,7 @@ import pygame
 import ftfy
 import num2words as nw
 from unidecode import unidecode
-from pptx.util import Pt, Cm
+from pptx.util import Pt
 from src.config.config import *
 from src.constants.enums import TagLabels
 from mutagen.flac import FLAC
@@ -84,6 +84,14 @@ def separar_artistas(artistas):
 
     return artists1, artists2
 
+
+def unir_artistas(orquesta, cantor, caracter_separacion):
+    if cantor and cantor != "":
+        artista = f'{orquesta}{caracter_separacion}{cantor}'
+    else:
+        artista = f'{orquesta}'
+
+    return artista
 
 def palabras_mas_comunes(db, columna):
     dataframe = db.copy()
@@ -273,6 +281,51 @@ def link_to_music(link):
     path = link.split('/', 3)[-1]
     local_path = os.path.join(mp3_dir, path)
     return local_path
+
+
+def buscar_preferencias(booleanos):
+    get = lambda label, idx=0: booleanos[label].iloc[idx]
+
+    mapping = {
+        'ORQUESTA': [TagLabels.ORQUESTA_EXACTA, TagLabels.ORQUESTA, TagLabels.ORQUESTA_PARCIAL,
+                     TagLabels.ORQUESTA_NEGATIVO],
+        'TITULO': [TagLabels.TITULO_EXACTO, TagLabels.TITULO, TagLabels.TITULO_PARCIAL, TagLabels.TITULO_NEGATIVO],
+        'CANTOR': [TagLabels.CANTOR_EXACTO, TagLabels.CANTOR, TagLabels.CANTOR_PARCIAL, TagLabels.CANTOR_NEGATIVO],
+        'FECHA': [TagLabels.FECHA_EXACTA, TagLabels.FECHA, TagLabels.FECHA_PARCIAL, TagLabels.FECHA_NEGATIVA],
+        'ESTILO': [TagLabels.ESTILO_EXACTO, TagLabels.ESTILO, TagLabels.ESTILO_PARCIAL, TagLabels.ESTILO_NEGATIVO],
+        'COMPOSITOR': [TagLabels.COMPOSITOR_AUTOR_EXACTO, TagLabels.COMPOSITOR_AUTOR,
+                       TagLabels.COMPOSITOR_AUTOR_PARCIAL, TagLabels.COMPOSITOR_AUTOR_NEGATIVO]
+    }
+    # Procesar cada grupo de coincidencias
+    for categoria, etiquetas in mapping.items():
+        exacta, normal, parcial, negativo = etiquetas
+
+    longitudes = [len(series) for series in booleanos.values()]
+         # Verifica si todas las longitudes son iguales
+    longitudes_iguales = len(set(longitudes)) == 1
+         # Retorna la longitud común si son iguales, o None si no lo son
+    if longitudes_iguales:
+        numero_de_resultados = longitudes[0]  # Todas las longitudes son iguales, devuelve una de ellas
+    else:
+        print('ERROR, las lista de booleanos no son iguales')
+        return False, 0
+
+    print(f"Numero de resultados: {numero_de_resultados}")
+    print(f"TITULO_EXACTO: {get(TagLabels.TITULO_EXACTO, 0)}")
+    print(f"TITULO: {get(TagLabels.TITULO, 0)}")
+    print(f"ORQUESTA_EXACTA: {get(TagLabels.ORQUESTA_EXACTA, 0)}")
+    print(f"ORQUESTA: {get(TagLabels.ORQUESTA, 0)}")
+    print(f"FECHA_NEGATIVA: {get(TagLabels.FECHA_NEGATIVA, 0)}")
+
+    # Corrección y simplificación del if
+    if (numero_de_resultados == 1 and
+            (get(TagLabels.TITULO_EXACTO, 0) or get(TagLabels.TITULO, 0)) and
+            (get(TagLabels.ORQUESTA_EXACTA, 0) or get(TagLabels.ORQUESTA, 0)) and
+            not get(TagLabels.FECHA_NEGATIVA, 0)):
+        return True, 0
+
+
+    return False, 0
 
 
 def es_par(numero):
