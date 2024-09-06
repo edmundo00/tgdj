@@ -26,7 +26,8 @@ def load_resources_paths():
         'searchdb': os.path.join(ICON_FOLDER, 'searchdb.png'),
         'presentacion': os.path.join(ICON_FOLDER, 'presentation.png'),
         'playlist': os.path.join(ICON_FOLDER, 'playlist.png'),
-        'convert_playlist': os.path.join(ICON_FOLDER, 'convert_playlist.png')
+        'convert_playlist': os.path.join(ICON_FOLDER, 'convert_playlist.png'),
+        'merge': os.path.join(ICON_FOLDER, 'merge.png')
     } 
 
     # Load Images
