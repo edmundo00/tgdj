@@ -6,7 +6,7 @@ from src.config.database import Database
 
 class FILETOFIND:
 
-    def __init__(self, framefiles, framedatabase, frames_columnas_archivo, frames_columnas_resultado, ruta_archivo, frame_number, root):
+    def __init__(self, framefiles, framedatabase, frames_columnas_archivo, frames_columnas_resultado, ruta_archivo, frame_number, root, show_date_checked, show_perfect_matches, show_artist_not_found, show_title_not_found, show_remaining):
         # print(db)
         self.data_store = Database()
         self.db = self.data_store.get_db()
@@ -27,6 +27,17 @@ class FILETOFIND:
         self.sizebuttons = [25, 25]  # Set button width and height in text units
         self.padx = 0
         self.pady = 0
+        self.perfect_match = False
+
+
+        # Initialize checkbutton states with default values
+        # Estados de los checkbuttons
+        self.show_date_checked = show_date_checked
+        self.show_perfect_matches = show_perfect_matches
+        self.show_artist_not_found = show_artist_not_found
+        self.show_title_not_found = show_title_not_found
+        self.show_remaining = show_remaining
+
 
         self.leer_tags()
 
@@ -39,23 +50,47 @@ class FILETOFIND:
         # Configurar la altura del frame
         self.configurar_altura_frame()
 
-        if self.artista_coincidencia==0:
-            self.representar_datos_archivo()
-            self.representar_datos_sin_resultado("NO ARTISTA", "red")
-            self.nextframe = self.frame_number + 1
-        elif self.titulo_coincidencia==0:
-            self.representar_datos_archivo()
-            self.representar_datos_sin_resultado("NO TITULO", "blue")
-            self.nextframe = self.frame_number + 1
-        elif self.perfect_match:
-            self.nextframe = self.frame_number
-            # self.representar_datos_archivo()
-            # self.representar_datos_perfect_match()
-            # self.nextframe = self.frame_number + 1
+        # Step 1: Check for coincidences and perfect matches
+        artista_not_found = self.artista_coincidencia == 0
+        titulo_not_found = self.titulo_coincidencia == 0
+        is_perfect_match = self.perfect_match
+
+        # Step 2: Adjust display logic based on checkbutton states
+        if artista_not_found:
+            if self.show_artist_not_found:
+                # Show data when artist is not found and the respective checkbox is checked
+                self.representar_datos_archivo()
+                self.representar_datos_sin_resultado("NO ARTISTA", "red")
+                self.nextframe = self.frame_number + 1
+            else:
+                self.nextframe = self.frame_number
+
+        elif titulo_not_found:
+            if self.show_title_not_found:
+                # Show data when title is not found and the respective checkbox is checked
+                self.representar_datos_archivo()
+                self.representar_datos_sin_resultado("NO TITULO", "blue")
+                self.nextframe = self.frame_number + 1
+            else:
+                self.nextframe = self.frame_number
+
+        elif is_perfect_match:
+            if self.show_perfect_matches:
+                # Show perfect matches if the checkbox is checked
+                self.representar_datos_archivo()
+                self.representar_datos_resultado()
+                self.nextframe = self.frame_number + 1
+            else:
+                self.nextframe = self.frame_number
+
         else:
-            self.representar_datos_archivo()
-            self.representar_datos_resultado()
-            self.nextframe = self.frame_number + 1
+            if self.show_remaining:
+                # Representar todos los datos restantes
+                self.representar_datos_archivo()
+                self.representar_datos_resultado()
+                self.nextframe = self.frame_number + 1
+            else:
+                self.nextframe = self.frame_number
 
     def representar_datos_archivo(self):
         """
@@ -332,6 +367,7 @@ class FILETOFIND:
             self.coincidencias = self.db.iloc[0:0]
             self.hay_coincidencia_preferida = False
             self.coincidencia_preferida = 0
+            self.titulo_coincidencia = 0
             return
 
         # Obtener las canciones del artista
@@ -359,6 +395,7 @@ class FILETOFIND:
 
         # Guardar coincidencias
         self.coincidencias = database_titulo
+
 
     def buscar_artista(self, artista_original):
         artista_buscar_min = unidecode(artista_original).lower()
@@ -678,16 +715,19 @@ class FILETOFIND:
             print(f"Error playing {file_path}: {e}")
 
     def destroy(self):
+        # Verificar si self.frames_archivo está definido y destruir los frames en 'archivo'
+        if hasattr(self, 'frames_archivo'):
+            for column in columnas_config['archivo']:
+                description = str(column['description'])
+                if description in self.frames_archivo:
+                    self.frames_archivo[description].destroy()
 
-        # Destruir frames en 'archivo'
-        for column in columnas_config['archivo']:
-            description = str(column['description'])
-            self.frames_archivo[description].destroy()
-
-        # Destruir frames en 'resultado'
-        for column in columnas_config['resultado']:
-            description = str(column['description'])
-            self.frames_resultado[description].destroy()
+        # Verificar si self.frames_resultado está definido y destruir los frames en 'resultado'
+        if hasattr(self, 'frames_resultado'):
+            for column in columnas_config['resultado']:
+                description = str(column['description'])
+                if description in self.frames_resultado:
+                    self.frames_resultado[description].destroy()
 
 
 

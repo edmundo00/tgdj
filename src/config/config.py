@@ -168,3 +168,11 @@ path_map = {
     "CAD065": "D:\\Dropbox",
     "LAPTOP-ABRSCER9": "C:\\Users\\diana\\Dropbox"
 }
+
+
+# Default settings for checkbuttons
+DEFAULT_DATE_CHECKED = False
+DEFAULT_PERFECT_MATCHES = False
+DEFAULT_ARTIST_NOT_FOUND = True
+DEFAULT_TITLE_NOT_FOUND = True
+DEFAULT_REMAINING = True

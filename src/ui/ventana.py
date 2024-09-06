@@ -30,6 +30,13 @@ class Ventana:
         self.presentation_window = None  # Inicializar a None
         # El resto de la inicialización
 
+        # Initialize the checkbutton states with default values from config.py
+        self.date_checked = tk.BooleanVar(value=DEFAULT_DATE_CHECKED)
+        self.perfect_matches = tk.BooleanVar(value=DEFAULT_PERFECT_MATCHES)
+        self.artist_not_found = tk.BooleanVar(value=DEFAULT_ARTIST_NOT_FOUND)
+        self.title_not_found = tk.BooleanVar(value=DEFAULT_TITLE_NOT_FOUND)
+        self.view_remaining = tk.BooleanVar(value=DEFAULT_REMAINING)
+
         # Create UI components
         self.create_menu_bar()
         self.create_icon_bar()
@@ -110,6 +117,18 @@ class Ventana:
             btn = tk.Button(self.icon_bar, image=icon, relief=tk.FLAT, command=command)
             btn.grid(row=0, column=i, padx=self.pad, pady=self.pad)
 
+        checkbuttons = [
+            ("Date Checked", self.date_checked),
+            ("Perfect Matches", self.perfect_matches),
+            ("Artist Not Found", self.artist_not_found),
+            ("Title Not Found", self.title_not_found),
+            ("Visualizar Resto", self.view_remaining),  # Añadir nuevo checkbox aquí
+        ]
+
+        for i, (text, variable) in enumerate(checkbuttons, start=len(buttons)):
+            chk = tk.Checkbutton(self.icon_bar, text=text, variable=variable)
+            chk.grid(row=0, column=i, padx=self.pad, pady=self.pad)
+
     def configure_scrollable_frames(self):
         """Configure all scrollable frames in self.scrollable_frame to expand and fill their canvases."""
         for canvas, scrollable_frame in zip(self.canvas, self.scrollable_frame):
@@ -121,6 +140,7 @@ class Ventana:
 
             # Initial adjustment to set the correct size
             self.adjust_canvas_width(canvas, scrollable_frame)
+
 
     def adjust_canvas_width(self, canvas, scrollable_frame):
         """Adjust the canvas window width to match the canvas size."""
@@ -618,7 +638,8 @@ class Ventana:
 
 
     def load_music_file(self):
-        global numero_canciones
+        self.borrar_todo()
+        numero_canciones = 0
         file_path = filedialog.askopenfilename(
             filetypes=[("MUSIC files", ".mp3 .wav .flac .ogg .m4a"), ("All files", "*.*")]
         )
@@ -631,7 +652,12 @@ class Ventana:
                 frames_columnas_resultado=self.frames_columnas_resultado,  # Pasar diccionario de frames de resultado
                 ruta_archivo=file_path,
                 frame_number=numero_canciones,
-                root=self.root
+                root=self.root,
+                show_date_checked=self.date_checked.get(),
+                show_perfect_matches=self.perfect_matches.get(),
+                show_artist_not_found=self.artist_not_found.get(),
+                show_title_not_found=self.title_not_found.get(),
+                show_remaining=self.view_remaining.get()  # Pasar el estado del nuevo checkbox
             )
 
             numero_canciones = new_filetofind.nextframe
@@ -640,6 +666,7 @@ class Ventana:
             #     messagebox.showerror("Error", f"Error al leer el archivo musica:\n{error}")
 
     def open_playlist(self):
+        self.borrar_todo()
         numero_canciones = 0
         # Open file dialog
         self.m3u_file_path = filedialog.askopenfilename(
@@ -662,43 +689,22 @@ class Ventana:
                     line = line.strip()
                     if line and not line.startswith("#"):
                         if os.path.exists(line):
-                            new_filetofind = FILETOFIND(
-                                framefiles=self.scrollable_frame[0],
-                                framedatabase=self.scrollable_frame[1],
-                                frames_columnas_archivo=self.frames_columnas_archivo,
-                                # Pasar diccionario de frames de archivo
-                                frames_columnas_resultado=self.frames_columnas_resultado,
-                                # Pasar diccionario de frames de resultado
+                            numero_canciones = self.crear_y_actualizar_filetofind(
                                 ruta_archivo=line,
-                                frame_number=numero_canciones,
-                                root=self.root
+                                frame_number=numero_canciones
                             )
-                            numero_canciones = new_filetofind.nextframe
-                            filetofind_list.append(new_filetofind)
                         else:
                             modified_path = dropbox_path + line.split("Dropbox", 1)[1]
                             if os.path.exists(modified_path):
-                                new_filetofind = FILETOFIND(
-                                    framefiles=self.scrollable_frame[0],
-                                    framedatabase=self.scrollable_frame[1],
-                                    frames_columnas_archivo=self.frames_columnas_archivo,
-                                    # Pasar diccionario de frames de archivo
-                                    frames_columnas_resultado=self.frames_columnas_resultado,
-                                    # Pasar diccionario de frames de resultado
+                                numero_canciones = self.crear_y_actualizar_filetofind(
                                     ruta_archivo=modified_path,
-                                    frame_number=numero_canciones,
-                                    root=self.root
+                                    frame_number=numero_canciones
                                 )
 
-                                numero_canciones = new_filetofind.nextframe
-                                filetofind_list.append(new_filetofind)
-                                # self.m3u_audio_files.append(modified_path)
-                                # tags = self.read_audio_tags(modified_path)
-                                # self.m3u_audio_tags.append(tags)
-
     def load_music_folder(self):
-        folder_path = filedialog.askdirectory()
+        self.borrar_todo()
         numero_canciones = 0
+        folder_path = filedialog.askdirectory()
         # Loop through all files in the folder
         # Create a Label for the status text
         self.status_label = tk.Label(self.status_bar, text="Progress: 0%", bd=1, relief=tk.SUNKEN, anchor=tk.W)
@@ -718,26 +724,43 @@ class Ventana:
             if filename.endswith(('.mp3', '.wav', '.flac', '.ogg', '.m4a')):  # Add more extensions as needed
                 file_path = os.path.join(folder_path, filename)
                 if file_path:
-                    # try:
-                    new_filetofind = FILETOFIND(
-                        framefiles=self.scrollable_frame[0],
-                        framedatabase=self.scrollable_frame[1],
-                        frames_columnas_archivo=self.frames_columnas_archivo,
-                        # Pasar diccionario de frames de archivo
-                        frames_columnas_resultado=self.frames_columnas_resultado,
-                        # Pasar diccionario de frames de resultado
+                    numero_canciones = self.crear_y_actualizar_filetofind(
                         ruta_archivo=file_path,
-                        frame_number=numero_canciones,
-                        root=self.root
+                        frame_number=numero_canciones
                     )
 
-                    numero_canciones = new_filetofind.nextframe
 
-                    filetofind_list.append(new_filetofind)
                     # except Exception as error:
                     #     messagebox.showerror("Error", f"Error al leer el archivo musica:\n{error}")
         self.progress_bar.pack_forget()
         self.status_label.pack_forget()
+
+    def crear_y_actualizar_filetofind(self, ruta_archivo, frame_number):
+        """
+        Crea una instancia de FILETOFIND, la actualiza según los filtros seleccionados,
+        y la añade a la lista global de filetofind_list.
+        """
+        # Crear instancia de FILETOFIND con los parámetros constantes
+        new_filetofind = FILETOFIND(
+            framefiles=self.scrollable_frame[0],
+            framedatabase=self.scrollable_frame[1],
+            frames_columnas_archivo=self.frames_columnas_archivo,
+            frames_columnas_resultado=self.frames_columnas_resultado,
+            ruta_archivo=ruta_archivo,
+            frame_number=frame_number,
+            root=self.root,
+            show_date_checked = self.date_checked.get(),
+            show_perfect_matches = self.perfect_matches.get(),
+            show_artist_not_found = self.artist_not_found.get(),
+            show_title_not_found = self.title_not_found.get(),
+            show_remaining = self.view_remaining.get()  # Pasar el estado del nuevo checkbox
+            )
+
+        # Actualizar el número de canciones y añadir a la lista global
+        frame_number = new_filetofind.nextframe
+        filetofind_list.append(new_filetofind)
+
+        return frame_number
 
     def aplicartags(self):
         reemplazo_tags = []
