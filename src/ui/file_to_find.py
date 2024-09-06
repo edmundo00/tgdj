@@ -48,9 +48,10 @@ class FILETOFIND:
             self.representar_datos_sin_resultado("NO TITULO", "blue")
             self.nextframe = self.frame_number + 1
         elif self.perfect_match:
-            self.representar_datos_archivo()
-            self.representar_datos_perfect_match()
-            self.nextframe = self.frame_number + 1
+            self.nextframe = self.frame_number
+            # self.representar_datos_archivo()
+            # self.representar_datos_perfect_match()
+            # self.nextframe = self.frame_number + 1
         else:
             self.representar_datos_archivo()
             self.representar_datos_resultado()

@@ -541,11 +541,11 @@ def compare_tags(artista_coincidencia, titulo_coincidencia, database, tag):
     coincidencias[TagLabels.TODO] = coincidencias[TagLabels.TITULO_EXACTO] & \
                                     coincidencias[TagLabels.ORQUESTA_EXACTA] & \
                                     coincidencias[TagLabels.CANTOR_EXACTO] & \
-                                    coincidencias[TagLabels.FECHA_NEGATIVA] & \
+                                    coincidencias[TagLabels.FECHA_EXACTA] & \
                                     coincidencias[TagLabels.ESTILO_EXACTO] & \
                                     coincidencias[TagLabels.COMPOSITOR_AUTOR_EXACTO]
 
-    perfect_match = database_length == 1 and coincidencias[TagLabels.TODO].iloc[0]
+    perfect_match = coincidencias[TagLabels.TODO].any()
 
     return coincidencias, perfect_match
 
