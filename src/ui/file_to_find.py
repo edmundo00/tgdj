@@ -473,6 +473,7 @@ class FILETOFIND:
 
         etiquetas_datos = [
             ["Nombre de archivo", tags._filename],
+            ["tag.artist", tags.artist],  # Add the artist tag here
             ["Titulo", tags.title],
             ["Orquesta", self.artists1],
             ["Cantor", self.artists2],
@@ -511,7 +512,8 @@ class FILETOFIND:
 
         # Crear un marco inferior con un color de fondo diferente y borde grueso usando grid
         bottom_frame = tk.Frame(popup, bg="#e0e0e0", bd=5, relief="ridge")
-        bottom_frame.grid(row=len(etiquetas_datos) + 1, column=0, columnspan=2, padx=self.padx, pady=self.pady, sticky="nsew")
+        bottom_frame.grid(row=len(etiquetas_datos) + 1, column=0, columnspan=2, padx=self.padx, pady=self.pady,
+                          sticky="nsew")
 
         # Expandir el bottom_frame al cambiar el tamaño del popup
         popup.grid_rowconfigure(len(etiquetas_datos) + 1, weight=1)
@@ -520,147 +522,7 @@ class FILETOFIND:
 
         # Encabezado dentro del bottom_frame
         header_label = tk.Label(bottom_frame, text="Base de Datos", font=("Helvetica", 14, "bold"), bg="#e0e0e0")
-        header_label.grid(row=0, column=0, columnspan=4, padx = self.padx, pady=self.pady)
-
-        def searchdb():
-            def update_table():
-                # Obtener filtros
-                title_filter = title_entry.get().lower()
-                artist_filter = artist_var.get()
-                cantor_filter = cantor_var.get()
-                start_date = start_date_entry.get()
-                end_date = end_date_entry.get()
-
-                # Filtrar datos
-                filtered_db = self.db[
-                    self.db['titulo'].str.lower().str.contains(title_filter, na=False) &
-                    (self.db['artista'] == artist_filter if artist_filter != 'Todos' else True) &
-                    (self.db['cantor'] == cantor_filter if cantor_filter != 'Todos' else True) &
-                    (self.db['fecha'] >= start_date if start_date else True) &
-                    (self.db['fecha'] <= end_date if end_date else True)
-                    ]
-
-                # Limpiar tabla
-                for row in table.get_children():
-                    table.delete(row)
-
-                # Insertar nuevos datos
-                for index, row in filtered_db.iterrows():
-                    table.insert('', 'end', values=(row['titulo'], row['artista'], row['cantor'], row['fecha']))
-
-            def update_cantor_dropdown(*args):
-                # Filtrar cantores según el artista seleccionado
-                selected_artist = artist_var.get()
-                if selected_artist == "Todos":
-                    filtered_cantors = self.db['cantor'].dropna().unique().tolist()
-                else:
-                    filtered_cantors = self.db[self.db['artista'] == selected_artist]['cantor'].dropna().unique().tolist()
-
-                # Actualizar el dropdown de cantores
-                cantor_var.set("Todos")
-                cantor_dropdown['values'] = ['Todos'] + sorted(filtered_cantors)
-
-                # Actualizar la tabla después de cambiar los cantores disponibles
-                update_table()
-
-            def on_filter_change(*args):
-                update_table()
-
-            # Ajustar el grid dentro del bottom_frame
-            bottom_frame.grid_rowconfigure(6, weight=1)
-            bottom_frame.grid_columnconfigure(1, weight=1)
-            bottom_frame.grid_columnconfigure(3, weight=1)
-
-            # Fuente personalizada
-            font_style = ('Helvetica', 12)
-            tree_font_style = ('Helvetica', 12)
-
-            # Filtro de Título
-            tk.Label(bottom_frame, text="Titulo:", font=font_style, bg="#e0e0e0").grid(row=1, column=0, padx=self.padx,
-                                                                                       pady=self.pady, sticky="w")
-            title_entry = tk.Entry(bottom_frame, font=font_style)
-            title_entry.grid(row=1, column=1, padx=self.padx, pady=self.pady, sticky="ew")
-            title_entry.bind("<KeyRelease>", lambda event: update_table())
-
-            # Filtro de Artista
-            tk.Label(bottom_frame, text="Artista:", font=font_style, bg="#e0e0e0").grid(row=2, column=0, padx=self.padx,
-                                                                                        pady=self.pady, sticky="w")
-            artist_var = tk.StringVar(bottom_frame)
-            artist_var.set("Todos")
-            artist_dropdown = ttk.Combobox(bottom_frame, textvariable=artist_var, font=font_style)
-            artist_dropdown['values'] = ['Todos'] + sorted(self.db['artista'].dropna().unique().tolist())
-            artist_dropdown.grid(row=2, column=1, padx=self.padx, pady=self.pady, sticky="ew")
-            artist_var.trace("w", update_cantor_dropdown)
-
-            # Filtro de Cantor
-            tk.Label(bottom_frame, text="Cantor:", font=font_style, bg="#e0e0e0").grid(row=3, column=0, padx=self.padx,
-                                                                                       pady=self.pady, sticky="w")
-            cantor_var = tk.StringVar(bottom_frame)
-            cantor_var.set("Todos")
-            cantor_dropdown = ttk.Combobox(bottom_frame, textvariable=cantor_var, font=font_style)
-            cantor_dropdown['values'] = ['Todos'] + sorted(self.db['cantor'].dropna().unique().tolist())
-            cantor_dropdown.grid(row=3, column=1, padx=self.padx, pady=self.pady, sticky="ew")
-            cantor_var.trace("w", on_filter_change)
-
-            # Filtro de Fecha
-            tk.Label(bottom_frame, text="Fecha desde:", font=font_style, bg="#e0e0e0").grid(row=4, column=0, padx=self.padx,
-                                                                                            pady=self.pady, sticky="w")
-            start_date_entry = tk.Entry(bottom_frame, font=font_style)
-            start_date_entry.grid(row=4, column=1, padx=self.padx, pady=self.pady, sticky="ew")
-            start_date_entry.bind("<KeyRelease>", lambda event: update_table())
-
-            tk.Label(bottom_frame, text="Fecha hasta:", font=font_style, bg="#e0e0e0").grid(row=4, column=2, padx=self.padx,
-                                                                                            pady=self.pady, sticky="w")
-            end_date_entry = tk.Entry(bottom_frame, font=font_style)
-            end_date_entry.grid(row=4, column=3, padx=self.padx, pady=self.pady, sticky="ew")
-            end_date_entry.bind("<KeyRelease>", lambda event: update_table())
-
-            # Crear canvas para scrollbar
-            canvas = tk.Canvas(bottom_frame)
-            canvas.grid(row=5, column=0, columnspan=4, sticky='nsew')
-
-            # Scrollbar vertical
-            scrollbar = ttk.Scrollbar(bottom_frame, orient="vertical", command=canvas.yview)
-            scrollbar.grid(row=5, column=4, sticky='ns')
-
-            # Frame dentro del canvas
-            second_frame = tk.Frame(canvas)
-
-            # Configurar scrollbar
-            second_frame.bind(
-                "<Configure>",
-                lambda e: canvas.configure(
-                    scrollregion=canvas.bbox("all")
-                )
-            )
-
-            canvas.create_window((0, 0), window=second_frame, anchor="nw")
-            canvas.configure(yscrollcommand=scrollbar.set)
-
-            # Crear tabla dentro del frame
-            columns = ['titulo', 'artista', 'cantor', 'fecha']
-            style = ttk.Style()
-            style.configure("Treeview", font=tree_font_style, rowheight=25)
-            style.configure("Treeview.Heading", font=('Helvetica', 14, 'bold'))
-
-            table = ttk.Treeview(second_frame, columns=columns, show='headings', style="Treeview")
-            for col in columns:
-                table.heading(col, text=col.capitalize())
-                table.column(col, anchor="center", width=150)
-
-            table.pack(fill="both", expand=True)
-
-            # Hacer que el frame que contiene la tabla se expanda
-            second_frame.pack(fill="both", expand=True)
-
-            # Llenar la tabla inicialmente
-            update_table()
-
-        # Ejecutar el popup de búsqueda de base de datos
-        searchdb()
-
-        # Iniciar el loop de tkinter
-        popup.mainloop()
+        header_label.grid(row=0, column=0, columnspan=4, padx=self.padx, pady=self.pady)
 
     # **********************************************
     # **********************************************
