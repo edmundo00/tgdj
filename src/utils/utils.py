@@ -310,19 +310,24 @@ def buscar_preferencias(booleanos):
         print('ERROR, las lista de booleanos no son iguales')
         return False, 0
 
-    print(f"Numero de resultados: {numero_de_resultados}")
-    print(f"TITULO_EXACTO: {get(TagLabels.TITULO_EXACTO, 0)}")
-    print(f"TITULO: {get(TagLabels.TITULO, 0)}")
-    print(f"ORQUESTA_EXACTA: {get(TagLabels.ORQUESTA_EXACTA, 0)}")
-    print(f"ORQUESTA: {get(TagLabels.ORQUESTA, 0)}")
-    print(f"FECHA_NEGATIVA: {get(TagLabels.FECHA_NEGATIVA, 0)}")
-
     # Corrección y simplificación del if
     if (numero_de_resultados == 1 and
             (get(TagLabels.TITULO_EXACTO, 0) or get(TagLabels.TITULO, 0)) and
             (get(TagLabels.ORQUESTA_EXACTA, 0) or get(TagLabels.ORQUESTA, 0)) and
-            not get(TagLabels.FECHA_NEGATIVA, 0)):
+            not get(TagLabels.FECHA_NEGATIVA, 0) and not not get(TagLabels.CANTOR_NEGATIVO, 0)):
         return True, 0
+
+        # Comprobar las condiciones para múltiples resultados
+    preferidos = []
+    for idx in range(numero_de_resultados):
+        if ((get(TagLabels.TITULO_EXACTO, idx) or get(TagLabels.TITULO, idx)) and
+                (get(TagLabels.ORQUESTA_EXACTA, idx) or get(TagLabels.ORQUESTA, idx)) and
+                not get(TagLabels.FECHA_NEGATIVA, idx) and not get(TagLabels.CANTOR_NEGATIVO, idx)):
+            preferidos.append(idx)
+
+    # Si hay exactamente un preferido, devolverlo
+    if len(preferidos) == 1:
+        return True, preferidos[0]
 
 
     return False, 0
@@ -463,113 +468,87 @@ def buscar_titulo(database, tag):
 
 
 def compare_tags(artista_coincidencia, titulo_coincidencia, database, tag):
-
     coincidencias = {}
     artista_original, cantor_original = separar_artistas(tag.artist)
     cantor_buscar = unidecode(cantor_original).lower()
 
     database_length = len(database)
 
-    # Check all the tags in the database
-    # Coincidencias para cantor: comparar cada elemento de "cantor" con "cantor_original"
+    # Coincidencias para orquesta
     coincidencias[TagLabels.ORQUESTA_EXACTA] = (database["artista"] == artista_original)
+    coincidencias[TagLabels.ORQUESTA] = pd.Series([artista_coincidencia == 2] * database_length, index=database.index)
+    coincidencias[TagLabels.ORQUESTA_PARCIAL] = pd.Series([artista_coincidencia == 1] * database_length, index=database.index)
+    coincidencias[TagLabels.ORQUESTA_NEGATIVO] = pd.Series([artista_coincidencia == 0] * database_length, index=database.index)
 
-    if artista_coincidencia == 2:
-        coincidencias[TagLabels.ORQUESTA] = pd.Series([True] * database_length, index=database.index)
-    else:
-        coincidencias[TagLabels.ORQUESTA] = pd.Series([False] * database_length, index=database.index)
+    # Coincidencias para título
+    coincidencias[TagLabels.TITULO_EXACTO] = pd.Series([titulo_coincidencia == 3] * database_length, index=database.index)
+    coincidencias[TagLabels.TITULO] = pd.Series([titulo_coincidencia == 2] * database_length, index=database.index)
+    coincidencias[TagLabels.TITULO_PARCIAL] = pd.Series([titulo_coincidencia == 1] * database_length, index=database.index)
+    coincidencias[TagLabels.TITULO_NEGATIVO] = pd.Series([titulo_coincidencia == 0] * database_length, index=database.index)
 
-    if artista_coincidencia == 1:
-        coincidencias[TagLabels.ORQUESTA_PARCIAL] = pd.Series([True] * database_length, index=database.index)
-    else:
-        coincidencias[TagLabels.ORQUESTA_PARCIAL] = pd.Series([False] * database_length, index=database.index)
-
-    if artista_coincidencia == 0:
-        coincidencias[TagLabels.ORQUESTA_NEGATIVO] = pd.Series([True] * database_length, index=database.index)
-    else:
-        coincidencias[TagLabels.ORQUESTA_NEGATIVO] = pd.Series([False] * database_length, index=database.index)
-
-    if titulo_coincidencia == 3:
-        coincidencias[TagLabels.TITULO_EXACTO] = pd.Series([True] * database_length, index=database.index)
-    else:
-        coincidencias[TagLabels.TITULO_EXACTO] = pd.Series([False] * database_length, index=database.index)
-
-    if titulo_coincidencia == 2:
-        coincidencias[TagLabels.TITULO] = pd.Series([True] * database_length, index=database.index)
-    else:
-        coincidencias[TagLabels.TITULO] = pd.Series([False] * database_length, index=database.index)
-
-    if titulo_coincidencia == 1:
-        coincidencias[TagLabels.TITULO_PARCIAL] = pd.Series([True] * database_length, index=database.index)
-    else:
-        coincidencias[TagLabels.TITULO_PARCIAL] = pd.Series([False] * database_length, index=database.index)
-
-    if titulo_coincidencia == 0:
-        coincidencias[TagLabels.TITULO_NEGATIVO] = pd.Series([True] * database_length, index=database.index)
-    else:
-        coincidencias[TagLabels.TITULO_NEGATIVO] = pd.Series([False] * database_length, index=database.index)
-
-    # Coincidencias para cantor: comparar cada elemento de "cantor" con "cantor_original"
+    # Coincidencias para cantor
     coincidencias[TagLabels.CANTOR_EXACTO] = (database["cantor"] == cantor_original)
-
-    # Coincidencias para cantor_min: usar str.contains y manejar valores vacíos correctamente
-    coincidencias[TagLabels.CANTOR] = database["cantor_min"].str.contains(
-        cantor_buscar, case=False, na=False, regex=False
-    )
-
-    # Coincidencias parciales y negativas para cantor
-    if cantor_buscar == "":
-        coincidencias[TagLabels.CANTOR_PARCIAL] = pd.Series([True] * database_length, index=database.index)
-    else:
-        coincidencias[TagLabels.CANTOR_PARCIAL] = pd.Series([False] * database_length, index=database.index)
-
+    coincidencias[TagLabels.CANTOR] = database["cantor_min"].str.contains(cantor_buscar, case=False, na=False, regex=False)
+    coincidencias[TagLabels.CANTOR_PARCIAL] = pd.Series([cantor_buscar == ""] * database_length, index=database.index)
     coincidencias[TagLabels.CANTOR_NEGATIVO] = pd.Series([True] * database_length, index=database.index)
 
+    # Coincidencias para fecha
     tag.year = tag.year or ""
     tag.genre = tag.genre or ""
     tag.composer = tag.composer or ""
 
     if extraer_cuatro_numeros(tag.year):
-        ano =  int(extraer_cuatro_numeros(tag.year))
+        ano = int(extraer_cuatro_numeros(tag.year))
     else:
-        ano=""
-    
+        ano = ""
+
     coincidencias[TagLabels.FECHA_EXACTA] = database["fecha"] == tag.year
     coincidencias[TagLabels.FECHA] = database["fecha_ano"] == ano
-    coincidencias[TagLabels.FECHA_PARCIAL] = pd.Series([False] * database_length, index=database.index)
+    if (not (tag.year) or tag.year == ""):
+        coincidencias[TagLabels.FECHA_PARCIAL] = pd.Series([True] * database_length, index=database.index)
+    else:
+        coincidencias[TagLabels.FECHA_PARCIAL] = pd.Series([False] * database_length, index=database.index)
     coincidencias[TagLabels.FECHA_NEGATIVA] = database["fecha_ano"] != extraer_cuatro_numeros(tag.year)
 
-    
-    # Check genre (genero)
+    # Coincidencias para estilo
     coincidencias[TagLabels.ESTILO_EXACTO] = database["estilo"] == tag.genre
-    coincidencias[TagLabels.ESTILO] =pd.Series([False] * database_length, index=database.index)
+    coincidencias[TagLabels.ESTILO] = pd.Series([False] * database_length, index=database.index)
     coincidencias[TagLabels.ESTILO_PARCIAL] = pd.Series([False] * database_length, index=database.index)
     coincidencias[TagLabels.ESTILO_NEGATIVO] = pd.Series([True] * database_length, index=database.index)
 
-
-
-    # Check composer/author (compositor_autor)
+    # Coincidencias para compositor_autor
     coincidencias[TagLabels.COMPOSITOR_AUTOR_EXACTO] = database["compositor_autor"] == tag.composer
     coincidencias[TagLabels.COMPOSITOR_AUTOR] = pd.Series([False] * database_length, index=database.index)
     coincidencias[TagLabels.COMPOSITOR_AUTOR_PARCIAL] = pd.Series([False] * database_length, index=database.index)
     coincidencias[TagLabels.COMPOSITOR_AUTOR_NEGATIVO] = pd.Series([True] * database_length, index=database.index)
 
+    # Ajustes para asegurar que solo uno sea True por cada grupo
+    def ajustar_grupo(grupo):
+        exacto, completo, parcial, negativo = grupo
+        coincidencias[completo] = coincidencias[completo] & ~coincidencias[exacto]
+        coincidencias[parcial] = coincidencias[parcial] & ~(coincidencias[exacto] | coincidencias[completo])
+        coincidencias[negativo] = coincidencias[negativo] & ~(coincidencias[exacto] | coincidencias[completo] | coincidencias[parcial])
 
+    # Ajustar todos los grupos
+    ajustar_grupo([TagLabels.ORQUESTA_EXACTA, TagLabels.ORQUESTA, TagLabels.ORQUESTA_PARCIAL, TagLabels.ORQUESTA_NEGATIVO])
+    ajustar_grupo([TagLabels.TITULO_EXACTO, TagLabels.TITULO, TagLabels.TITULO_PARCIAL, TagLabels.TITULO_NEGATIVO])
+    ajustar_grupo([TagLabels.CANTOR_EXACTO, TagLabels.CANTOR, TagLabels.CANTOR_PARCIAL, TagLabels.CANTOR_NEGATIVO])
+    ajustar_grupo([TagLabels.FECHA_EXACTA, TagLabels.FECHA, TagLabels.FECHA_PARCIAL, TagLabels.FECHA_NEGATIVA])
+    ajustar_grupo([TagLabels.ESTILO_EXACTO, TagLabels.ESTILO, TagLabels.ESTILO_PARCIAL, TagLabels.ESTILO_NEGATIVO])
+    ajustar_grupo([TagLabels.COMPOSITOR_AUTOR_EXACTO, TagLabels.COMPOSITOR_AUTOR, TagLabels.COMPOSITOR_AUTOR_PARCIAL, TagLabels.COMPOSITOR_AUTOR_NEGATIVO])
 
     # Check all fields (todo)
-    coincidencias[TagLabels.TODO] = coincidencias[TagLabels.TITULO_EXACTO]  & \
-                            (coincidencias[TagLabels.ORQUESTA_EXACTA]) & \
-                            (coincidencias[TagLabels.CANTOR_EXACTO]) & \
-                            (coincidencias[TagLabels.FECHA_NEGATIVA]) & \
-                            (coincidencias[TagLabels.ESTILO_EXACTO]) & \
-                            (coincidencias[TagLabels.COMPOSITOR_AUTOR_EXACTO])
+    coincidencias[TagLabels.TODO] = coincidencias[TagLabels.TITULO_EXACTO] & \
+                                    coincidencias[TagLabels.ORQUESTA_EXACTA] & \
+                                    coincidencias[TagLabels.CANTOR_EXACTO] & \
+                                    coincidencias[TagLabels.FECHA_NEGATIVA] & \
+                                    coincidencias[TagLabels.ESTILO_EXACTO] & \
+                                    coincidencias[TagLabels.COMPOSITOR_AUTOR_EXACTO]
 
-    if database_length==1 & coincidencias[TagLabels.TODO].iloc[0]:
-        perfect_match = True
-    else:
-        perfect_match = False
+    perfect_match = database_length == 1 and coincidencias[TagLabels.TODO].iloc[0]
 
     return coincidencias, perfect_match
+
 
 
 def stop_music():
