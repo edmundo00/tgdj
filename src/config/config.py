@@ -172,7 +172,7 @@ path_map = {
 
 
 # Default settings for checkbuttons
-DEFAULT_DATE_CHECKED = False
+DEFAULT_DATE_CHECKED = True
 DEFAULT_PERFECT_MATCHES = False
 DEFAULT_ARTIST_NOT_FOUND = True
 DEFAULT_TITLE_NOT_FOUND = True

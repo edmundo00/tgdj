@@ -283,7 +283,7 @@ def link_to_music(link):
     return local_path
 
 
-def buscar_preferencias(booleanos):
+def buscar_preferencias(booleanos, buscar_fecha):
     get = lambda label, idx=0: booleanos[label].iloc[idx]
 
     mapping = {
@@ -317,12 +317,17 @@ def buscar_preferencias(booleanos):
             not get(TagLabels.FECHA_NEGATIVA, 0) and not not get(TagLabels.CANTOR_NEGATIVO, 0)):
         return True, 0
 
+
+
         # Comprobar las condiciones para múltiples resultados
     preferidos = []
     for idx in range(numero_de_resultados):
-        if ((get(TagLabels.TITULO_EXACTO, idx) or get(TagLabels.TITULO, idx)) and
-                (get(TagLabels.ORQUESTA_EXACTA, idx) or get(TagLabels.ORQUESTA, idx)) and
-                not get(TagLabels.FECHA_NEGATIVA, idx) and not get(TagLabels.CANTOR_NEGATIVO, idx)):
+        titulo_condicion = get(TagLabels.TITULO_EXACTO, idx) or get(TagLabels.TITULO, idx)
+        orquesta_condicion = get(TagLabels.ORQUESTA_EXACTA, idx) or get(TagLabels.ORQUESTA, idx)
+        fecha_condicion = not get(TagLabels.FECHA_NEGATIVA, idx) if buscar_fecha else True
+        cantor_condicion = not get(TagLabels.CANTOR_NEGATIVO, idx)
+
+        if titulo_condicion and orquesta_condicion and fecha_condicion and cantor_condicion:
             preferidos.append(idx)
 
     # Si hay exactamente un preferido, devolverlo

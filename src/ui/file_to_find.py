@@ -388,7 +388,7 @@ class FILETOFIND:
             self.artista_coincidencia, self.titulo_coincidencia, database_titulo, self.tags
         )
 
-        self.hay_coincidencia_preferida, self.coincidencia_preferida = buscar_preferencias (self.bool_coincidencias)
+        self.hay_coincidencia_preferida, self.coincidencia_preferida = buscar_preferencias (self.bool_coincidencias, self.show_date_checked)
 
         # Generar colores para los labels
         self.colores_labels = coincidencias_a_colores(self.bool_coincidencias)
