@@ -2,11 +2,12 @@ from tinytag import TinyTag
 from tkinter import ttk
 from src.utils.utils import *
 from src.config.database import Database
+from datetime import datetime
 
 
 class FILETOFIND:
 
-    def __init__(self, framefiles, framedatabase, frames_columnas_archivo, frames_columnas_resultado, ruta_archivo, frame_number, root, show_date_checked, show_perfect_matches, show_artist_not_found, show_title_not_found, show_remaining):
+    def __init__(self, framefiles, framedatabase, frames_columnas_archivo, frames_columnas_resultado, ruta_archivo, frame_number, root, show_date_checked, show_perfect_matches, show_artist_not_found, show_title_not_found, show_remaining, compare):
         # print(db)
         self.data_store = Database()
         self.db = self.data_store.get_db()
@@ -37,12 +38,34 @@ class FILETOFIND:
         self.show_artist_not_found = show_artist_not_found
         self.show_title_not_found = show_title_not_found
         self.show_remaining = show_remaining
+        self.compare = compare
 
 
         self.leer_tags()
 
         self.buscar()
-        self.representa()
+        if compare:
+            now = datetime.now()  # Get the current datetime
+            print(f"{now.minute} minutos, {now.second} segundos y {now.microsecond} microsegundos")  # Correct way to access minutes and seconds
+            self.nextframe = self.frame_number
+            # Apply tags directly if matches exist
+            if self.coincidencias is not None and not self.coincidencias.empty:
+                self.apply_tags_directly()
+        else:
+            self.representa()
+
+    def apply_tags_directly(self):
+        """
+        Apply tags directly using the first preferred match or all matches
+        if multiple preferred matches exist.
+        """
+        if self.hay_coincidencia_preferida and not self.perfect_match:
+            print(self.coincidencias)
+            print(self.hay_coincidencia_preferida)
+            print(self.coincidencia_preferida)
+        else:
+            print('No hay coincidencias preferidas')
+
 
     def representa(self):
         # Determinar color de fondo basado en el número de frame

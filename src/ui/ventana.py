@@ -5,9 +5,10 @@ from presentation_app import PresentationApp
 from src.ui.file_to_find import FILETOFIND
 from src.utils.utils import *
 from src.config.database import Database
-from src.config.config import columnas_config
+from src.config.config import columnas_config, musicbee_tags
 import tkinter as tk
 from src.ui.playlist_operations import PlaylistOperations
+from src.utils.MusicBeeLibraryTools import MusicBeeLibraryTools
 
 class Ventana:
     def __init__(self, root):
@@ -22,6 +23,9 @@ class Ventana:
 
         # Initialize PlaylistOperations
         self.playlist_operations = PlaylistOperations(self.root, m3u_start_path, path_map)
+
+        self.musicbee = MusicBeeLibraryTools(self.root)
+
 
         self.root.title("Tkinter Window with Menu, Icon, and Status Bar")
         self.root.geometry('1700x800')
@@ -39,6 +43,7 @@ class Ventana:
         self.artist_not_found = tk.BooleanVar(value=DEFAULT_ARTIST_NOT_FOUND)
         self.title_not_found = tk.BooleanVar(value=DEFAULT_TITLE_NOT_FOUND)
         self.view_remaining = tk.BooleanVar(value=DEFAULT_REMAINING)
+        self.direct_comparison = tk.BooleanVar(value=DEFAULT_DIRECT_COMPARISON)
 
         # Create UI components
         self.create_menu_bar()
@@ -99,7 +104,7 @@ class Ventana:
 
         # Define icons and their commands
         icon_names = ['archivo', 'directorio', 'correr', 'transfer', 'trash', 'searchdb', 'presentacion', 'playlist',
-                      'convert_playlist', 'merge']
+                      'convert_playlist', 'merge', 'musicbee']
         for icon_name in icon_names:
             setattr(self, f"{icon_name}_icon", tk.PhotoImage(file=icon_paths[icon_name]))
 
@@ -114,7 +119,8 @@ class Ventana:
             (self.presentacion_icon, self.open_presentation_popup),
             (self.playlist_icon, self.open_playlist),
             (self.convert_playlist_icon, self.playlist_operations.convert_playlist),
-            (self.merge_icon, self.playlist_operations.merge_playlist)
+            (self.merge_icon, self.playlist_operations.merge_playlist),
+            (self.musicbee_icon, self.musicbee.open_musicbee_library)
         ]
 
         for i, (icon, command) in enumerate(buttons):
@@ -126,11 +132,16 @@ class Ventana:
             ("Perfect Matches", self.perfect_matches),
             ("Artist Not Found", self.artist_not_found),
             ("Title Not Found", self.title_not_found),
-            ("Visualizar Resto", self.view_remaining),  # Añadir nuevo checkbox aquí
+            ("Visualizar Resto", self.view_remaining),
+            ("Comparacion directa", self.direct_comparison)
         ]
 
         for i, (text, variable) in enumerate(checkbuttons, start=len(buttons)):
-            chk = tk.Checkbutton(self.icon_bar, text=text, variable=variable)
+            # Asigna 'red' a los colores solo si el texto es "Comparacion directa", de lo contrario None
+            color = 'red' if text == "Comparacion directa" else None
+            # Crea el Checkbutton con los colores correspondientes
+            chk = tk.Checkbutton(self.icon_bar, text=text, variable=variable,
+                                 bg=color, selectcolor=color)
             chk.grid(row=0, column=i, padx=self.pad, pady=self.pad)
 
     def configure_scrollable_frames(self):
@@ -157,7 +168,24 @@ class Ventana:
         scrollable_frame.grid_rowconfigure(0, weight=1)  # Ensuring the row expands
         scrollable_frame.grid_columnconfigure(0, weight=1)  # Ensuring the column expands
 
+    def open_musicbee_library(self):
+        """Open a file dialog to select the MusicBee library file."""
+        file_path = filedialog.askopenfilename(
+            title="Select MusicBee Library File",
+            filetypes=[("MusicBee Library Files", "*.mbl"), ("All Files", "*.*")]
+        )
+        if file_path:
+            try:
+                # Initialize the MusicBeeLibraryTools with the selected file
+                self.musicbee_tool = MusicBeeLibraryTools(file_path)
+                self.musicbee_tool.parse_library()
+                messagebox.showinfo("Success", "Library loaded successfully!")
 
+                # After loading, show a popup to search for artist
+                self.show_artist_search_popup()
+
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to load library: {e}")
 
     def create_title_frame(self):
         """Create the title frame with 'File Tags' and 'Database Tags' labels."""
@@ -561,7 +589,8 @@ class Ventana:
                 show_perfect_matches=self.perfect_matches.get(),
                 show_artist_not_found=self.artist_not_found.get(),
                 show_title_not_found=self.title_not_found.get(),
-                show_remaining=self.view_remaining.get()  # Pasar el estado del nuevo checkbox
+                show_remaining=self.view_remaining.get(),  # Pasar el estado del nuevo checkbox
+                compare=self.direct_comparison.get()
             )
 
             numero_canciones = new_filetofind.nextframe
@@ -657,7 +686,8 @@ class Ventana:
             show_perfect_matches = self.perfect_matches.get(),
             show_artist_not_found = self.artist_not_found.get(),
             show_title_not_found = self.title_not_found.get(),
-            show_remaining = self.view_remaining.get()  # Pasar el estado del nuevo checkbox
+            show_remaining = self.view_remaining.get(),  # Pasar el estado del nuevo checkbox
+            compare = self.direct_comparison.get()
             )
 
         # Actualizar el número de canciones y añadir a la lista global

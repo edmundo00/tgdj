@@ -27,7 +27,8 @@ def load_resources_paths():
         'presentacion': os.path.join(ICON_FOLDER, 'presentation.png'),
         'playlist': os.path.join(ICON_FOLDER, 'playlist.png'),
         'convert_playlist': os.path.join(ICON_FOLDER, 'convert_playlist.png'),
-        'merge': os.path.join(ICON_FOLDER, 'merge.png')
+        'merge': os.path.join(ICON_FOLDER, 'merge.png'),
+        'musicbee': os.path.join(ICON_FOLDER, 'musicbee.png')
     } 
 
     # Load Images
@@ -94,6 +95,7 @@ project_root = PROJECT_ROOT
 directorio_raiz = MUSIC_PATH
 dropbox_path=MUSIC_PATH
 m3u_start_path = os.path.join(dropbox_path, "MUSICA", "MP3", "TANGO", "other_stuff", "playlists")
+musicbee_start_folder = os.path.join(dropbox_path, "MUSICA", "MP3", "TANGO", "other_stuff", "MUSICBEE DATABASES")
 
 data_folder = DATA_FOLDER
 csv_grabaciones = os.path.join(data_folder, 'todo.csv')
@@ -182,3 +184,13 @@ DEFAULT_PERFECT_MATCHES = False
 DEFAULT_ARTIST_NOT_FOUND = True
 DEFAULT_TITLE_NOT_FOUND = True
 DEFAULT_REMAINING = True
+DEFAULT_DIRECT_COMPARISON = True
+
+musicbee_tags = {
+    "title": "65",
+    "artist": "32",
+    "album": "30",
+    "year": "88",
+    "genre": "59",
+    "composer": "43",
+}
