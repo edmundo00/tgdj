@@ -267,6 +267,33 @@ def capitalize_uppercase_words(text):
 
     return ' '.join(transformed_words)
 
+def aplicartag_archivo(ruta_archivo,coincidencias,coincidencia_preferida,tags):
+
+    artists1, artists2 = separar_artistas(tags.artist)
+    artist=unir_artistas(coincidencias.artista.iloc[coincidencia_preferida],coincidencias.cantor.iloc[coincidencia_preferida], " / " )
+    update_tags(
+        ruta_archivo,
+        title=coincidencias.titulo.iloc[coincidencia_preferida],
+        artist=artist,
+        year=coincidencias.fecha.iloc[coincidencia_preferida],
+        genre=coincidencias.estilo.iloc[coincidencia_preferida],
+        composer=coincidencias.compositor_autor.iloc[coincidencia_preferida]
+    )
+    reemplazo_tags_linea = {
+        'archivo': ruta_archivo,
+        'old_title': tags.title,
+        'new_title': coincidencias.titulo.iloc[coincidencia_preferida],
+        'old_artist': artists1,
+        'new_artist': coincidencias.artista.iloc[coincidencia_preferida],
+        'old_cantor': artists2,
+        'new_cantor': coincidencias.cantor.iloc[coincidencia_preferida],
+        'old_year': tags.year,
+        'new_year': coincidencias.fecha.iloc[coincidencia_preferida],
+        'old_genre': tags.genre,
+        'new_genre': coincidencias.estilo.iloc[coincidencia_preferida],
+        'old_composer': tags.composer,
+        'new_composer': coincidencias.compositor_autor.iloc[coincidencia_preferida]
+    }
 
 def extraer_cuatro_numeros(cadena):
     # Usamos la expresión regular \d{4} para encontrar cuatro dígitos consecutivos

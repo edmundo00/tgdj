@@ -696,6 +696,9 @@ class Ventana:
 
         return frame_number
 
+
+
+
     def aplicartags(self):
         reemplazo_tags = []
         for archivos in filetofind_list:
