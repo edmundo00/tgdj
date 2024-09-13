@@ -170,6 +170,11 @@ path_map = {
     "LAPTOP-ABRSCER9": "C:\\Users\\diana\\Dropbox"
 }
 
+playlist_path_map = {
+    "WINDOW-COMPUTER": os.path.join(m3u_start_path, 'casa'),
+    "CAD065": os.path.join(m3u_start_path, 'trabajo'),
+    "LAPTOP-ABRSCER9": os.path.join(m3u_start_path, 'portatil')
+}
 
 # Default settings for checkbuttons
 DEFAULT_DATE_CHECKED = True

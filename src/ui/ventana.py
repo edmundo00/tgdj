@@ -7,6 +7,7 @@ from src.utils.utils import *
 from src.config.database import Database
 from src.config.config import columnas_config
 import tkinter as tk
+from src.ui.playlist_operations import PlaylistOperations
 
 class Ventana:
     def __init__(self, root):
@@ -19,6 +20,8 @@ class Ventana:
         self.frames_columnas_archivo = {}
         self.frames_columnas_resultado = {}
 
+        # Initialize PlaylistOperations
+        self.playlist_operations = PlaylistOperations(self.root, m3u_start_path, path_map)
 
         self.root.title("Tkinter Window with Menu, Icon, and Status Bar")
         self.root.geometry('1700x800')
@@ -110,8 +113,8 @@ class Ventana:
             (self.searchdb_icon, self.searchdb),
             (self.presentacion_icon, self.open_presentation_popup),
             (self.playlist_icon, self.open_playlist),
-            (self.convert_playlist_icon, self.convert_playlist),
-            (self.merge_icon, self.merge_playlist)
+            (self.convert_playlist_icon, self.playlist_operations.convert_playlist),
+            (self.merge_icon, self.playlist_operations.merge_playlist)
         ]
 
         for i, (icon, command) in enumerate(buttons):
@@ -142,7 +145,6 @@ class Ventana:
             # Initial adjustment to set the correct size
             self.adjust_canvas_width(canvas, scrollable_frame)
 
-
     def adjust_canvas_width(self, canvas, scrollable_frame):
         """Adjust the canvas window width to match the canvas size."""
         # Get the current width of the canvas
@@ -155,44 +157,7 @@ class Ventana:
         scrollable_frame.grid_rowconfigure(0, weight=1)  # Ensuring the row expands
         scrollable_frame.grid_columnconfigure(0, weight=1)  # Ensuring the column expands
 
-    def merge_playlist(self):
-        # Utiliza el directorio definido en m3u_start_path como inicial para abrir y guardar
-        playlist_directory = m3u_start_path
 
-        # Abrir un cuadro de diálogo para seleccionar múltiples archivos M3U desde el directorio de playlists
-        file_paths = filedialog.askopenfilenames(
-            title="Select M3U Playlists to Merge",
-            filetypes=[("M3U files", "*.m3u")],
-            initialdir=playlist_directory  # Usar el directorio preferido
-        )
-
-        # Verificar si se seleccionaron archivos
-        if not file_paths:
-            return
-
-        # Crear un diccionario para almacenar rutas únicas basadas en títulos normalizados
-        unique_titles = {}
-
-        # Función para extraer el título a partir de un punto común (por ejemplo, "Dropbox")
-        def extract_title_from_path(line):
-            split_point = line.lower().find('dropbox')
-            return line[split_point + len('Dropbox'):] if split_point != -1 else line
-
-        # Leer cada archivo y agregar sus títulos únicos al diccionario
-        for file_path in file_paths:
-            with open(file_path, 'r', encoding='utf-8') as file:
-                for line in file:
-                    line = line.strip()
-                    if line and not line.startswith("#"):  # Ignorar líneas en blanco y comentarios
-                        title = extract_title_from_path(line)  # Normalizar para comparar títulos
-                        if title not in unique_titles:
-                            unique_titles[title] = line  # Guardar la línea completa la primera vez que se ve el título
-
-        # Convertir el diccionario de líneas únicas a una lista para pasarlo a la función de visualización
-        merged_lines = list(unique_titles.values())
-
-        # Pasar las líneas combinadas a la función de creación del popup para mostrarlas y convertirlas
-        self.create_playlist_popup(merged_lines, "merged_playlist.m3u")
 
     def create_title_frame(self):
         """Create the title frame with 'File Tags' and 'Database Tags' labels."""
@@ -269,7 +234,6 @@ class Ventana:
             canvas_attr_name='canvas2'
         )
         self.configure_scrollable_frames()
-
 
 
     def create_and_configure_subframe(self, subframe_bg, subframe_row, subframe_column, title_config, scrollable_bg,
@@ -413,151 +377,12 @@ class Ventana:
         return self.frames_columnas_resultado
 
 
-
-
-
-
-
-
-
-
-
     def create_status_bar(self):
         """Create a status bar at the bottom of the window."""
         self.status_bar = tk.Label(self.root, text="Status: Ready", bd=1, relief=tk.SUNKEN, anchor=tk.W)
         # Set the grid for the status bar, ensuring it spans across the required columns
         self.status_bar.grid(row=self.status_bar_row, column=0, columnspan=self.status_bar_colspan, sticky="ew")
 
-    def convert_playlist(self):
-        # Step 1: Open the file and read its lines
-        m3u_file_path = filedialog.askopenfilename(
-            initialdir=m3u_start_path,
-            title="Select M3U Playlist",
-            filetypes=[("M3U files", "*.m3u"), ("All files", "*.*")]
-        )
-
-        # If no file is selected, exit the function
-        if not m3u_file_path:
-            return
-
-        # Read the contents of the file and store the lines in a variable
-        try:
-            with open(m3u_file_path, 'r', encoding='utf-8') as file:
-                m3u_lines = file.readlines()  # Save lines without processing
-        except Exception as e:
-            messagebox.showerror("Error", f"Error reading file: {e}")
-            return
-
-        # Step 2: Create and display the popup with the playlist lines
-        self.create_playlist_popup(m3u_lines, m3u_file_path)
-
-    def convert_and_save(self, m3u_lines, m3u_file_path):
-        # Usar la variable global path_map para identificar las rutas
-        global path_map
-
-        # Identificar a qué ordenador corresponde el path de cada línea
-        def get_computer_name_for_path(path):
-            for computer_name, dropbox_path in path_map.items():
-                if path.startswith(dropbox_path):
-                    return computer_name
-            return None
-
-        # Crear los archivos M3U para cada ordenador en el directorio de playlists
-        for computer_name, dropbox_path in path_map.items():
-            # Define el path de guardado en el directorio de playlists
-            save_directory = m3u_start_path
-            new_m3u_path = os.path.join(save_directory, f"merged_playlist_{computer_name}.m3u")
-
-            try:
-                with open(new_m3u_path, 'w', encoding='utf-8') as new_file:
-                    for line in m3u_lines:
-                        if 'Dropbox' in line:
-                            # Reemplazar la parte del string antes de "Dropbox" con el path correspondiente
-                            split_point = line.lower().find('dropbox')
-                            original_computer = get_computer_name_for_path(line)
-                            if original_computer == computer_name:
-                                new_line = line
-                            else:
-                                new_line = dropbox_path + line[split_point + len('Dropbox'):]
-                            new_file.write(new_line + '\n')
-                        else:
-                            new_file.write(line + '\n')
-            except Exception as e:
-                messagebox.showerror("Error", f"Error saving file for {computer_name}: {e}")
-                return
-
-        # Mostrar un mensaje de éxito con las rutas guardadas
-        saved_files = ', '.join([os.path.join(m3u_start_path, f"merged_playlist_{cn}.m3u") for cn in path_map.keys()])
-        messagebox.showinfo("Success", f"Playlists converted and saved successfully at:\n{saved_files}")
-
-    def create_playlist_popup(self, m3u_lines, m3u_file_path):
-        # Strip the lines to remove empty lines and whitespace
-        m3u_lines = [line.strip() for line in m3u_lines if line.strip()]
-
-        # Crear una ventana popup para mostrar el contenido del M3U
-        popup = tk.Toplevel(self.root)
-        popup.title("Playlist Preview")
-        popup.geometry("800x600")
-
-        # Crear un marco para la tabla
-        frame = tk.Frame(popup)
-        frame.pack(fill='both', expand=True)
-
-        # Crear una tabla Treeview para mostrar las líneas del M3U
-        columns = ('#', 'Path')
-        tree = ttk.Treeview(frame, columns=columns, show='headings')
-        tree.heading('#', text='#')
-        tree.heading('Path', text='Path')
-        tree.column('#', width=30, anchor='center')
-        tree.column('Path', anchor='w')
-
-        # Añadir un scrollbar a la tabla
-        scrollbar = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
-        tree.configure(yscrollcommand=scrollbar.set)
-        scrollbar.pack(side='right', fill='y')
-        tree.pack(fill='both', expand=True)
-
-        # Mostrar el contenido del M3U en la tabla
-        for index, line in enumerate(m3u_lines):
-            if 'Dropbox' in line:
-                # Cambiar el color del texto antes de "Dropbox"
-                tree.insert('', 'end', values=(index + 1, line), tags=('highlight',))
-                tree.tag_configure('highlight', foreground='blue')
-            else:
-                tree.insert('', 'end', values=(index + 1, line))
-
-        # Crear el botón para convertir la playlist y llamar a la función convert_and_save
-        convert_button = ttk.Button(popup, text="Convert Playlist",
-                                    command=lambda: self.convert_and_save(m3u_lines, m3u_file_path))
-        convert_button.pack(pady=self.pad)
-
-        # Mostrar la ventana popup
-        popup.transient(self.root)
-        popup.grab_set()
-        self.root.wait_window(popup)
-
-    def open_playlist_file(self):
-        # Abrir el cuadro de diálogo para seleccionar un archivo M3U
-        m3u_file_path = filedialog.askopenfilename(
-            initialdir=m3u_start_path,
-            title="Select M3U Playlist",
-            filetypes=[("M3U files", "*.m3u"), ("All files", "*.*")]
-        )
-
-        # Si no se selecciona ningún archivo, salir de la función
-        if not m3u_file_path:
-            return
-
-        # Leer el contenido del archivo y almacenar las líneas en una variable
-        try:
-            with open(m3u_file_path, 'r', encoding='utf-8') as file:
-                m3u_lines = file.readlines()  # Guardar las líneas sin procesar
-        except Exception as e:
-            messagebox.showerror("Error", f"Error reading file: {e}")
-            return
-
-        # Pasar las líneas leídas y la ruta del archivo a la función para crear el popup
-        self.create_playlist_popup(m3u_lines, m3u_file_path)
 
     def open_presentation_popup(self):
         # Inicializa la ventana si no existe o si ha sido destruida
