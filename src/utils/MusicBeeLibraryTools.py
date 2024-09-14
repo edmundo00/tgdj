@@ -106,6 +106,7 @@ class MusicBeeLibraryTools:
 
             while True:  # Start reading media entries
                 media = {"file_designation": self.read_uint(mbl.read(1))}  # Read the file designation
+
                 # If the designation is 1, it indicates the end of entries
                 if media["file_designation"] == 1:
                     break
@@ -114,17 +115,21 @@ class MusicBeeLibraryTools:
                 if 10 > media["file_designation"] > 1:
                     media["status"] = self.read_uint(mbl.read(1))  # Read status byte
                     if media["status"] > 6:
-                        raise ValueError("Invalid status value")  # Validate the status value
+                        print(f"Invalid status value: {media['status']} at entry {len(records) + 1}")
+                        continue  # Skip entries with invalid status
 
                     # Read various metadata fields for the media entry
+                    media["unknown_1"] = self.read_uint(mbl.read(1))
                     media["play_count"] = self.read_uint(mbl.read(2))
                     media["date_last_played"] = self.read_int(mbl.read(8))
                     media["skip_count"] = self.read_uint(mbl.read(2))
                     media["file_path"] = self.read_str(mbl)  # Read and decode the file path
+                    print(media["file_path"])
 
                     # Ensure the file path is valid
                     if media["file_path"] == "":
-                        raise ValueError("Empty file path found")
+                        print(f"Empty file path found at entry {len(records) + 1}, skipping...")
+                        continue  # Skip entries with empty file paths
 
                     # Read additional metadata fields
                     media["file_size"] = self.read_int(mbl.read(4))
@@ -136,24 +141,45 @@ class MusicBeeLibraryTools:
                     media["date_added"] = self.read_int(mbl.read(8))
                     media["date_modified"] = self.read_int(mbl.read(8))
 
-                    # Process tags associated with the media
+                    media["artwork"] = []
+                    while True:
+                        art = {"type": self.read_uint(mbl.read(1))}
+                        if art["type"] > 253:
+                            break
+
+                        art["string_1"] = self.read_str(mbl)
+                        art["store_mode"] = self.read_uint(mbl.read(1))
+                        art["string_2"] = self.read_str(mbl)
+                        media["artwork"].append(art)
+
+                    media["tags_type"] = self.read_uint(mbl.read(1))
                     media["tags"] = {}
                     while True:
-                        tag_code = self.read_uint(mbl.read(1))  # Read tag code
-                        # If tag code is 0, end of tags
+                        tag_code = self.read_uint(mbl.read(1))
                         if tag_code == 0:
                             break
-                        # Read and store tag value associated with the tag code
-                        media["tags"][str(tag_code)] = self.read_str(mbl)
+                        if tag_code == 255:
+                            c = self.read_int(mbl.read(2))
+                            i = 0
+                            media["cue"] = []
 
-                    # Map tag codes to descriptive names using musicbee_tags
-                    for tag_name, tag_code in musicbee_tags.items():
-                        media[tag_name] = media["tags"].get(tag_code, "")
+                            while i < c:
+                                cue = {}
+                                cue["a"] = self.read_uint(mbl.read(1))
+                                cue["b"] = self.read_uint(mbl.read(2))
+                                cue["c"] = self.read_int(mbl.read(8))
+                                cue["d"] = self.read_uint(mbl.read(2))
+                                media["cue"].append(cue)
+                                i += 1
+                            break
+
+                        media["tags"][str(tag_code)] = self.read_str(mbl)
 
                     # Append the processed media entry to records
                     records.append(media)
                 else:
-                    raise ValueError("Unexpected file designation")  # Handle invalid designations
+                    print(f"Unexpected file designation: {media['file_designation']} at entry {len(records) + 1}")
+                    continue  # Skip unexpected designations
 
         # Convert records to a DataFrame
         self.library_df = pd.DataFrame.from_records(records)
@@ -186,17 +212,14 @@ class MusicBeeLibraryTools:
             initialdir=musicbee_start_folder
         )
         if file_path:
-            try:
-                # Initialize the MusicBeeLibraryTools with the selected file
-                self.file_path = file_path
-                self.parse_library()
-                messagebox.showinfo("Success", "Library loaded successfully!")
 
-                # After loading, show a popup to search for artist
-                self.show_artist_search_popup()
+            # Initialize the MusicBeeLibraryTools with the selected file
+            self.file_path = file_path
+            self.parse_library()
+            messagebox.showinfo("Success", "Library loaded successfully!")
 
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to load library: {e}")
+            # After loading, show a popup to search for artist
+            self.show_artist_search_popup()
 
     def show_artist_search_popup(self):
         """
