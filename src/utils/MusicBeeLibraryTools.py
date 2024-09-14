@@ -173,7 +173,15 @@ class MusicBeeLibraryTools:
                                 i += 1
                             break
 
+                        # Read the tag value and store it with its tag code
                         media["tags"][str(tag_code)] = self.read_str(mbl)
+
+                    # Flatten important tags into separate columns
+                    for key, tag_code in musicbee_tags.items():
+                        media[key] = media["tags"].get(tag_code, "")
+
+                    # Remove the nested tags dictionary if no longer needed
+                    media.pop("tags", None)
 
                     # Append the processed media entry to records
                     records.append(media)
@@ -183,6 +191,7 @@ class MusicBeeLibraryTools:
 
         # Convert records to a DataFrame
         self.library_df = pd.DataFrame.from_records(records)
+        print()
 
     def get_files_by_artist(self, artist_name):
         """
@@ -191,13 +200,15 @@ class MusicBeeLibraryTools:
         :param artist_name: The name of the artist to search for.
         :return: List of file paths matching the artist name.
         """
-        artist_column = musicbee_tags['artist']  # Use the artist tag code from the config
-        if artist_column in self.library_df.columns:  # Check if artist column exists
-            # Filter rows where the artist column contains the artist name (case-insensitive)
-            return self.library_df[self.library_df[artist_column].str.contains(artist_name, case=False, na=False)][
-                'file_path'].tolist()
-        else:
-            return []
+        # Filtrar las filas donde la columna 'artist' contiene el nombre del artista (sin distinguir mayúsculas/minúsculas)
+        filtered_df = self.library_df[self.library_df['artist'].str.contains(artist_name, case=False, na=False)]
+
+        # Extraer las rutas de archivo ('file_path') y convertirlas a una lista
+        file_paths = filtered_df['file_path'].tolist()
+
+        # Retornar la lista de rutas de archivos
+        return file_paths
+
 
     def open_musicbee_library(self):
         """
