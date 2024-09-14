@@ -194,3 +194,7 @@ musicbee_tags = {
     "genre": "59",
     "composer": "43",
 }
+
+guardar_residuos = True
+
+residuos = []

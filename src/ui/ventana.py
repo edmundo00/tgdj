@@ -618,6 +618,23 @@ class Ventana:
                                     ruta_archivo=modified_path,
                                     frame_number=numero_canciones
                                 )
+            if guardar_residuos:
+                # Crear un DataFrame a partir de la lista de residuos
+                residuos_df = pd.DataFrame(residuos, columns=['Titulo Archivo', 'Titulo base de datos', 'Residuo'])
+
+                # Obtener la marca de tiempo actual para el nombre del archivo
+                now = datetime.now()
+                timestamp = now.strftime('%Y%m%d_%H%M%S')
+                filename = f'residuos_{timestamp}.csv'
+
+                # Especificar la carpeta de salida
+                output_folder = 'output'  # Cambia esta ruta según sea necesario
+                file_path = os.path.join(output_folder, filename)
+
+                # Guardar el DataFrame de residuos en un archivo CSV
+                residuos_df.to_csv(file_path, index=False, sep=';')
+
+                print(f'Residuos guardados en: {file_path}')
 
     def load_music_folder(self):
         self.borrar_todo()
@@ -650,6 +667,25 @@ class Ventana:
 
                     # except Exception as error:
                     #     messagebox.showerror("Error", f"Error al leer el archivo musica:\n{error}")
+
+        if guardar_residuos:
+            # Crear un DataFrame a partir de la lista de residuos
+            residuos_df = pd.DataFrame(residuos, columns=['Titulo Archivo', 'Titulo base de datos', 'Residuo'])
+
+
+            # Obtener la marca de tiempo actual para el nombre del archivo
+            now = datetime.now()
+            timestamp = now.strftime('%Y%m%d_%H%M%S')
+            filename = f'residuos_{timestamp}.csv'
+
+            # Especificar la carpeta de salida
+            output_folder = 'output'  # Cambia esta ruta según sea necesario
+            file_path = os.path.join(output_folder, filename)
+
+            # Guardar el DataFrame de residuos en un archivo CSV
+            residuos_df.to_csv(file_path, index=False, sep=';')
+
+            print(f'Residuos guardados en: {file_path}')
         self.progress_bar.pack_forget()
         self.status_label.pack_forget()
 
@@ -728,8 +764,8 @@ class Ventana:
         # Obtener la fecha y hora actual para nombrar el archivo
         now = datetime.now()
         timestamp = now.strftime('%Y%m%d_%H%M%S')
-        filename = f'{archivotest}_{timestamp}.csv'
-        file_path = os.path.join(os.getcwd(), filename)
+        filename = f'tagsbackup_{timestamp}.csv'
+        file_path = os.path.join(output_folder, filename)
         reemplazo_tags_df.to_csv(file_path, index=False, sep=';')
 
         # Resetear la barra de estado al mensaje por defecto

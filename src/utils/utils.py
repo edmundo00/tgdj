@@ -490,7 +490,7 @@ def buscar_titulo(database, tag):
     length_of_database = len(database)
     titulo_original = ftfy.fix_text(tag.title).strip() if tag.title else ""
     if not titulo_original:
-        titulo_original = get_file_name_without_extension(tag._file_name)
+        titulo_original = get_file_name_without_extension(tag._filename)
     titulo_buscar_min = unidecode(convert_numbers_to_words(titulo_original)).lower().strip()
 
     # Primera búsqueda: coincidencia exacta
@@ -499,8 +499,34 @@ def buscar_titulo(database, tag):
 
     # Si no hay coincidencias (todos False), buscar con 'contains'
     if not coincidencias.any():
+        # Primera verificación: si 'titulo_buscar_min' está contenido en 'database["titulo_min"]'
         coincidencias = database["titulo_min"].str.contains(titulo_buscar_min, case=False, na=False, regex=False)
         titulo_coincidencia = 2
+
+    # Segunda verificación: si 'database["titulo_min"]' está contenido en 'titulo_buscar_min'
+    if not coincidencias.any():
+        coincidencias = database["titulo_min"].apply(lambda x: titulo_buscar_min.startswith(x))
+
+        # Encontrar el índice del título más largo entre las coincidencias
+        if coincidencias.any():
+            indice_mejor_coincidencia = database[coincidencias]["titulo_min"].apply(len).idxmax()
+
+            # Crear una serie de coincidencias que solo tiene True para el título más largo
+            coincidencias = coincidencias & (database.index == indice_mejor_coincidencia)
+
+            # Establecer indicador de coincidencia
+            titulo_coincidencia = 2
+
+        if guardar_residuos and coincidencias.any():
+            # Ya hay un solo título más largo seleccionado en coincidencias
+
+            # Obtener el título directamente desde las coincidencias filtradas
+            titulo_coincidencia = database.loc[coincidencias, 'titulo_min'].iloc[0]
+
+            nuevos_residuos = [tag.title, titulo_coincidencia, tag.title[len(titulo_coincidencia):]]
+            # Añadir el residuo completo a la lista
+            residuos.append(nuevos_residuos)  # Cambiado extend() a append()
+
 
     # Si aún no hay coincidencias, usar la función 'contain_most_words'
     if not coincidencias.any():

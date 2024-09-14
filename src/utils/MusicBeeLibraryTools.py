@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from src.config.config import musicbee_start_folder, musicbee_tags
 import pandas as pd  # Import Pandas for DataFrame management
-
+from collections import Counter
 
 class MusicBeeLibraryTools:
     def __init__(self, root, file_path=None):
@@ -230,11 +230,15 @@ class MusicBeeLibraryTools:
             messagebox.showinfo("Success", "Library loaded successfully!")
 
             # After loading, show a popup to search for artist
-            self.show_artist_search_popup()
+            self.musicbee_options_popup()
 
-    def show_artist_search_popup(self):
+    import tkinter as tk
+    from tkinter import messagebox
+    from collections import Counter
+
+    def musicbee_options_popup(self):
         """
-        Show a popup with an entry to search files by artist.
+        Show a popup with an entry to search files by artist and display database statistics.
         """
         if self.library_df.empty:
             messagebox.showwarning("Warning", "Please load a library first.")
@@ -242,8 +246,8 @@ class MusicBeeLibraryTools:
 
         # Create the popup window
         popup = tk.Toplevel(self.root)
-        popup.title("Search by Artist")
-        popup.geometry("400x200")
+        popup.title("Musicbee Options")
+        popup.geometry("1000x800")
 
         # Label and entry for artist name
         artist_label = tk.Label(popup, text="Enter Artist Name:")
@@ -255,6 +259,47 @@ class MusicBeeLibraryTools:
         # Button to trigger the search
         search_button = tk.Button(popup, text="Search", command=lambda: self.show_files_by_artist(artist_entry.get()))
         search_button.pack(pady=10)
+
+        # Button to trigger the comparison
+        compare_button = tk.Button(popup, text="Compare", command=self.comparar_con_basedatos)
+        compare_button.pack(pady=10)
+
+        # Calculate statistics
+        total_files = len(self.library_df)
+        top_artists = Counter(self.library_df['artist']).most_common(5)
+        top_genres = Counter(self.library_df['genre']).most_common(5)
+        top_albums = Counter(self.library_df['album']).most_common(5)
+        year_range = (self.library_df['year'].min(), self.library_df['year'].max())
+
+        # Display statistics
+        stats_frame = tk.Frame(popup)
+        stats_frame.pack(pady=20, fill=tk.BOTH, expand=True)
+
+        stats_label = tk.Label(stats_frame, text="Database Statistics", font=("Arial", 14, "bold"))
+        stats_label.pack(pady=10)
+
+        stats_text = tk.Text(stats_frame, wrap=tk.WORD, height=15)
+        stats_text.insert(tk.END, f"Total Files: {total_files}\n\n")
+        stats_text.insert(tk.END, "Top 5 Artists:\n")
+        for artist, count in top_artists:
+            stats_text.insert(tk.END, f"  - {artist}: {count} files\n")
+
+        stats_text.insert(tk.END, "\nTop 5 Genres:\n")
+        for genre, count in top_genres:
+            stats_text.insert(tk.END, f"  - {genre}: {count} files\n")
+
+        stats_text.insert(tk.END, "\nTop 5 Albums:\n")
+        for album, count in top_albums:
+            stats_text.insert(tk.END, f"  - {album}: {count} files\n")
+
+        stats_text.insert(tk.END, f"\nYear Range: {year_range[0]} - {year_range[1]}")
+        stats_text.config(state=tk.DISABLED)  # Make the text read-only
+        stats_text.pack(pady=10, padx=10, fill=tk.BOTH, expand=True)
+
+    def comparar_con_basedatos(self):
+
+        return None
+
 
     def show_files_by_artist(self, artist_name):
         """
