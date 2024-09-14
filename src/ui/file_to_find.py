@@ -45,42 +45,9 @@ class FILETOFIND:
 
         self.buscar()
         if compare:
-            #now = datetime.now()  # Get the current datetime
-            #print(f"{now.minute} minutos, {now.second} segundos y {now.microsecond} microsegundos")  # Correct way to access minutes and seconds
             self.nextframe = self.frame_number
-            # Apply tags directly if matches exist
-            if self.coincidencias is not None and not self.coincidencias.empty:
-                self.apply_tags_directly()
         else:
             self.representa()
-
-    def apply_tags_directly(self):
-        """
-        Apply tags directly using the first preferred match or all matches
-        if multiple preferred matches exist.
-        """
-        if self.hay_coincidencia_preferida and not self.perfect_match:
-            # print(self.ruta_archivo)
-            # # Imprime los tags alineados
-            # # Imprime los títulos alineados como primera fila
-            # print(f"{'Campo':<20} {'Tags Originales':<40} {'Coincidencias Preferidas':<40}")
-            #
-            # # Accede a la fila específica usando self.coincidencia_preferida
-            # fila = self.coincidencias.iloc[self.coincidencia_preferida]
-            #
-            # # Imprime los valores alineados uno debajo del otro para comparar
-            # print(f"{'Título:':<20} {self.tags.title:<40} {fila['titulo']:<40}")
-            # print(f"{'Orquesta:':<20} {self.artists1:<40} {fila['artista']:<40}")
-            # print(f"{'Cantor:':<20} {self.artists2:<40} {fila['cantor']:<40}")
-            # print(f"{'Fecha:':<20} {self.tags.year:<40} {fila['fecha']:<40}")
-            # print(f"{'Género:':<20} {self.tags.genre:<40} {fila['estilo']:<40}")
-            # print(f"{'Compositor/Autor:':<20} {self.tags.composer:<40} {fila['compositor_autor']:<40}")
-
-            aplicartag_archivo(ruta_archivo=self.ruta_archivo, coincidencias=self.coincidencias, coincidencia_preferida=self.coincidencia_preferida, tags=self.tags)
-
-        else:
-            print('No hay coincidencias preferidas')
-
 
     def representa(self):
         # Determinar color de fondo basado en el número de frame
@@ -422,17 +389,26 @@ class FILETOFIND:
             return
 
         # Comparar tags y generar coincidencias
-        self.bool_coincidencias, self.perfect_match = compare_tags(
+        self.bool_coincidencias, self.perfect_match, perfect_match_index = compare_tags(
             self.artista_coincidencia, self.titulo_coincidencia, database_titulo, self.tags
         )
 
-        self.hay_coincidencia_preferida, self.coincidencia_preferida = buscar_preferencias (self.bool_coincidencias, self.show_date_checked)
+        if self.perfect_match:
+            # Filtrar solo la coincidencia exacta utilizando el índice perfecto
+            database_titulo = database_titulo.loc[[perfect_match_index]]
+            self.hay_coincidencia_preferida = False  # No hay coincidencia preferida en caso de perfect match
+            self.coincidencia_preferida = 0
 
-        # Generar colores para los labels
-        self.colores_labels = coincidencias_a_colores(self.bool_coincidencias)
+        else:
+            # Si no hay perfect match, proceder con la búsqueda de coincidencia preferida
+            self.hay_coincidencia_preferida, self.coincidencia_preferida = buscar_preferencias(
+                self.bool_coincidencias, self.show_date_checked
+            )
 
-        # Guardar coincidencias
         self.coincidencias = database_titulo
+        # Generar colores para los labels
+        self.colores_labels = coincidencias_a_colores(self.bool_coincidencias,self.perfect_match)
+
 
 
     def buscar_artista(self, artista_original):

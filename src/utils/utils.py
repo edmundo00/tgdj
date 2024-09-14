@@ -145,7 +145,8 @@ def convert_date_format(date_str):
 
     return new_date_str
 
-def coincidencias_a_colores(bool_coincidencias):
+
+def coincidencias_a_colores(bool_coincidencias, perfect_match):
     # Definir colores para cada tipo de coincidencia
     colores = {
         'EXACTO': 'lightgreen',
@@ -158,14 +159,23 @@ def coincidencias_a_colores(bool_coincidencias):
     indices = next(iter(bool_coincidencias.values())).index
     df_colores = pd.DataFrame(index=indices)
 
+    # Si hay un perfect match, asignar todos los colores a gris y retornar
+    if perfect_match:
+        df_colores = pd.DataFrame('grey', index=indices, columns=[
+            'ORQUESTA', 'TITULO', 'CANTOR', 'FECHA', 'ESTILO', 'COMPOSITOR'
+        ])
+        return df_colores
+
     # Mapear los colores para cada categoría relevante
     mapping = {
-        'ORQUESTA': [TagLabels.ORQUESTA_EXACTA, TagLabels.ORQUESTA, TagLabels.ORQUESTA_PARCIAL, TagLabels.ORQUESTA_NEGATIVO],
+        'ORQUESTA': [TagLabels.ORQUESTA_EXACTA, TagLabels.ORQUESTA, TagLabels.ORQUESTA_PARCIAL,
+                     TagLabels.ORQUESTA_NEGATIVO],
         'TITULO': [TagLabels.TITULO_EXACTO, TagLabels.TITULO, TagLabels.TITULO_PARCIAL, TagLabels.TITULO_NEGATIVO],
         'CANTOR': [TagLabels.CANTOR_EXACTO, TagLabels.CANTOR, TagLabels.CANTOR_PARCIAL, TagLabels.CANTOR_NEGATIVO],
         'FECHA': [TagLabels.FECHA_EXACTA, TagLabels.FECHA, TagLabels.FECHA_PARCIAL, TagLabels.FECHA_NEGATIVA],
         'ESTILO': [TagLabels.ESTILO_EXACTO, TagLabels.ESTILO, TagLabels.ESTILO_PARCIAL, TagLabels.ESTILO_NEGATIVO],
-        'COMPOSITOR': [TagLabels.COMPOSITOR_AUTOR_EXACTO, TagLabels.COMPOSITOR_AUTOR, TagLabels.COMPOSITOR_AUTOR_PARCIAL, TagLabels.COMPOSITOR_AUTOR_NEGATIVO]
+        'COMPOSITOR': [TagLabels.COMPOSITOR_AUTOR_EXACTO, TagLabels.COMPOSITOR_AUTOR,
+                       TagLabels.COMPOSITOR_AUTOR_PARCIAL, TagLabels.COMPOSITOR_AUTOR_NEGATIVO]
     }
 
     # Procesar cada grupo de coincidencias
@@ -188,9 +198,6 @@ def coincidencias_a_colores(bool_coincidencias):
 
     return df_colores
 
-# Ejemplo de uso con self.bool_coincidencias
-# resultado = coincidencias_a_colores(self.bool_coincidencias)
-# print(resultado)
 
 def update_tags(file_path, title=None, artist=None, year=None, genre=None, composer=None):
     # Get the file extension
@@ -267,10 +274,19 @@ def capitalize_uppercase_words(text):
 
     return ' '.join(transformed_words)
 
-def aplicartag_archivo(ruta_archivo,coincidencias,coincidencia_preferida,tags):
 
+def aplicartag_archivo(ruta_archivo, coincidencias, coincidencia_preferida, tags):
+    # Separar artistas originales en dos partes
     artists1, artists2 = separar_artistas(tags.artist)
-    artist=unir_artistas(coincidencias.artista.iloc[coincidencia_preferida],coincidencias.cantor.iloc[coincidencia_preferida], " / " )
+
+    # Combinar artista y cantor preferidos
+    artist = unir_artistas(
+        coincidencias.artista.iloc[coincidencia_preferida],
+        coincidencias.cantor.iloc[coincidencia_preferida],
+        " / "
+    )
+
+    # Actualizar tags usando un solo llamado a la función update_tags
     update_tags(
         ruta_archivo,
         title=coincidencias.titulo.iloc[coincidencia_preferida],
@@ -279,6 +295,8 @@ def aplicartag_archivo(ruta_archivo,coincidencias,coincidencia_preferida,tags):
         genre=coincidencias.estilo.iloc[coincidencia_preferida],
         composer=coincidencias.compositor_autor.iloc[coincidencia_preferida]
     )
+
+    # Crear el diccionario de reemplazo de tags
     reemplazo_tags_linea = {
         'archivo': ruta_archivo,
         'old_title': tags.title,
@@ -294,6 +312,8 @@ def aplicartag_archivo(ruta_archivo,coincidencias,coincidencia_preferida,tags):
         'old_composer': tags.composer,
         'new_composer': coincidencias.compositor_autor.iloc[coincidencia_preferida]
     }
+
+    return reemplazo_tags_linea
 
 def extraer_cuatro_numeros(cadena):
     # Usamos la expresión regular \d{4} para encontrar cuatro dígitos consecutivos
@@ -554,32 +574,39 @@ def compare_tags(artista_coincidencia, titulo_coincidencia, database, tag):
     coincidencias[TagLabels.COMPOSITOR_AUTOR_PARCIAL] = pd.Series([False] * database_length, index=database.index)
     coincidencias[TagLabels.COMPOSITOR_AUTOR_NEGATIVO] = pd.Series([True] * database_length, index=database.index)
 
-    # Ajustes para asegurar que solo uno sea True por cada grupo
+    #Ajustes para asegurar que solo uno sea True por cada grupo
     def ajustar_grupo(grupo):
         exacto, completo, parcial, negativo = grupo
         coincidencias[completo] = coincidencias[completo] & ~coincidencias[exacto]
         coincidencias[parcial] = coincidencias[parcial] & ~(coincidencias[exacto] | coincidencias[completo])
-        coincidencias[negativo] = coincidencias[negativo] & ~(coincidencias[exacto] | coincidencias[completo] | coincidencias[parcial])
+        coincidencias[negativo] = coincidencias[negativo] & ~(
+                    coincidencias[exacto] | coincidencias[completo] | coincidencias[parcial])
 
     # Ajustar todos los grupos
-    ajustar_grupo([TagLabels.ORQUESTA_EXACTA, TagLabels.ORQUESTA, TagLabels.ORQUESTA_PARCIAL, TagLabels.ORQUESTA_NEGATIVO])
+    ajustar_grupo(
+        [TagLabels.ORQUESTA_EXACTA, TagLabels.ORQUESTA, TagLabels.ORQUESTA_PARCIAL, TagLabels.ORQUESTA_NEGATIVO])
     ajustar_grupo([TagLabels.TITULO_EXACTO, TagLabels.TITULO, TagLabels.TITULO_PARCIAL, TagLabels.TITULO_NEGATIVO])
     ajustar_grupo([TagLabels.CANTOR_EXACTO, TagLabels.CANTOR, TagLabels.CANTOR_PARCIAL, TagLabels.CANTOR_NEGATIVO])
     ajustar_grupo([TagLabels.FECHA_EXACTA, TagLabels.FECHA, TagLabels.FECHA_PARCIAL, TagLabels.FECHA_NEGATIVA])
     ajustar_grupo([TagLabels.ESTILO_EXACTO, TagLabels.ESTILO, TagLabels.ESTILO_PARCIAL, TagLabels.ESTILO_NEGATIVO])
-    ajustar_grupo([TagLabels.COMPOSITOR_AUTOR_EXACTO, TagLabels.COMPOSITOR_AUTOR, TagLabels.COMPOSITOR_AUTOR_PARCIAL, TagLabels.COMPOSITOR_AUTOR_NEGATIVO])
+    ajustar_grupo([TagLabels.COMPOSITOR_AUTOR_EXACTO, TagLabels.COMPOSITOR_AUTOR, TagLabels.COMPOSITOR_AUTOR_PARCIAL,
+                   TagLabels.COMPOSITOR_AUTOR_NEGATIVO])
 
     # Check all fields (todo)
-    coincidencias[TagLabels.TODO] = coincidencias[TagLabels.TITULO_EXACTO] & \
-                                    coincidencias[TagLabels.ORQUESTA_EXACTA] & \
-                                    coincidencias[TagLabels.CANTOR_EXACTO] & \
-                                    coincidencias[TagLabels.FECHA_EXACTA] & \
-                                    coincidencias[TagLabels.ESTILO_EXACTO] & \
-                                    coincidencias[TagLabels.COMPOSITOR_AUTOR_EXACTO]
+    coincidencias[TagLabels.TODO] = (
+            coincidencias[TagLabels.TITULO_EXACTO] &
+            coincidencias[TagLabels.ORQUESTA_EXACTA] &
+            coincidencias[TagLabels.CANTOR_EXACTO] &
+            coincidencias[TagLabels.FECHA_EXACTA] &
+            coincidencias[TagLabels.ESTILO_EXACTO] &
+            coincidencias[TagLabels.COMPOSITOR_AUTOR_EXACTO]
+    )
 
+    # Determinar si hay un perfect match y encontrar el índice de la coincidencia
     perfect_match = coincidencias[TagLabels.TODO].any()
+    perfect_match_index = coincidencias[TagLabels.TODO].idxmax() if perfect_match else None
 
-    return coincidencias, perfect_match
+    return coincidencias, perfect_match, perfect_match_index
 
 
 

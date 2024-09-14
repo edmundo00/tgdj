@@ -567,36 +567,21 @@ class Ventana:
         """Reset the scroll region to encompass the inner frame."""
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
-
-
     def load_music_file(self):
-        self.borrar_todo()
+        self.borrar_todo()  # Limpiar la lista de archivos existentes
         numero_canciones = 0
+
+        # Abrir un diálogo para seleccionar un archivo de música
         file_path = filedialog.askopenfilename(
             filetypes=[("MUSIC files", ".mp3 .wav .flac .ogg .m4a"), ("All files", "*.*")]
         )
-        if file_path:
-            # try:
-            new_filetofind = FILETOFIND(
-                framefiles=self.scrollable_frame[0],
-                framedatabase=self.scrollable_frame[1],
-                frames_columnas_archivo=self.frames_columnas_archivo,  # Pasar diccionario de frames de archivo
-                frames_columnas_resultado=self.frames_columnas_resultado,  # Pasar diccionario de frames de resultado
-                ruta_archivo=file_path,
-                frame_number=numero_canciones,
-                root=self.root,
-                show_date_checked=self.date_checked.get(),
-                show_perfect_matches=self.perfect_matches.get(),
-                show_artist_not_found=self.artist_not_found.get(),
-                show_title_not_found=self.title_not_found.get(),
-                show_remaining=self.view_remaining.get(),  # Pasar el estado del nuevo checkbox
-                compare=self.direct_comparison.get()
-            )
 
-            numero_canciones = new_filetofind.nextframe
-            filetofind_list.append(new_filetofind)
-            # except Exception as error:
-            #     messagebox.showerror("Error", f"Error al leer el archivo musica:\n{error}")
+        if file_path:
+            # Usar el método crear_y_actualizar_filetofind para crear la instancia de FILETOFIND
+            numero_canciones = self.crear_y_actualizar_filetofind(
+                ruta_archivo=file_path,
+                frame_number=numero_canciones
+            )
 
     def open_playlist(self):
         self.borrar_todo()
@@ -692,54 +677,114 @@ class Ventana:
 
         # Actualizar el número de canciones y añadir a la lista global
         frame_number = new_filetofind.nextframe
+
         filetofind_list.append(new_filetofind)
 
         return frame_number
 
-
-
-
     def aplicartags(self):
         reemplazo_tags = []
-        for archivos in filetofind_list:
-            for index, check in enumerate(archivos.vars):
-                if check.get():
-                    artist=unir_artistas(archivos.coincidencias.artista.iloc[index],archivos.coincidencias.cantor.iloc[index], " / " )
+        total_archivos = len(filetofind_list)
+        analizados = 0  # Contador de archivos analizados
+        tageados = 0  # Contador de archivos efectivamente etiquetados
 
-
-                    update_tags(
-                        archivos.ruta_archivo,
-                        title=archivos.coincidencias.titulo.iloc[index],
-                        artist=artist,
-                        year=archivos.coincidencias.fecha.iloc[index],
-                        genre=archivos.coincidencias.estilo.iloc[index],
-                        composer=archivos.coincidencias.compositor_autor.iloc[index]
+        if self.direct_comparison:
+            # Aplicar directamente los tags para las instancias con coincidencia preferida
+            for archivos in filetofind_list:
+                analizados += 1  # Incrementar el contador de analizados
+                if archivos.hay_coincidencia_preferida:
+                    # Usar aplicartag_archivo para aplicar los cambios
+                    reemplazo_tags_linea = aplicartag_archivo(
+                        ruta_archivo=archivos.ruta_archivo,
+                        coincidencias=archivos.coincidencias,
+                        coincidencia_preferida=archivos.coincidencia_preferida,
+                        tags=archivos.tags
                     )
-                    reemplazo_tags_linea = {
-                        'archivo': archivos.ruta_archivo,
-                        'old_title': archivos.tags.title,
-                        'new_title': archivos.coincidencias.titulo.iloc[index],
-                        'old_artist': archivos.artists1,
-                        'new_artist': archivos.coincidencias.artista.iloc[index],
-                        'old_cantor': archivos.artists2,
-                        'new_cantor': archivos.coincidencias.cantor.iloc[index],
-                        'old_year': archivos.tags.year,
-                        'new_year': archivos.coincidencias.fecha.iloc[index],
-                        'old_genre': archivos.tags.genre,
-                        'new_genre': archivos.coincidencias.estilo.iloc[index],
-                        'old_composer': archivos.tags.composer,
-                        'new_composer': archivos.coincidencias.compositor_autor.iloc[index]
-                    }
                     reemplazo_tags.append(reemplazo_tags_linea)
+                    tageados += 1  # Incrementar el contador de tageados
+                # Actualizar la barra de estado con el progreso
+                self.actualizar_barra_estado(analizados, total_archivos, tageados)
+        else:
+            # Operar sobre las variables vars si no hay comparación directa
+            for archivos in filetofind_list:
+                for index, check in enumerate(archivos.vars):
+                    analizados += 1  # Incrementar el contador de analizados
+                    if check.get():
+                        # Usar aplicartag_archivo para simplificar la lógica de asignación de tags
+                        reemplazo_tags_linea = aplicartag_archivo(
+                            ruta_archivo=archivos.ruta_archivo,
+                            coincidencias=archivos.coincidencias,
+                            coincidencia_preferida=index,
+                            tags=archivos.tags
+                        )
+                        reemplazo_tags.append(reemplazo_tags_linea)
+                        tageados += 1  # Incrementar el contador de tageados
+                    # Actualizar la barra de estado con el progreso
+                    self.actualizar_barra_estado(analizados, total_archivos, tageados)
+
+        # Crear DataFrame y guardar en un archivo CSV
         reemplazo_tags_df = pd.DataFrame(reemplazo_tags)
 
-        # Get the current date and time
+        # Obtener la fecha y hora actual para nombrar el archivo
         now = datetime.now()
-
-        # Format the date and time to include in the filename
         timestamp = now.strftime('%Y%m%d_%H%M%S')
         filename = f'{archivotest}_{timestamp}.csv'
-        reemplazo_tags_df.to_csv(filename, index=False, sep=';')
+        file_path = os.path.join(os.getcwd(), filename)
+        reemplazo_tags_df.to_csv(file_path, index=False, sep=';')
+
+        # Resetear la barra de estado al mensaje por defecto
+        self.resetear_barra_estado()
+
+        # Mostrar mensaje de confirmación con un enlace para abrir el archivo y el resumen final
+        self.mostrar_mensaje_confirmacion(file_path, analizados, tageados)
+
+    def actualizar_barra_estado(self, analizados, total, tageados):
+        # Actualizar la barra de estado con el mensaje de progreso
+        mensaje = f"Archivos analizados: {analizados} de {total}, tageados: {tageados}"
+        # Suponiendo que tienes una barra de estado en tu aplicación, por ejemplo, un Label o un StatusBar
+        self.status_bar.config(text=mensaje)
+        self.status_bar.update_idletasks()  # Refrescar la barra de estado
+
+    def resetear_barra_estado(self):
+        # Restablecer la barra de estado al mensaje por defecto
+        mensaje_defecto = "Listo"
+        self.status_bar.config(text=mensaje_defecto)
+        self.status_bar.update_idletasks()
+
+    def mostrar_mensaje_confirmacion(self, file_path, analizados, tageados):
+        # Crear una ventana emergente para mostrar el mensaje de confirmación
+        popup = tk.Toplevel()
+        popup.title("Archivo Guardado")
+        popup.geometry("350x250")  # Ajustar el tamaño de la ventana
+
+        # Etiqueta de confirmación de guardado
+        label = tk.Label(popup, text="Archivo guardado correctamente.")
+        label.pack(pady=10)
+
+        # Mostrar el resumen de archivos analizados y etiquetados
+        resumen = f"Archivos analizados: {analizados}\nArchivos tageados: {tageados}"
+        resumen_label = tk.Label(popup, text=resumen)
+        resumen_label.pack(pady=10)
+
+        # Mostrar la ruta del archivo guardado
+        path_label = tk.Label(popup, text=f"Ruta del archivo:\n{file_path}", wraplength=300, justify="center")
+        path_label.pack(pady=10)
+
+        # Botón para abrir el archivo
+        abrir_button = tk.Button(popup, text="Abrir archivo", command=lambda: self.abrir_archivo(file_path))
+        abrir_button.pack(pady=10)
+
+        # Botón para cerrar la ventana emergente
+        cerrar_button = tk.Button(popup, text="Cerrar", command=popup.destroy)
+        cerrar_button.pack(pady=10)
+
+    def abrir_archivo(self, file_path):
+        # Abrir el archivo en el explorador de archivos predeterminado del sistema
+        os.startfile(file_path)  # Para Windows
+
+        # Para otros sistemas operativos:
+        # macOS: os.system(f'open "{file_path}"')
+        # Linux: os.system(f'xdg-open "{file_path}"')
 
     def borrar_todo(self):
         for archivos in filetofind_list:
