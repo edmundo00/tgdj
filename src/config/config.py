@@ -196,7 +196,7 @@ musicbee_tags = {
     "composer": "43",
 }
 
-guardar_residuos = True
+guardar_residuos = False
 
 residuos = []
 

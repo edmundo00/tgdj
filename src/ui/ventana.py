@@ -25,9 +25,6 @@ class Ventana:
         # Initialize PlaylistOperations
         self.playlist_operations = PlaylistOperations(self.root, m3u_start_path, path_map)
 
-        self.musicbee = MusicBeeLibraryTools(self.root)
-
-
         self.root.title("Tkinter Window with Menu, Icon, and Status Bar")
         self.root.geometry('1700x800')
 
@@ -121,7 +118,7 @@ class Ventana:
             (self.playlist_icon, self.open_playlist),
             (self.convert_playlist_icon, self.playlist_operations.convert_playlist),
             (self.merge_icon, self.playlist_operations.merge_playlist),
-            (self.musicbee_icon, self.musicbee.open_musicbee_library)
+            (self.musicbee_icon, self.open_musicbee_library)
         ]
 
         for i, (icon, command) in enumerate(buttons):
@@ -168,25 +165,6 @@ class Ventana:
         # Ensure the grid inside the scrollable frame allows content to expand
         scrollable_frame.grid_rowconfigure(0, weight=1)  # Ensuring the row expands
         scrollable_frame.grid_columnconfigure(0, weight=1)  # Ensuring the column expands
-
-    def open_musicbee_library(self):
-        """Open a file dialog to select the MusicBee library file."""
-        file_path = filedialog.askopenfilename(
-            title="Select MusicBee Library File",
-            filetypes=[("MusicBee Library Files", "*.mbl"), ("All Files", "*.*")]
-        )
-        if file_path:
-            try:
-                # Initialize the MusicBeeLibraryTools with the selected file
-                self.musicbee_tool = MusicBeeLibraryTools(file_path)
-                self.musicbee_tool.parse_library()
-                messagebox.showinfo("Success", "Library loaded successfully!")
-
-                # After loading, show a popup to search for artist
-                self.show_artist_search_popup()
-
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to load library: {e}")
 
     def create_title_frame(self):
         """Create the title frame with 'File Tags' and 'Database Tags' labels."""
@@ -561,9 +539,6 @@ class Ventana:
         # Iniciar el loop de tkinter
         popup.mainloop()
 
-    # AQUI EMPIEZA LO MIO
-    # AQUI EMPIEZA LO MIO
-    # AQUI EMPIEZA LO MIO
     def on_frame_configure(self, event):
         """Reset the scroll region to encompass the inner frame."""
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
@@ -583,6 +558,33 @@ class Ventana:
                 ruta_archivo=file_path,
                 frame_number=numero_canciones
             )
+
+    def open_musicbee_library(self):
+
+        self.borrar_todo()  # Limpiar la lista de archivos existentes
+        numero_canciones = 0
+        """Open a file dialog to select the MusicBee library file."""
+        file_path = filedialog.askopenfilename(
+            title="Select MusicBee Library File",
+            filetypes=[("MusicBee Library Files", "*.mbl"), ("All Files", "*.*")]
+        )
+        if file_path:
+            try:
+                # Initialize the MusicBeeLibraryTools with the selected file
+                self.musicbee_tool = MusicBeeLibraryTools(self.root, file_path)
+                self.musicbee_tool.parse_library()
+                # messagebox.showinfo("Success", "Library loaded successfully!")
+                lines = self.musicbee_tool.library_df['file_path'].tolist()
+                tagsml_df = self.musicbee_tool.library_df[['title', 'artist', 'year', 'genre', 'composer','file_path']]
+
+                self.procesar_archivos(lines, numero_canciones, from_musicbee=True, show_progress=True,
+                                       origen=file_path, tags=tagsml_df)
+
+                # # After loading, show a popup to search for artist
+                # self.musicbee_tool.musicbee_options_popup()
+
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to load library: {e}")
 
     def open_playlist(self):
         self.borrar_todo()
@@ -604,6 +606,9 @@ class Ventana:
             with open(self.m3u_file_path, 'r', encoding='utf-8') as file:
                 lines = [line.strip() for line in file if line.strip() and not line.startswith("#")]
                 # Process lines from M3U file
+                #lines es una lista con todos los paths de las canciones
+                # numero_canciones es un contador que se define aqui mismo
+
                 self.procesar_archivos(lines, numero_canciones, from_playlist=True, show_progress=True,origen=self.m3u_file_path)
 
     def load_music_folder(self):
@@ -619,7 +624,7 @@ class Ventana:
             # Process files from the directory
             self.procesar_archivos(music_files, numero_canciones, show_progress=True,origen=folder_path)
 
-    def procesar_archivos(self, archivos, numero_canciones, from_playlist=False, show_progress=False, origen=None):
+    def procesar_archivos(self, archivos, numero_canciones, from_playlist=False, from_musicbee= False, show_progress=False, origen=None, tags=None):
         """Procesa una lista de archivos y actualiza la interfaz."""
 
         self.df_reporte.drop(self.df_reporte.index, inplace=True)
@@ -630,6 +635,7 @@ class Ventana:
             self.setup_progress_bar()
 
         for index, archivo in enumerate(archivos):
+            tags_aplicar = None
             # Update progress if required
             if show_progress:
                 self.update_progress_bar(current= index + 1, total= total_archivos)
@@ -642,10 +648,16 @@ class Ventana:
                 if os.path.exists(modified_path):
                     archivo = modified_path
 
+            if from_musicbee and os.path.exists(archivo):
+                # Handle special case for modified paths in playlists
+                tags_aplicar = tags.iloc[index].tolist()
+
+
             if os.path.exists(archivo):
                 numero_canciones, report_archivo = self.crear_y_actualizar_filetofind(
                     ruta_archivo=archivo,
-                    frame_number=numero_canciones
+                    frame_number=numero_canciones,
+                    tags = tags_aplicar
                 )
                 #self.df_reporte.loc[len(self.df_reporte)] = report_archivo
                 self.df_reporte = pd.concat([self.df_reporte, pd.DataFrame([report_archivo])], ignore_index=True)
@@ -729,7 +741,7 @@ class Ventana:
         self.progress_bar.pack_forget()
         self.status_label.pack_forget()
 
-    def crear_y_actualizar_filetofind(self, ruta_archivo, frame_number):
+    def crear_y_actualizar_filetofind(self, ruta_archivo, frame_number, tags):
         """
         Crea una instancia de FILETOFIND, la actualiza según los filtros seleccionados,
         y la añade a la lista global de filetofind_list.
@@ -752,10 +764,11 @@ class Ventana:
 
         # Pass the list as a single argument along with other parameters
         new_filetofind = FILETOFIND(
-            lista_frames=lista_frames,
             ruta_archivo=ruta_archivo,
+            lista_frames=lista_frames,
             frame_number=frame_number,
-            lista_checks=lista_checks
+            lista_checks=lista_checks,
+            tags = tags
         )
 
         # Actualizar el número de canciones y añadir a la lista global

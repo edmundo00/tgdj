@@ -1,242 +1,138 @@
-import tkinter as tk
-from tkinter import ttk
+import pandas as pd
+from tinytag import TinyTag
+from mutagen.easyid3 import EasyID3
+from mutagen.mp3 import MP3
+from mutagen.flac import FLAC
+from mutagen.mp4 import MP4
+import os
 
-class MiAplicacion(tk.Tk):
-    def __init__(self):
-        super().__init__()
-        self.title("Ejemplo de Agrupación de Columnas con Frames")
 
-        # Configurar la ventana principal para que se expanda
-        self.grid_rowconfigure(0, weight=1)
-        self.grid_columnconfigure(0, weight=1)
+def update_tags(file_path, title=None, artist=None, year=None, genre=None, composer=None):
+    # Get the file extension
+    _, ext = os.path.splitext(file_path)
+    ext = ext.lower()
 
-        # Crear el frame principal y configurarlo para que se expanda
-        self.frame_principal = ttk.Frame(self)
-        self.frame_principal.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
-
-        # Definir la configuración de las columnas
-        columnas_config = {
-            "archivo_info": {
-                "titulo": "", "columna": 0, "ancho": 15, "expandir": False, "fondo": "#f0f0f0", "borde": 1,
-                "sticky": "ns", "rowconfigure": {"index": 1, "weight": 0, "minsize": 10},
-                "columnconfigure": {"index": 0, "weight": 0, "minsize": 15}
-            },
-            "archivo_titulo": {
-                "titulo": "Titulo", "columna": 1, "ancho": None, "expandir": True, "fondo": "#ffffff", "borde": 1,
-                "sticky": "nsew", "rowconfigure": {"index": 1, "weight": 1, "minsize": 20},
-                "columnconfigure": {"index": 0, "weight": 1, "minsize": 50}
-            },
-            "archivo_orquesta": {
-                "titulo": "Orquesta", "columna": 2, "ancho": None, "expandir": True, "fondo": "#ffffff", "borde": 1,
-                "sticky": "nsew", "rowconfigure": {"index": 1, "weight": 1, "minsize": 20},
-                "columnconfigure": {"index": 0, "weight": 1, "minsize": 50}
-            },
-            "archivo_cantor": {
-                "titulo": "Cantor", "columna": 3, "ancho": None, "expandir": True, "fondo": "#ffffff", "borde": 1,
-                "sticky": "nsew", "rowconfigure": {"index": 1, "weight": 1, "minsize": 20},
-                "columnconfigure": {"index": 0, "weight": 1, "minsize": 50}
-            },
-            "archivo_fecha": {
-                "titulo": "Fecha", "columna": 4, "ancho": None, "expandir": True, "fondo": "#ffffff", "borde": 1,
-                "sticky": "nsew", "rowconfigure": {"index": 1, "weight": 1, "minsize": 20},
-                "columnconfigure": {"index": 0, "weight": 1, "minsize": 50}
-            },
-            "archivo_play": {
-                "titulo": "", "columna": 5, "ancho": 15, "expandir": False, "fondo": "#f0f0f0", "borde": 1,
-                "sticky": "ns", "rowconfigure": {"index": 1, "weight": 0, "minsize": 10},
-                "columnconfigure": {"index": 0, "weight": 0, "minsize": 15}
-            },
-            "archivo_pausa": {
-                "titulo": "", "columna": 6, "ancho": 15, "expandir": False, "fondo": "#f0f0f0", "borde": 1,
-                "sticky": "ns", "rowconfigure": {"index": 1, "weight": 0, "minsize": 10},
-                "columnconfigure": {"index": 0, "weight": 0, "minsize": 15}
-            },
-            "database_checkbox": {
-                "titulo": "", "columna": 7, "ancho": 15, "expandir": False, "fondo": "#f0f0f0", "borde": 1,
-                "sticky": "ns", "rowconfigure": {"index": 1, "weight": 0, "minsize": 10},
-                "columnconfigure": {"index": 0, "weight": 0, "minsize": 15}
-            },
-            "database_titulo": {
-                "titulo": "Titulo", "columna": 8, "ancho": None, "expandir": True, "fondo": "#ffffff", "borde": 1,
-                "sticky": "nsew", "rowconfigure": {"index": 1, "weight": 1, "minsize": 20},
-                "columnconfigure": {"index": 0, "weight": 1, "minsize": 50}
-            },
-            "database_orquesta": {
-                "titulo": "Orquesta", "columna": 9, "ancho": None, "expandir": True, "fondo": "#ffffff", "borde": 1,
-                "sticky": "nsew", "rowconfigure": {"index": 1, "weight": 1, "minsize": 20},
-                "columnconfigure": {"index": 0, "weight": 1, "minsize": 50}
-            },
-            "database_cantor": {
-                "titulo": "Cantor", "columna": 10, "ancho": None, "expandir": True, "fondo": "#ffffff", "borde": 1,
-                "sticky": "nsew", "rowconfigure": {"index": 1, "weight": 1, "minsize": 20},
-                "columnconfigure": {"index": 0, "weight": 1, "minsize": 50}
-            },
-            "database_estilo": {
-                "titulo": "Genero", "columna": 11, "ancho": None, "expandir": True, "fondo": "#ffffff", "borde": 1,
-                "sticky": "nsew", "rowconfigure": {"index": 1, "weight": 1, "minsize": 20},
-                "columnconfigure": {"index": 0, "weight": 1, "minsize": 50}
-            },
-            "database_fecha": {
-                "titulo": "Fecha", "columna": 12, "ancho": None, "expandir": True, "fondo": "#ffffff", "borde": 1,
-                "sticky": "nsew", "rowconfigure": {"index": 1, "weight": 1, "minsize": 20},
-                "columnconfigure": {"index": 0, "weight": 1, "minsize": 50}
-            },
-            "database_info": {
-                "titulo": "", "columna": 13, "ancho": 15, "expandir": False, "fondo": "#f0f0f0", "borde": 1,
-                "sticky": "ns", "rowconfigure": {"index": 1, "weight": 0, "minsize": 10},
-                "columnconfigure": {"index": 0, "weight": 0, "minsize": 15}
-            },
-            "database_play30": {
-                "titulo": "", "columna": 14, "ancho": 15, "expandir": False, "fondo": "#f0f0f0", "borde": 1,
-                "sticky": "ns", "rowconfigure": {"index": 1, "weight": 0, "minsize": 10},
-                "columnconfigure": {"index": 0, "weight": 0, "minsize": 15}
-            },
-            "database_play10": {
-                "titulo": "", "columna": 15, "ancho": 15, "expandir": False, "fondo": "#f0f0f0", "borde": 1,
-                "sticky": "ns", "rowconfigure": {"index": 1, "weight": 0, "minsize": 10},
-                "columnconfigure": {"index": 0, "weight": 0, "minsize": 15}
-            },
-            "database_pausa": {
-                "titulo": "", "columna": 16, "ancho": 15, "expandir": False, "fondo": "#f0f0f0", "borde": 1,
-                "sticky": "ns", "rowconfigure": {"index": 1, "weight": 0, "minsize": 10},
-                "columnconfigure": {"index": 0, "weight": 0, "minsize": 15}
-            }
-        }
-
-        # Configurar las columnas de acuerdo a su propiedad 'expandir'
-        for nombre_interno, config in columnas_config.items():
-            # Configura el peso solo para las columnas que deben expandirse
-            if config["expandir"]:
-                self.frame_principal.grid_columnconfigure(config["columna"], weight=1)  # Expande
-            else:
-                self.frame_principal.grid_columnconfigure(config["columna"], weight=0)  # No expande
-
-        # Configurar la expansión de la fila de contenido
-        self.frame_principal.grid_rowconfigure(1, weight=1)
-
-        # Crear encabezados para las agrupaciones con bordes
-        archivo_label = tk.Label(
-            self.frame_principal, text="Archivo", font=("Consolas", 12, "bold"),
-            borderwidth=2, relief="solid"
-        )
-        archivo_label.grid(row=0, column=0, columnspan=7, sticky="nsew", padx=2, pady=2)
-
-        base_datos_label = tk.Label(
-            self.frame_principal, text="Base de datos", font=("Consolas", 12, "bold"),
-            borderwidth=2, relief="solid"
-        )
-        base_datos_label.grid(row=0, column=7, columnspan=10, sticky="nsew", padx=2, pady=2)
-
-        # Crear frames para las columnas usando la configuración detallada
-        self.frames_columnas = {}
-        for nombre_interno, config in columnas_config.items():
-            frame_columna = ttk.Frame(self.frame_principal, borderwidth=config["borde"], relief="solid")
-            frame_columna.grid(row=1, column=config["columna"], padx=2, pady=2, sticky=config["sticky"])
-
-            # Configurar el frame de la columna con rowconfigure, columnconfigure y minsize
-            frame_columna.grid_rowconfigure(config["rowconfigure"]["index"],
-                                            weight=config["rowconfigure"]["weight"],
-                                            minsize=config["rowconfigure"]["minsize"])
-            frame_columna.grid_columnconfigure(config["columnconfigure"]["index"],
-                                               weight=config["columnconfigure"]["weight"],
-                                               minsize=config["columnconfigure"]["minsize"])
-
-            # Configurar para que el frame de la columna tenga ancho fijo si no se expande
-            if not config["expandir"]:
-                frame_columna.grid_propagate(False)
-                frame_columna.config(width=config["ancho"])
-
-            # Título de la columna
-            label = tk.Label(frame_columna, text=config["titulo"], font=("Consolas", 10), background=config["fondo"])
-            label.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
-
-            # Guardar el frame en el diccionario con el nombre interno de la columna
-            self.frames_columnas[nombre_interno] = frame_columna
-
-        # Altura deseada para las columnas
-        altura_columna = 10  # Puedes ajustar esta variable según tus necesidades
-
-        # Crear una lista para almacenar las filas de frames
-        self.frames_por_filas = []
-
-        # Crear frames para las columnas usando la función personalizada y almacenarlos en filas
-        self.crear_fila_de_frames(columnas_config, altura_columna, fila=1)
-        self.crear_fila_de_frames(columnas_config, altura_columna, fila=1)
-
-        # Ejemplo de lista con números que se mostrarán en cada columna
-        numeros = [1, 2, 3, 4, 5]
-
-        # Introducir la lista de números en los frames de la primera fila
-        self.introducir_numeros_en_fila(0, numeros)
-
-        # Introducir la lista de números en los frames de la primera fila
-        self.introducir_numeros_en_fila(1, numeros)
-
-    def crear_frame_columna(self, config, altura, fila):
-        """
-        Crea un frame para una columna con la configuración dada y una altura específica.
-
-        :param config: Configuración de la columna (diccionario).
-        :param altura: Altura deseada para el frame.
-        :param fila: Número de fila en la que se debe colocar el frame.
-        :return: El frame creado.
-        """
-        frame_columna = ttk.Frame(self.frame_principal, borderwidth=config["borde"], relief="solid")
-        frame_columna.grid(row=fila, column=config["columna"], padx=2, pady=2, sticky=config["sticky"])
-
-        # Configurar el frame de la columna con rowconfigure, columnconfigure y minsize
-        frame_columna.grid_rowconfigure(config["rowconfigure"]["index"],
-                                        weight=config["rowconfigure"]["weight"],
-                                        minsize=config["rowconfigure"]["minsize"])
-        frame_columna.grid_columnconfigure(config["columnconfigure"]["index"],
-                                           weight=config["columnconfigure"]["weight"],
-                                           minsize=config["columnconfigure"]["minsize"])
-
-        # Configurar el frame para que tenga una altura fija
-        frame_columna.config(height=altura)
-        frame_columna.grid_propagate(False)  # Evitar que el frame cambie de tamaño con su contenido
-
-        # Título de la columna
-        label = tk.Label(frame_columna, text=config["titulo"], font=("Consolas", 10), background=config["fondo"])
-        label.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
-
-        return frame_columna
-
-    def crear_fila_de_frames(self, columnas_config, altura, fila):
-        """
-        Crea una fila de frames y los guarda en una lista.
-
-        :param columnas_config: Configuraciones de todas las columnas.
-        :param altura: Altura deseada para los frames.
-        :param fila: Número de fila en la que colocar los frames.
-        """
-        fila_frames = []  # Lista para almacenar los frames de esta fila
-
-        for nombre_interno, config in columnas_config.items():
-            frame_columna = self.crear_frame_columna(config, altura, fila)
-            fila_frames.append(frame_columna)
-
-        # Guardar la fila de frames en la lista de filas
-        self.frames_por_filas.append(fila_frames)
-
-    def introducir_numeros_en_fila(self, fila_index, numeros):
-        """
-        Introduce una lista de números en los frames de una fila específica.
-
-        :param fila_index: Índice de la fila donde se introducirán los números.
-        :param numeros: Lista de números a introducir en los frames.
-        """
-        if 0 <= fila_index < len(self.frames_por_filas):
-            fila = self.frames_por_filas[fila_index]
-            for index, frame in enumerate(fila):
-                if index < len(numeros):
-                    numero = numeros[index]
-                    # Crear un label con el número y agregarlo al frame
-                    label_numero = tk.Label(frame, text=str(numero), font=("Consolas", 10))
-                    label_numero.grid(row=1, column=0, padx=5, pady=5, sticky="new")
+    try:
+        if ext == '.mp3':
+            # Load the MP3 file
+            audio = MP3(file_path, ID3=EasyID3)
+        elif ext == '.flac':
+            # Load the FLAC file
+            audio = FLAC(file_path)
+        elif ext == '.m4a':
+            # Load the M4A file
+            audio = MP4(file_path)
         else:
-            print("Índice de fila fuera de rango.")
+            print(f"Unsupported file format: {ext}")
+            return
 
-if __name__ == "__main__":
-    app = MiAplicacion()
-    app.mainloop()
+        # Update tags
+        if title:
+            if ext == '.m4a':
+                audio['\xa9nam'] = title  # Tag for title in M4A files
+            else:
+                audio['title'] = title
+
+        if artist:
+            audio['artist'] = artist
+
+        if year:
+            audio['date'] = year
+
+        if genre:
+            audio['genre'] = genre
+
+        if composer:
+            if ext == '.m4a':
+                audio['\xa9wrt'] = composer  # Tag for composer in M4A files
+            else:
+                audio['composer'] = composer
+
+        # Save the updated tags
+        audio.save()
+        print(f"Updated tags for: {file_path}")
+
+    except Exception as e:
+        print(f"Error updating tags for {file_path}: {e}")
+
+
+# Path to the CSV file
+csv_path = r"E:\Dropbox\MUSICA\MP3\TANGO\other_stuff\PYTHON\tgdj\output\residuos.csv"
+
+# Read the CSV file with UTF-8-BOM encoding and semicolon delimiter
+try:
+    df = pd.read_csv(csv_path, delimiter=';', encoding='utf-8-sig', on_bad_lines='skip')
+except pd.errors.ParserError as e:
+    print(f"Error reading CSV: {e}")
+    exit(1)
+
+# Initialize lists to store the data
+original_titles = []
+strings_to_remove = []
+final_titles = []
+
+# Iterate over each row in the dataframe
+for index, row in df.iterrows():
+    file_path = row.iloc[3]  # Full path of the music file
+    string_to_remove = row.iloc[2]  # String to be removed from the title
+
+    # Check if file_path is valid and the file exists
+    if isinstance(file_path, str) and os.path.isfile(file_path):
+        try:
+            # Load the music file using TinyTag to read the title
+            tag = TinyTag.get(file_path)
+            original_title = tag.title  # Get the title
+            print(original_title)
+
+            if original_title and string_to_remove and original_title.endswith(string_to_remove):
+                # Remove the specified string from the end of the title
+                final_title = original_title[: -len(string_to_remove)]
+            else:
+                final_title = original_title  # No change if the string is not at the end
+
+            # Append data to the lists
+            original_titles.append(original_title)
+            strings_to_remove.append(string_to_remove)
+            final_titles.append(final_title)
+
+        except Exception as e:
+            # Handle errors from TinyTag
+            print(f"Error processing file {file_path}: {e}")
+            original_titles.append(None)
+            strings_to_remove.append(string_to_remove)
+            final_titles.append(None)
+    else:
+        # Handle missing or invalid file paths
+        original_titles.append(None)
+        strings_to_remove.append(None)
+        final_titles.append(None)
+
+# Create a DataFrame to display the results
+result_df = pd.DataFrame({
+    'Original Title': original_titles,
+    'String to Remove': strings_to_remove,
+    'Final Title': final_titles
+})
+
+# Display the DataFrame
+print(result_df)
+
+# Optionally, save the results to an Excel file for easier review
+result_df.to_excel('music_titles_review.xlsx', index=False)
+print("Results saved to 'music_titles_review.xlsx'.")
+
+# After reviewing the changes, proceed with updating the titles
+update_titles = input("Do you want to update the titles in the music files? (yes/no): ").strip().lower()
+
+if update_titles == 'yes':
+    for index, row in df.iterrows():
+        file_path = row.iloc[3]
+        final_title = final_titles[index]  # Use the updated title from the list
+
+        if isinstance(file_path, str) and os.path.isfile(file_path) and final_title:
+            # Update the tags using Mutagen
+            update_tags(file_path, title=final_title)
+
+    print("Titles have been updated successfully.")
+else:
+    print("No changes were made to the titles.")

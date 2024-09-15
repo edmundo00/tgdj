@@ -3,11 +3,13 @@ from tkinter import ttk
 from src.utils.utils import *
 from src.config.database import Database
 from datetime import datetime
+from mutagen.id3 import ID3, ID3NoHeaderError
+from types import SimpleNamespace
 
 
 class FILETOFIND:
 
-    def __init__(self, lista_frames, ruta_archivo, frame_number, lista_checks):
+    def __init__(self, ruta_archivo, lista_frames, frame_number, lista_checks, tags = None):
         # print(db)
         self.data_store = Database()
         self.db = self.data_store.get_db()
@@ -37,13 +39,33 @@ class FILETOFIND:
         # Initialize checkbutton states with default values
         # Estados de los checkbuttons
 
-        self.leer_tags()
+        if tags is None:
+            self.tags = self.leer_tags()
+        else:
+            self.tags = self.listoid3(tags)
+
+        self.artists1, self.artists2 = separar_artistas(self.tags.artist)
+
+
         self.buscar()
 
         if self.direct_comparison:
             self.nextframe = self.frame_number
         else:
             self.representa()
+
+
+    def listoid3(self,tags):
+        # Creating a simulated ID3 object using SimpleNamespace
+        custom_tags = SimpleNamespace(
+            title=tags[0],
+            artist=tags[1],
+            year=tags[2],
+            genre=tags[3],
+            composer=tags[4],
+            _filename=tags[5]
+        )
+        return custom_tags
 
     def reporte(self):
         """
@@ -366,8 +388,8 @@ class FILETOFIND:
         stop_button.grid(row=row, column=column, sticky="ne", padx=self.padx, pady=self.pady)
 
     def leer_tags(self):
-        self.tags = TinyTag.get(self.ruta_archivo)
-        self.artists1, self.artists2 = separar_artistas(self.tags.artist)
+        tags = TinyTag.get(self.ruta_archivo)
+        return tags
 
     def buscar(self):
         # Inicialización de variables

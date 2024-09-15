@@ -124,7 +124,6 @@ class MusicBeeLibraryTools:
                     media["date_last_played"] = self.read_int(mbl.read(8))
                     media["skip_count"] = self.read_uint(mbl.read(2))
                     media["file_path"] = self.read_str(mbl)  # Read and decode the file path
-                    print(media["file_path"])
 
                     # Ensure the file path is valid
                     if media["file_path"] == "":
@@ -191,7 +190,6 @@ class MusicBeeLibraryTools:
 
         # Convert records to a DataFrame
         self.library_df = pd.DataFrame.from_records(records)
-        print()
 
     def get_files_by_artist(self, artist_name):
         """
@@ -210,31 +208,6 @@ class MusicBeeLibraryTools:
         return file_paths
 
 
-    def open_musicbee_library(self):
-        """
-        Opens a file dialog to select the MusicBee library file and loads it.
-
-        Displays success or error messages based on the outcome.
-        """
-        # Open a file dialog starting from the configured start folder
-        file_path = filedialog.askopenfilename(
-            title="Select MusicBee Library File",
-            filetypes=[("MusicBee Library Files", "*.mbl"), ("All Files", "*.*")],
-            initialdir=musicbee_start_folder
-        )
-        if file_path:
-
-            # Initialize the MusicBeeLibraryTools with the selected file
-            self.file_path = file_path
-            self.parse_library()
-            messagebox.showinfo("Success", "Library loaded successfully!")
-
-            # After loading, show a popup to search for artist
-            self.musicbee_options_popup()
-
-    import tkinter as tk
-    from tkinter import messagebox
-    from collections import Counter
 
     def musicbee_options_popup(self):
         """

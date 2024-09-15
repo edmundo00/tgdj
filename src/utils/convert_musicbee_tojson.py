@@ -39,7 +39,7 @@ def read_str(file):
     return file.read(length).decode("utf-8")
 
 
-with open("E:\\Dropbox\\MUSICA\\MP3\\TANGO\\other_stuff\\MUSICBEE DATABASES\\Eduardo test\\MusicBeeLibrary.mbl", "rb") as mbl:
+with open("E:\\Dropbox\\MUSICA\\MP3\\TANGO\\other_stuff\\MUSICBEE DATABASES\\Eduardo_test\\MusicBeeLibrary.mbl", "rb") as mbl:
     count = read_int(mbl.read(4))
 
     if not count & 0xFF:
@@ -76,7 +76,39 @@ with open("E:\\Dropbox\\MUSICA\\MP3\\TANGO\\other_stuff\\MUSICBEE DATABASES\\Edu
             media["date_added"] = read_int(mbl.read(8))
             media["date_modified"] = read_int(mbl.read(8))
 
+            media["artwork"] = []
+            while True:
+                art = {"type": read_uint(mbl.read(1))}
+                if art["type"] > 253:
+                    break
 
+                art["string_1"] = read_str(mbl)
+                art["store_mode"] = read_uint(mbl.read(1))
+                art["string_2"] = read_str(mbl)
+                media["artwork"].append(art)
+
+            media["tags_type"] = read_uint(mbl.read(1))
+            media["tags"] = {}
+            while True:
+                tag_code = read_uint(mbl.read(1))
+                if tag_code == 0:
+                    break
+                if tag_code == 255:
+                    c = read_int(mbl.read(2))
+                    i = 0
+                    media["cue"] = []
+
+                    while i < c:
+                        cue = {}
+                        cue["a"] = read_uint(mbl.read(1))
+                        cue["b"] = read_uint(mbl.read(2))
+                        cue["c"] = read_int(mbl.read(8))
+                        cue["d"] = read_uint(mbl.read(2))
+                        media["cue"].append(cue)
+                        i += 1
+                    break
+
+                media["tags"][str(tag_code)] = read_str(mbl)
 
 
             library["files"].append(media)
@@ -85,5 +117,5 @@ with open("E:\\Dropbox\\MUSICA\\MP3\\TANGO\\other_stuff\\MUSICBEE DATABASES\\Edu
     print(count, len(library["files"]))
 
 
-with open("E:\\Dropbox\\MUSICA\\MP3\\TANGO\\other_stuff\\MUSICBEE DATABASES\\Eduardo test\\MBL.json", "w") as jfile:
+with open("E:\\Dropbox\\MUSICA\\MP3\\TANGO\\other_stuff\\MUSICBEE DATABASES\\Eduardo_test\\MBL.json", "w") as jfile:
     json.dump(library, jfile, indent=2)
