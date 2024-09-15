@@ -7,12 +7,13 @@ from datetime import datetime
 
 class FILETOFIND:
 
-    def __init__(self, framefiles, framedatabase, frames_columnas_archivo, frames_columnas_resultado, ruta_archivo, frame_number, show_date_checked, show_perfect_matches, show_artist_not_found, show_title_not_found, show_remaining, compare):
+    def __init__(self, lista_frames, ruta_archivo, frame_number, lista_checks):
         # print(db)
         self.data_store = Database()
         self.db = self.data_store.get_db()
         self.dic_art = self.data_store.get_dic_art()
-        self.direct_comparison = compare
+        self.show_date_checked, self.show_perfect_matches, self.show_artist_not_found, \
+            self.show_title_not_found, self.show_remaining, self.direct_comparison = lista_checks
         self.ruta_archivo = ruta_archivo
         self.frame_number = frame_number
         self.artist_not_found = False
@@ -25,29 +26,21 @@ class FILETOFIND:
             self.info_icon = tk.PhotoImage(file=icon_paths['info'])
             self.vars = []
             self.checkbuttons = []
-            self.framefiles = framefiles
-            self.framedatabase = framedatabase
-            self.frames_columnas_archivo = frames_columnas_archivo
-            self.frames_columnas_resultado = frames_columnas_resultado  # Asegúrate
+            self.framefiles, self.framedatabase, self.frames_columnas_archivo, self.frames_columnas_resultado = lista_frames
             # In your class initialization or setup
             self.sizebuttons = [25, 25]  # Set button width and height in text units
             self.padx = 0
             self.pady = 0
-            self.show_perfect_matches = show_perfect_matches
-            self.show_artist_not_found = show_artist_not_found
-            self.show_title_not_found = show_title_not_found
 
 
         self.perfect_match = False
         # Initialize checkbutton states with default values
         # Estados de los checkbuttons
-        self.show_date_checked = show_date_checked
-        self.show_remaining = show_remaining
 
         self.leer_tags()
         self.buscar()
 
-        if compare:
+        if self.direct_comparison:
             self.nextframe = self.frame_number
         else:
             self.representa()

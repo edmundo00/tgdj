@@ -735,20 +735,28 @@ class Ventana:
         y la añade a la lista global de filetofind_list.
         """
         # Crear instancia de FILETOFIND con los parámetros constantes
+        lista_frames = [
+            self.scrollable_frame[0],  # Corresponds to ff
+            self.scrollable_frame[1],  # Corresponds to fd
+            self.frames_columnas_archivo,
+            self.frames_columnas_resultado
+        ]
+        lista_checks = [
+            self.date_checked.get(),  # Corresponds to show_date_checked
+            self.perfect_matches.get(),  # Corresponds to show_perfect_matches
+            self.artist_not_found.get(),  # Corresponds to show_artist_not_found
+            self.title_not_found.get(),  # Corresponds to show_title_not_found
+            self.view_remaining.get(),  # Corresponds to show_remaining
+            self.direct_comparison.get()  # Corresponds to compare
+        ]
+
+        # Pass the list as a single argument along with other parameters
         new_filetofind = FILETOFIND(
-            framefiles=self.scrollable_frame[0],
-            framedatabase=self.scrollable_frame[1],
-            frames_columnas_archivo=self.frames_columnas_archivo,
-            frames_columnas_resultado=self.frames_columnas_resultado,
+            lista_frames=lista_frames,
             ruta_archivo=ruta_archivo,
             frame_number=frame_number,
-            show_date_checked = self.date_checked.get(),
-            show_perfect_matches = self.perfect_matches.get(),
-            show_artist_not_found = self.artist_not_found.get(),
-            show_title_not_found = self.title_not_found.get(),
-            show_remaining = self.view_remaining.get(),  # Pasar el estado del nuevo checkbox
-            compare = self.direct_comparison.get()
-            )
+            lista_checks=lista_checks
+        )
 
         # Actualizar el número de canciones y añadir a la lista global
         frame_number = new_filetofind.nextframe
