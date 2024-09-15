@@ -598,84 +598,80 @@ class Ventana:
                 self.m3u_db = self.m3u_db.iloc[0:0]  # Clear the DataFrame but keep the columns
 
             self.m3u_audio_files = []  # Clear the audio files list
-            # self.m3u_audio_tags = []  # Clear the audio tags list
 
             # Load the M3U file and extract data
             with open(self.m3u_file_path, 'r', encoding='utf-8') as file:
-
-                for line in file:
-                    line = line.strip()
-                    if line and not line.startswith("#"):
-                        if os.path.exists(line):
-                            numero_canciones = self.crear_y_actualizar_filetofind(
-                                ruta_archivo=line,
-                                frame_number=numero_canciones
-                            )
-                        else:
-                            modified_path = dropbox_path + line.split("Dropbox", 1)[1]
-                            if os.path.exists(modified_path):
-                                numero_canciones = self.crear_y_actualizar_filetofind(
-                                    ruta_archivo=modified_path,
-                                    frame_number=numero_canciones
-                                )
-            if guardar_residuos:
-                # Crear un DataFrame a partir de la lista de residuos
-                residuos_df = pd.DataFrame(residuos, columns=['Titulo Archivo', 'Titulo base de datos', 'Residuo'])
-
-                # Obtener la marca de tiempo actual para el nombre del archivo
-                now = datetime.now()
-                timestamp = now.strftime('%Y%m%d_%H%M%S')
-                filename = f'residuos_{timestamp}.csv'
-
-                # Especificar la carpeta de salida
-                output_folder = 'output'  # Cambia esta ruta según sea necesario
-                file_path = os.path.join(output_folder, filename)
-
-                # Guardar el DataFrame de residuos en un archivo CSV
-                residuos_df.to_csv(file_path, index=False, sep=';')
-
-                print(f'Residuos guardados en: {file_path}')
+                lines = [line.strip() for line in file if line.strip() and not line.startswith("#")]
+                # Process lines from M3U file
+                self.procesar_archivos(lines, numero_canciones, from_playlist=True, show_progress=True)
 
     def load_music_folder(self):
         self.borrar_todo()
         numero_canciones = 0
         folder_path = filedialog.askdirectory()
-        # Loop through all files in the folder
-        # Create a Label for the status text
-        self.status_label = tk.Label(self.status_bar, text="Progress: 0%", bd=1, relief=tk.SUNKEN, anchor=tk.W)
-        self.status_label.pack(side=tk.LEFT)
 
-        # Create a Progressbar widget
-        self.progress_var = tk.IntVar()
-        self.progress_bar = ttk.Progressbar(self.status_bar, variable=self.progress_var, maximum=100, length=150)
-        self.progress_bar.pack(side=tk.RIGHT, padx=self.pad)
-        contador_canciones = 0
+        if folder_path:
+            # Get list of music files
+            music_files = [os.path.join(folder_path, filename) for filename in os.listdir(folder_path)
+                           if filename.endswith(('.mp3', '.wav', '.flac', '.ogg', '.m4a'))]
 
-        for filename in os.listdir(folder_path):
-            self.update_progress(100 * contador_canciones / len(os.listdir(folder_path)))
-            contador_canciones += 1
-            if contador_canciones % 10 == 0:
-                self.root.update()
-            if filename.endswith(('.mp3', '.wav', '.flac', '.ogg', '.m4a')):  # Add more extensions as needed
-                file_path = os.path.join(folder_path, filename)
-                if file_path:
-                    numero_canciones = self.crear_y_actualizar_filetofind(
-                        ruta_archivo=file_path,
-                        frame_number=numero_canciones
-                    )
+            # Process files from the directory
+            self.procesar_archivos(music_files, numero_canciones, show_progress=True)
 
-        if guardar_residuos:
+    def procesar_archivos(self, archivos, numero_canciones, from_playlist=False, show_progress=False):
+        """Procesa una lista de archivos y actualiza la interfaz."""
+        total_archivos = len(archivos)
+
+        # Configurar la barra de progreso si es necesario
+        if show_progress:
+            self.setup_progress_bar()
+
+        for index, archivo in enumerate(archivos):
+            # Update progress if required
+            if show_progress:
+                self.update_progress(index + 1, total_archivos)
+
+
+            # Process each file
+            if from_playlist and not os.path.exists(archivo):
+                # Handle special case for modified paths in playlists
+                modified_path = dropbox_path + archivo.split("Dropbox", 1)[1]
+                if os.path.exists(modified_path):
+                    archivo = modified_path
+
+            if os.path.exists(archivo):
+                numero_canciones = self.crear_y_actualizar_filetofind(
+                    ruta_archivo=archivo,
+                    frame_number=numero_canciones
+                )
+
+        # Guardar residuos si se requiere
+        if guardar_residuos and residuos:
             residuos_df = pd.DataFrame(residuos, columns=['Titulo Archivo', 'Titulo base de datos', 'Residuo'])
             now = datetime.now()
             timestamp = now.strftime('%Y%m%d_%H%M%S')
             filename = f'residuos_{timestamp}.csv'
-            # Especificar la carpeta de salida
             output_folder = 'output'  # Cambia esta ruta según sea necesario
             file_path = os.path.join(output_folder, filename)
-            # Guardar el DataFrame de residuos en un archivo CSV
             residuos_df.to_csv(file_path, index=False, sep=';')
             print(f'Residuos guardados en: {file_path}')
 
+        # Limpiar la barra de progreso si fue utilizada
+        if show_progress:
+            self.cleanup_progress_bar()
+
+    def setup_progress_bar(self):
+        """Configura la barra de progreso y la etiqueta de estado."""
+        self.status_label = tk.Label(self.status_bar, text="Progress: 0%", bd=1, relief=tk.SUNKEN, anchor=tk.W)
+        self.status_label.pack(side=tk.LEFT)
+
+        self.progress_var = tk.IntVar()
+        self.progress_bar = ttk.Progressbar(self.status_bar, variable=self.progress_var, maximum=100, length=150)
+        self.progress_bar.pack(side=tk.RIGHT, padx=self.pad)
+
+
+    def cleanup_progress_bar(self):
+        """Elimina la barra de progreso y la etiqueta de estado."""
         self.progress_bar.pack_forget()
         self.status_label.pack_forget()
 
@@ -816,6 +812,20 @@ class Ventana:
             archivos.destroy()
         filetofind_list.clear()
 
-    def update_progress(self, value):
-        self.progress_var.set(int(value))
-        self.status_label.config(text=f"Progress: {int(value)}%")
+    def update_progress(self, value=None, current=None, total=None):
+        """
+        Actualiza la barra de progreso con el estado actual.
+
+        Parameters:
+        - value: Valor de progreso en porcentaje (opcional).
+        - current: Valor actual en el progreso (opcional).
+        - total: Valor total para calcular el porcentaje de progreso (opcional).
+
+        Si `current` y `total` son proporcionados, `value` se ignora y el progreso se calcula.
+        """
+        if current is not None and total is not None:
+            value = (current / total) * 100  # Calcula el progreso como un porcentaje
+        if value is not None:
+            self.progress_var.set(int(value))
+            self.status_label.config(text=f"Progress: {int(value)}%")
+            self.root.update_idletasks()  # Refrescar la interfaz para mostrar los cambios
