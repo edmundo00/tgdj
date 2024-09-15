@@ -5,7 +5,7 @@ from presentation_app import PresentationApp
 from src.ui.file_to_find import FILETOFIND
 from src.utils.utils import *
 from src.config.database import Database
-from src.config.config import columnas_config, musicbee_tags
+from src.config.config import columnas_config, musicbee_tags, df_reporte
 import tkinter as tk
 from src.ui.playlist_operations import PlaylistOperations
 from src.utils.MusicBeeLibraryTools import MusicBeeLibraryTools
@@ -16,6 +16,7 @@ class Ventana:
         self.root = root
         self.colour = 'white'
         self.pad = 0
+        self.df_reporte = df_reporte
 
         # Inicializar los diccionarios para almacenar los frames de columnas
         self.frames_columnas_archivo = {}
@@ -603,7 +604,7 @@ class Ventana:
             with open(self.m3u_file_path, 'r', encoding='utf-8') as file:
                 lines = [line.strip() for line in file if line.strip() and not line.startswith("#")]
                 # Process lines from M3U file
-                self.procesar_archivos(lines, numero_canciones, from_playlist=True, show_progress=True)
+                self.procesar_archivos(lines, numero_canciones, from_playlist=True, show_progress=True,origen=self.m3u_file_path)
 
     def load_music_folder(self):
         self.borrar_todo()
@@ -616,10 +617,12 @@ class Ventana:
                            if filename.endswith(('.mp3', '.wav', '.flac', '.ogg', '.m4a'))]
 
             # Process files from the directory
-            self.procesar_archivos(music_files, numero_canciones, show_progress=True)
+            self.procesar_archivos(music_files, numero_canciones, show_progress=True,origen=folder_path)
 
-    def procesar_archivos(self, archivos, numero_canciones, from_playlist=False, show_progress=False):
+    def procesar_archivos(self, archivos, numero_canciones, from_playlist=False, show_progress=False, origen=None):
         """Procesa una lista de archivos y actualiza la interfaz."""
+
+        self.df_reporte.drop(self.df_reporte.index, inplace=True)
         total_archivos = len(archivos)
 
         # Configurar la barra de progreso si es necesario
@@ -629,7 +632,7 @@ class Ventana:
         for index, archivo in enumerate(archivos):
             # Update progress if required
             if show_progress:
-                self.update_progress(index + 1, total_archivos)
+                self.update_progress_bar(current= index + 1, total= total_archivos)
 
 
             # Process each file
@@ -640,25 +643,76 @@ class Ventana:
                     archivo = modified_path
 
             if os.path.exists(archivo):
-                numero_canciones = self.crear_y_actualizar_filetofind(
+                numero_canciones, report_archivo = self.crear_y_actualizar_filetofind(
                     ruta_archivo=archivo,
                     frame_number=numero_canciones
                 )
+                #self.df_reporte.loc[len(self.df_reporte)] = report_archivo
+                self.df_reporte = pd.concat([self.df_reporte, pd.DataFrame([report_archivo])], ignore_index=True)
 
+        self.mostrar_popup_reporte(self.df_reporte)
         # Guardar residuos si se requiere
         if guardar_residuos and residuos:
-            residuos_df = pd.DataFrame(residuos, columns=['Titulo Archivo', 'Titulo base de datos', 'Residuo'])
+            residuos_df = pd.DataFrame(residuos, columns=['Titulo Archivo', 'Titulo base de datos', 'Residuo','Ruta completa'])
             now = datetime.now()
             timestamp = now.strftime('%Y%m%d_%H%M%S')
             filename = f'residuos_{timestamp}.csv'
             output_folder = 'output'  # Cambia esta ruta según sea necesario
             file_path = os.path.join(output_folder, filename)
-            residuos_df.to_csv(file_path, index=False, sep=';')
+            # Guardar el DataFrame de residuos en un archivo CSV con 'Origen' en el encabezado
+            with open(file_path, 'w', newline='') as file:
+                file.write(f"Origen: {origen}\n")  # Escribe el encabezado personalizado con el origen
+                residuos_df.to_csv(file, index=False, sep=';',
+                                   mode='a')  # Guarda el DataFrame sin el encabezado por defecto
+
             print(f'Residuos guardados en: {file_path}')
 
         # Limpiar la barra de progreso si fue utilizada
         if show_progress:
             self.cleanup_progress_bar()
+
+    def mostrar_popup_reporte(self, df_reporte):
+        # Calcular métricas del reporte
+        total_canciones = len(df_reporte)
+        sin_artista = df_reporte["Artista encontrado"].sum()
+        sin_titulo = df_reporte["Titulo encontrado"].sum()
+        coincidencia_perfecta = df_reporte["Coincidencia perfecta"].sum()
+        coincidencia_preferida = df_reporte["Hay coincidencia preferida"].sum()
+        no_coincidencia_preferida = df_reporte["No hay coincidencia preferida"].sum()
+
+        # Crear la ventana de popup
+        popup = tk.Toplevel()
+        popup.title("Reporte de Análisis")
+
+        # Crear el contenido del popup
+        label_total = tk.Label(popup, text=f"Numero de canciones analizadas: {total_canciones}", font=("Helvetica", 12))
+        label_total.grid(row=0, column=0, padx=10, pady=10)
+
+        label_sin_artista = tk.Label(popup, text=f"Numero de canciones sin Artista encontrado: {sin_artista}",
+                                     font=("Helvetica", 12, "bold"))
+        label_sin_artista.grid(row=1, column=0, padx=10, pady=10)
+
+        label_sin_titulo = tk.Label(popup, text=f"Numero de canciones sin Titulo encontrado: {sin_titulo}",
+                                    font=("Helvetica", 12, "bold"))
+        label_sin_titulo.grid(row=2, column=0, padx=10, pady=10)
+
+        label_sin_titulo = tk.Label(popup, text=f"Numero de canciones con coincidencia perfecta: {coincidencia_perfecta}",
+                                    font=("Helvetica", 12, "bold"))
+        label_sin_titulo.grid(row=3, column=0, padx=10, pady=10)
+
+
+        label_sin_titulo = tk.Label(popup, text=f"Numero de canciones con coincidencia preferida: {coincidencia_preferida}",
+                                    font=("Helvetica", 12, "bold"))
+        label_sin_titulo.grid(row=4, column=0, padx=10, pady=10)
+
+        label_sin_titulo = tk.Label(popup, text=f"Numero de canciones sin coincidencia perfecta: {no_coincidencia_preferida}",
+                                    font=("Helvetica", 12, "bold"))
+        label_sin_titulo.grid(row=5, column=0, padx=10, pady=10)
+
+
+        # Botón para cerrar el popup
+        close_button = tk.Button(popup, text="Cerrar", command=popup.destroy)
+        close_button.grid(row=6, column=0, padx=10, pady=10)
 
     def setup_progress_bar(self):
         """Configura la barra de progreso y la etiqueta de estado."""
@@ -698,10 +752,11 @@ class Ventana:
 
         # Actualizar el número de canciones y añadir a la lista global
         frame_number = new_filetofind.nextframe
+        reporte = new_filetofind.reporte()
 
         filetofind_list.append(new_filetofind)
 
-        return frame_number
+        return frame_number, reporte
 
     def aplicartags(self):
         reemplazo_tags = []
@@ -812,7 +867,7 @@ class Ventana:
             archivos.destroy()
         filetofind_list.clear()
 
-    def update_progress(self, value=None, current=None, total=None):
+    def update_progress_bar(self, value=None, current=None, total=None):
         """
         Actualiza la barra de progreso con el estado actual.
 
@@ -827,5 +882,6 @@ class Ventana:
             value = (current / total) * 100  # Calcula el progreso como un porcentaje
         if value is not None:
             self.progress_var.set(int(value))
-            self.status_label.config(text=f"Progress: {int(value)}%")
+            progress_text = f"Progress: {int(value)}% ({current} de {total} canciones)" if current and total else f"Progress: {int(value)}%"
+            self.status_label.config(text=progress_text)
             self.root.update_idletasks()  # Refrescar la interfaz para mostrar los cambios

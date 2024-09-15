@@ -523,7 +523,7 @@ def buscar_titulo(database, tag):
             # Obtener el título directamente desde las coincidencias filtradas
             titulo_coincidencia = database.loc[coincidencias, 'titulo_min'].iloc[0]
 
-            nuevos_residuos = [tag.title, titulo_coincidencia, tag.title[len(titulo_coincidencia):]]
+            nuevos_residuos = [tag.title, titulo_coincidencia, tag.title[len(titulo_coincidencia):], tag._filename]
             # Añadir el residuo completo a la lista
             residuos.append(nuevos_residuos)  # Cambiado extend() a append()
 

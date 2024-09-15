@@ -2,6 +2,7 @@ import os
 import configparser
 import tkinter as tk
 from PIL import ImageFont
+import pandas as pd
 
 
 
@@ -184,7 +185,7 @@ DEFAULT_PERFECT_MATCHES = False
 DEFAULT_ARTIST_NOT_FOUND = True
 DEFAULT_TITLE_NOT_FOUND = True
 DEFAULT_REMAINING = True
-DEFAULT_DIRECT_COMPARISON = False
+DEFAULT_DIRECT_COMPARISON = True
 
 musicbee_tags = {
     "title": "65",
@@ -198,3 +199,13 @@ musicbee_tags = {
 guardar_residuos = True
 
 residuos = []
+
+
+df_reporte = pd.DataFrame(columns=[
+    "Artista encontrado",
+    "Titulo encontrado",
+    "Numero de coincidencias",
+    "Hay coincidencia preferida",
+    "No hay coincidencia preferida",
+    "Coincidencia perfecta"
+])

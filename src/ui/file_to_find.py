@@ -15,6 +15,9 @@ class FILETOFIND:
         self.direct_comparison = compare
         self.ruta_archivo = ruta_archivo
         self.frame_number = frame_number
+        self.artist_not_found = False
+        self.title_not_found = False
+
 
         if not self.direct_comparison:
             self.play_icon = tk.PhotoImage(file=icon_paths['play'])
@@ -34,6 +37,7 @@ class FILETOFIND:
             self.show_artist_not_found = show_artist_not_found
             self.show_title_not_found = show_title_not_found
 
+
         self.perfect_match = False
         # Initialize checkbutton states with default values
         # Estados de los checkbuttons
@@ -48,6 +52,24 @@ class FILETOFIND:
         else:
             self.representa()
 
+    def reporte(self):
+        """
+        Genera un reporte de las variables más importantes y las imprime, además de retornarlas.
+
+        Returns:
+            pd.DataFrame: Un DataFrame con las variables clave del reporte.
+        """
+        reporte_data = {
+            "Artista encontrado": self.artist_not_found,
+            "Titulo encontrado": self.title_not_found,
+            "Numero de coincidencias": len(self.coincidencias) if self.coincidencias is not None else 0,
+            "Hay coincidencia preferida": self.hay_coincidencia_preferida,
+            "No hay coincidencia preferida": self.no_hay_coincidencia_preferida,
+            "Coincidencia perfecta": self.perfect_match
+        }
+
+        return reporte_data
+
     def representa(self):
         # Determinar color de fondo basado en el número de frame
         self.color_de_fondo = 'whitesmoke' if es_par(self.frame_number) else 'lightgrey'
@@ -55,12 +77,10 @@ class FILETOFIND:
         self.configurar_altura_frame()
 
         # Step 1: Check for coincidences and perfect matches
-        artista_not_found = self.artista_coincidencia == 0
-        titulo_not_found = self.titulo_coincidencia == 0
         is_perfect_match = self.perfect_match
 
         # Step 2: Adjust display logic based on checkbutton states
-        if artista_not_found:
+        if self.artist_not_found:
             if self.show_artist_not_found:
                 # Show data when artist is not found and the respective checkbox is checked
                 self.representar_datos_archivo()
@@ -69,7 +89,7 @@ class FILETOFIND:
             else:
                 self.nextframe = self.frame_number
 
-        elif titulo_not_found:
+        elif self.title_not_found:
             if self.show_title_not_found:
                 # Show data when title is not found and the respective checkbox is checked
                 self.representar_datos_archivo()
@@ -359,6 +379,7 @@ class FILETOFIND:
     def buscar(self):
         # Inicialización de variables
         self.hay_coincidencia_preferida = False
+        self.no_hay_coincidencia_preferida = False
         self.coincidencia_preferida = 0
         self.tipo_de_coincidencia = 0
 
@@ -372,6 +393,7 @@ class FILETOFIND:
             self.hay_coincidencia_preferida = False
             self.coincidencia_preferida = 0
             self.titulo_coincidencia = 0
+            self.artist_not_found =True
             return
 
         # Obtener las canciones del artista
@@ -385,6 +407,7 @@ class FILETOFIND:
             self.coincidencias = self.db.iloc[0:0]
             self.hay_coincidencia_preferida = False
             self.coincidencia_preferida = 0
+            self.title_not_found =True
             return
 
         # Comparar tags y generar coincidencias
@@ -403,6 +426,8 @@ class FILETOFIND:
             self.hay_coincidencia_preferida, self.coincidencia_preferida = buscar_preferencias(
                 self.bool_coincidencias, self.show_date_checked
             )
+            if not self.hay_coincidencia_preferida:
+                self.no_hay_coincidencia_preferida = True
 
         self.coincidencias = database_titulo
         # Generar colores para los labels
