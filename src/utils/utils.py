@@ -462,11 +462,6 @@ def contain_most_words_in_dic(dictionary, text):
     else:
         return None
 
-
-
-
-
-
     # Encuentra los índices que tienen ese máximo número de palabras en común
     indices_mas_palabras = [index for index, value in lista_numero_palabras_comun if value == maximo_palabras]
 
@@ -606,6 +601,8 @@ def buscar_titulo(database, tag):
 
     # Si no se encontraron coincidencias
     return 0, pd.DataFrame()  # Retorna 0 si no se encontraron coincidencias
+
+
 def compare_tags(artista_coincidencia, titulo_coincidencia, database, tag):
     coincidencias = {}
     artista_original, cantor_original = separar_artistas(tag.artist)
