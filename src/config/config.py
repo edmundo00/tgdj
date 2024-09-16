@@ -186,6 +186,10 @@ DEFAULT_ARTIST_NOT_FOUND = True
 DEFAULT_TITLE_NOT_FOUND = True
 DEFAULT_REMAINING = True
 DEFAULT_DIRECT_COMPARISON = True
+DEFAULT_DIRECT_TAGGING = False
+guardar_residuos = False
+guardar_coincidencias = True
+
 
 musicbee_tags = {
     "title": "65",
@@ -196,7 +200,7 @@ musicbee_tags = {
     "composer": "43",
 }
 
-guardar_residuos = False
+
 
 residuos = []
 
@@ -208,4 +212,20 @@ df_reporte = pd.DataFrame(columns=[
     "Hay coincidencia preferida",
     "No hay coincidencia preferida",
     "Coincidencia perfecta"
+])
+
+df_reporte_coincidencia_favorita = pd.DataFrame(columns=[
+    'archivo',
+    'old_title',
+    'new_title',
+    'old_artist',
+    'new_artist',
+    'old_cantor',
+    'new_cantor',
+    'old_year',
+    'new_year',
+    'old_genre',
+    'new_genre',
+    'old_composer',
+    'new_composer'
 ])

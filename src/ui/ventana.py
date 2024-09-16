@@ -17,6 +17,7 @@ class Ventana:
         self.colour = 'white'
         self.pad = 0
         self.df_reporte = df_reporte
+        self.df_reporte_coincidencia_favorita = df_reporte_coincidencia_favorita
 
         # Inicializar los diccionarios para almacenar los frames de columnas
         self.frames_columnas_archivo = {}
@@ -42,6 +43,9 @@ class Ventana:
         self.title_not_found = tk.BooleanVar(value=DEFAULT_TITLE_NOT_FOUND)
         self.view_remaining = tk.BooleanVar(value=DEFAULT_REMAINING)
         self.direct_comparison = tk.BooleanVar(value=DEFAULT_DIRECT_COMPARISON)
+        self.direct_tagging = tk.BooleanVar(value=DEFAULT_DIRECT_TAGGING)
+        self.guardar_residuos = tk.BooleanVar(value=guardar_residuos)
+        self.guardar_coincidencias = tk.BooleanVar(value=guardar_coincidencias)
 
         # Create UI components
         self.create_menu_bar()
@@ -131,12 +135,15 @@ class Ventana:
             ("Artist Not Found", self.artist_not_found),
             ("Title Not Found", self.title_not_found),
             ("Visualizar Resto", self.view_remaining),
-            ("Comparacion directa", self.direct_comparison)
+            ("Guardar coincidencias", self.guardar_coincidencias),
+            ("Guardar residuos", self.guardar_residuos),
+            ("No mostrar comparativa", self.direct_comparison),
+            ("Direct tagging", self.direct_tagging)
         ]
 
         for i, (text, variable) in enumerate(checkbuttons, start=len(buttons)):
             # Asigna 'red' a los colores solo si el texto es "Comparacion directa", de lo contrario None
-            color = 'red' if text == "Comparacion directa" else None
+            color = 'red' if text == "Direct tagging" else None
             # Crea el Checkbutton con los colores correspondientes
             chk = tk.Checkbutton(self.icon_bar, text=text, variable=variable,
                                  bg=color, selectcolor=color)
@@ -654,30 +661,23 @@ class Ventana:
 
 
             if os.path.exists(archivo):
-                numero_canciones, report_archivo = self.crear_y_actualizar_filetofind(
+                numero_canciones, report_archivo, coinc_fav = self.crear_y_actualizar_filetofind(
                     ruta_archivo=archivo,
                     frame_number=numero_canciones,
                     tags = tags_aplicar
                 )
-                #self.df_reporte.loc[len(self.df_reporte)] = report_archivo
+
                 self.df_reporte = pd.concat([self.df_reporte, pd.DataFrame([report_archivo])], ignore_index=True)
+                if self.guardar_coincidencias.get():
+                    self.df_reporte_coincidencia_favorita = pd.concat([self.df_reporte_coincidencia_favorita, coinc_fav], ignore_index=True)
 
         self.mostrar_popup_reporte(self.df_reporte)
+        if self.guardar_coincidencias.get():
+            guardar_archivo_output(tipo='coincidencias', dataframe=self.df_reporte_coincidencia_favorita, encabezados=None)
         # Guardar residuos si se requiere
-        if guardar_residuos and residuos:
+        if self.guardar_residuos.get():
             residuos_df = pd.DataFrame(residuos, columns=['Titulo Archivo', 'Titulo base de datos', 'Residuo','Ruta completa'])
-            now = datetime.now()
-            timestamp = now.strftime('%Y%m%d_%H%M%S')
-            filename = f'residuos_{timestamp}.csv'
-            output_folder = 'output'  # Cambia esta ruta según sea necesario
-            file_path = os.path.join(output_folder, filename)
-            # Guardar el DataFrame de residuos en un archivo CSV con 'Origen' en el encabezado
-            with open(file_path, 'w', newline='') as file:
-                file.write(f"Origen: {origen}\n")  # Escribe el encabezado personalizado con el origen
-                residuos_df.to_csv(file, index=False, sep=';',
-                                   mode='a')  # Guarda el DataFrame sin el encabezado por defecto
-
-            print(f'Residuos guardados en: {file_path}')
+            guardar_archivo_output(tipo='residuos',dataframe=residuos_df,encabezados=f"Origen: {origen}\n")
 
         # Limpiar la barra de progreso si fue utilizada
         if show_progress:
@@ -774,10 +774,11 @@ class Ventana:
         # Actualizar el número de canciones y añadir a la lista global
         frame_number = new_filetofind.nextframe
         reporte = new_filetofind.reporte()
+        coinc_fav = new_filetofind.get_coincidencia_favorita()
 
         filetofind_list.append(new_filetofind)
 
-        return frame_number, reporte
+        return frame_number, reporte, coinc_fav
 
     def aplicartags(self):
         reemplazo_tags = []
@@ -795,7 +796,8 @@ class Ventana:
                         ruta_archivo=archivos.ruta_archivo,
                         coincidencias=archivos.coincidencias,
                         coincidencia_preferida=archivos.coincidencia_preferida,
-                        tags=archivos.tags
+                        tags=archivos.tags,
+                        coincidencia_titulo = archivos.titulo_coincidencia
                     )
                     reemplazo_tags.append(reemplazo_tags_linea)
                     tageados += 1  # Incrementar el contador de tageados
@@ -812,7 +814,8 @@ class Ventana:
                             ruta_archivo=archivos.ruta_archivo,
                             coincidencias=archivos.coincidencias,
                             coincidencia_preferida=index,
-                            tags=archivos.tags
+                            tags=archivos.tags,
+                            coincidencia_titulo=archivos.titulo_coincidencia
                         )
                         reemplazo_tags.append(reemplazo_tags_linea)
                         tageados += 1  # Incrementar el contador de tageados

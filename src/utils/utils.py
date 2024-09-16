@@ -1,4 +1,5 @@
 import re
+import os
 import pandas as pd
 import pygame
 import ftfy
@@ -11,6 +12,7 @@ from mutagen.flac import FLAC
 from mutagen.mp4 import MP4
 from mutagen.mp3 import MP3
 from mutagen.easyid3 import EasyID3
+from datetime import datetime
 
 def convertir_segundos(segundos, formato='x\'x\'\''):
     """
@@ -275,7 +277,7 @@ def capitalize_uppercase_words(text):
     return ' '.join(transformed_words)
 
 
-def aplicartag_archivo(ruta_archivo, coincidencias, coincidencia_preferida, tags):
+def aplicartag_archivo(ruta_archivo, coincidencias, coincidencia_preferida,coincidencia_titulo , tags):
     # Separar artistas originales en dos partes
     artists1, artists2 = separar_artistas(tags.artist)
 
@@ -297,21 +299,15 @@ def aplicartag_archivo(ruta_archivo, coincidencias, coincidencia_preferida, tags
     )
 
     # Crear el diccionario de reemplazo de tags
-    reemplazo_tags_linea = {
-        'archivo': ruta_archivo,
-        'old_title': tags.title,
-        'new_title': coincidencias.titulo.iloc[coincidencia_preferida],
-        'old_artist': artists1,
-        'new_artist': coincidencias.artista.iloc[coincidencia_preferida],
-        'old_cantor': artists2,
-        'new_cantor': coincidencias.cantor.iloc[coincidencia_preferida],
-        'old_year': tags.year,
-        'new_year': coincidencias.fecha.iloc[coincidencia_preferida],
-        'old_genre': tags.genre,
-        'new_genre': coincidencias.estilo.iloc[coincidencia_preferida],
-        'old_composer': tags.composer,
-        'new_composer': coincidencias.compositor_autor.iloc[coincidencia_preferida]
-    }
+    reemplazo_tags_linea = crear_reemplazo_tags_linea(
+        ruta_archivo=ruta_archivo,
+        tags=tags,
+        coincidencias=coincidencias,
+        coincidencia_preferida=coincidencia_preferida,
+        artists1=artists1,
+        artists2=artists2,
+        coincidencia_titulo=coincidencia_titulo
+    )
 
     return reemplazo_tags_linea
 
@@ -322,6 +318,42 @@ def extraer_cuatro_numeros(cadena):
         return resultado.group()
     else:
         return None
+
+
+def crear_reemplazo_tags_linea(
+    ruta_archivo, tags, coincidencias, coincidencia_preferida, artists1, artists2, coincidencia_titulo
+):
+    """
+    Crea un diccionario de reemplazo de tags para una coincidencia preferida.
+
+    :param ruta_archivo: Ruta del archivo.
+    :param tags: Objeto con los tags actuales (title, artist, year, genre, composer).
+    :param coincidencias: DataFrame con las coincidencias.
+    :param coincidencia_preferida: Índice de la coincidencia preferida.
+    :param artists1: Artista original.
+    :param artists2: Cantor original.
+    :return: Diccionario con los reemplazos de tags.
+    """
+    if coincidencia_preferida is not None:
+        data = {
+            'archivo': [ruta_archivo],
+            'old_title': [tags.title],
+            'new_title': [coincidencias.titulo.iloc[coincidencia_preferida]],
+            'old_artist': [artists1],
+            'new_artist': [coincidencias.artista.iloc[coincidencia_preferida]],
+            'old_cantor': [artists2],
+            'new_cantor': [coincidencias.cantor.iloc[coincidencia_preferida]],
+            'old_year': [tags.year],
+            'new_year': [coincidencias.fecha.iloc[coincidencia_preferida]],
+            'old_genre': [tags.genre],
+            'new_genre': [coincidencias.estilo.iloc[coincidencia_preferida]],
+            'old_composer': [tags.composer],
+            'new_composer': [coincidencias.compositor_autor.iloc[coincidencia_preferida]],
+            'coincidencia_titulo': [coincidencia_titulo]
+        }
+        return pd.DataFrame(data)
+    else:
+        return pd.DataFrame()  # Return an empty DataFrame if no preferred match
 
 
 def link_to_music(link):
@@ -486,65 +518,94 @@ def get_file_name_without_extension(file_path):
 
 
 def buscar_titulo(database, tag):
-    # Corregir y limpiar el título original
-    length_of_database = len(database)
-    titulo_original = ftfy.fix_text(tag.title).strip() if tag.title else ""
-    if not titulo_original:
-        titulo_original = get_file_name_without_extension(tag._filename)
+    """
+    Busca un título en una base de datos utilizando diversas estrategias de coincidencia, con optimizaciones de rendimiento.
+
+    Proceso paso a paso:
+    1. Normaliza y limpia el título original a buscar.
+    2. Realiza coincidencias exactas y normalizadas:
+       - Coincidencia exacta con el título original.
+       - Coincidencia exacta con el título normalizado.
+    3. Busca coincidencias parciales y patrones en los títulos:
+       - Coincidencias al inicio de los títulos.
+       - Coincidencias en cualquier parte de los títulos.
+       - Coincidencias donde los títulos empiezan con el término buscado.
+    4. Coincidencia basada en la mayor cantidad de palabras coincidentes.
+    5. Devuelve el tipo de coincidencia y las entradas correspondientes.
+
+    :param database: DataFrame que contiene los títulos donde buscar.
+    :param tag: Objeto con el título a buscar y metadatos adicionales.
+    :return: Tupla que contiene un indicador del tipo de coincidencia y un DataFrame con las entradas coincidentes.
+    """
+
+    # Normaliza y limpia el título original; si está vacío, usa el nombre del archivo sin extensión
+    titulo_original = ftfy.fix_text(tag.title).strip() if tag.title else get_file_name_without_extension(tag._filename)
     titulo_buscar_min = unidecode(convert_numbers_to_words(titulo_original)).lower().strip()
 
-    # Primera búsqueda: coincidencia exacta
-    coincidencias = (database["titulo"] == titulo_original)
-    titulo_coincidencia = 3
+    # Verifica si el título es válido para la búsqueda
+    if titulo_buscar_min == "":
+        return 0, pd.DataFrame()  # No hay título válido para buscar
 
-    # Si no hay coincidencias (todos False), buscar con 'contains'
-    if not coincidencias.any():
-        # Primera verificación: si 'titulo_buscar_min' está contenido en 'database["titulo_min"]'
-        coincidencias = database["titulo_min"].str.contains(titulo_buscar_min, case=False, na=False, regex=False)
-        titulo_coincidencia = 2
+    # Coincidencias exactas
 
-    # Segunda verificación: si 'database["titulo_min"]' está contenido en 'titulo_buscar_min'
-    if not coincidencias.any():
-        coincidencias = database["titulo_min"].apply(lambda x: titulo_buscar_min.startswith(x))
+    # Paso 2.1: Coincidencia exacta del título original
+    # Variable clave: coincidencias (boolean series que compara los títulos originales)
+    coincidencias = database["titulo"] == titulo_original
+    if coincidencias.any():
+        return 6, database[coincidencias].copy()  # Retorna 6 si hay coincidencias exactas con el título original
 
-        # Encontrar el índice del título más largo entre las coincidencias
-        if coincidencias.any():
-            indice_mejor_coincidencia = database[coincidencias]["titulo_min"].apply(len).idxmax()
+    # Paso 2.2: Coincidencia exacta con el título normalizado
+    # Variable clave: coincidencias (boolean series que compara los títulos normalizados)
+    coincidencias = database["titulo_min"] == titulo_buscar_min
+    if coincidencias.any():
+        return 5, database[coincidencias].copy()  # Retorna 5 si hay coincidencias exactas con el título normalizado
 
-            # Crear una serie de coincidencias que solo tiene True para el título más largo
-            coincidencias = coincidencias & (database.index == indice_mejor_coincidencia)
+    # Coincidencias parciales y patrones en los títulos
 
-            # Establecer indicador de coincidencia
-            titulo_coincidencia = 2
+    # Paso 3.1: Coincidencias al inicio de los títulos
+    # Variable clave: coincidencias (boolean series que verifica si los títulos comienzan con el término de búsqueda usando regex)
+    coincidencias = database["titulo_min"].str.contains(f'^{titulo_buscar_min}', case=False, na=False, regex=False)
+    if coincidencias.any():
+        return 4, database[
+            coincidencias].copy()  # Retorna 4 si el término de búsqueda coincide al inicio de algún título
 
-        if guardar_residuos and coincidencias.any():
-            # Ya hay un solo título más largo seleccionado en coincidencias
 
-            # Obtener el título directamente desde las coincidencias filtradas
+    # Paso 3.3: Coincidencias donde los títulos empiezan con el término buscado
+    # Variable clave: coincidencias (boolean series que verifica si los títulos comienzan exactamente con el término de búsqueda)
+    coincidencias = database["titulo_min"].str.startswith(titulo_buscar_min, na=False)
+    if coincidencias.any():
+        # Encuentra la coincidencia más larga por la longitud del título
+        indice_mejor_coincidencia = database.loc[coincidencias, "titulo_min"].str.len().idxmax()
+        coincidencias = database.index == indice_mejor_coincidencia
+
+        # Guarda información residual si está configurado
+        if guardar_residuos:
             titulo_coincidencia = database.loc[coincidencias, 'titulo_min'].iloc[0]
-
             nuevos_residuos = [tag.title, titulo_coincidencia, tag.title[len(titulo_coincidencia):], tag._filename]
-            # Añadir el residuo completo a la lista
-            residuos.append(nuevos_residuos)  # Cambiado extend() a append()
+            residuos.append(nuevos_residuos)
+
+        return 3, database[
+            coincidencias].copy()  # Retorna 2 si encuentra el título más largo que empieza con el término de búsqueda
+
+    # Paso 3.2: Coincidencias en cualquier parte de los títulos
+    # Variable clave: coincidencias (boolean series que verifica si los títulos contienen el término de búsqueda en cualquier parte)
+    coincidencias = database["titulo_min"].str.contains(titulo_buscar_min, case=False, na=False, regex=False)
+    if coincidencias.any():
+        return 2, database[
+            coincidencias].copy()  # Retorna 3 si el término de búsqueda se encuentra en cualquier parte del título
 
 
-    # Si aún no hay coincidencias, usar la función 'contain_most_words'
-    if not coincidencias.any():
-        # Asegúrate de que contain_most_words devuelva una Serie booleana
-        coincidencias = pd.Series(contain_most_words(database, titulo_buscar_min, "titulo_min"))
-        titulo_coincidencia = 1
+    # Coincidencia basada en palabras
 
-    # Si aún no hay coincidencias, usar la función 'contain_most_words'
-    if not coincidencias.any():
-        # Asegúrate de que contain_most_words devuelva una Serie booleana
-        coincidencias = pd.Series([False] * len(database), index=database.index)
-        titulo_coincidencia = 0
+    # Paso 4.1: Coincidencia basada en la mayor cantidad de palabras coincidentes
+    # Variable clave: coincidencias (series booleana generada por la función personalizada `contain_most_words`)
+    coincidencias = pd.Series(contain_most_words(database, titulo_buscar_min, "titulo_min"), index=database.index)
+    if coincidencias.any():
+        return 1, database[
+            coincidencias].copy()  # Retorna 1 si hay coincidencias basadas en la mayor cantidad de palabras coincidentes
 
-
-    # Filtrar el DataFrame para incluir solo las filas que coinciden
-    return titulo_coincidencia, database[coincidencias].copy()
-
-
+    # Si no se encontraron coincidencias
+    return 0, pd.DataFrame()  # Retorna 0 si no se encontraron coincidencias
 def compare_tags(artista_coincidencia, titulo_coincidencia, database, tag):
     coincidencias = {}
     artista_original, cantor_original = separar_artistas(tag.artist)
@@ -559,9 +620,10 @@ def compare_tags(artista_coincidencia, titulo_coincidencia, database, tag):
     coincidencias[TagLabels.ORQUESTA_NEGATIVO] = pd.Series([artista_coincidencia == 0] * database_length, index=database.index)
 
     # Coincidencias para título
-    coincidencias[TagLabels.TITULO_EXACTO] = pd.Series([titulo_coincidencia == 3] * database_length, index=database.index)
-    coincidencias[TagLabels.TITULO] = pd.Series([titulo_coincidencia == 2] * database_length, index=database.index)
-    coincidencias[TagLabels.TITULO_PARCIAL] = pd.Series([titulo_coincidencia == 1] * database_length, index=database.index)
+    coincidencias[TagLabels.TITULO_EXACTO] = pd.Series([titulo_coincidencia == 6] * database_length, index=database.index)
+    coincidencias[TagLabels.TITULO] = pd.Series([titulo_coincidencia in [2,3,4,5]] * database_length, index=database.index)
+    coincidencias[TagLabels.TITULO_PARCIAL] = pd.Series([titulo_coincidencia in [1]] * database_length,
+                                                        index=database.index)  # Coincidencia parcial
     coincidencias[TagLabels.TITULO_NEGATIVO] = pd.Series([titulo_coincidencia == 0] * database_length, index=database.index)
 
     # Coincidencias para cantor
@@ -757,3 +819,22 @@ def get_largest_paragraph(text):
 
     return largest_paragraph
 
+
+def guardar_archivo_output(tipo, dataframe, encabezados=None):
+    now = datetime.now()
+    timestamp = now.strftime('%Y%m%d_%H%M%S')
+    filename = f'{tipo}_{timestamp}.csv'
+    file_path = os.path.join(output_folder, filename)
+
+    # Open the file to write data
+    with open(file_path, 'w', newline='', encoding='utf-8') as file:
+        # If custom headers are provided, write them manually
+        if encabezados is not None:
+            file.write(encabezados + '\n')  # Write the custom header line with the origin
+            # Write the DataFrame without the default headers since they are custom
+            dataframe.to_csv(file, index=False, sep=';', header=True)
+        else:
+            # Write the DataFrame with its own headers
+            dataframe.to_csv(file, index=False, sep=';', header=True)
+
+    print(f'{tipo.capitalize()} guardados en: {file_path}')

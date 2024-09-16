@@ -20,6 +20,7 @@ class FILETOFIND:
         self.frame_number = frame_number
         self.artist_not_found = False
         self.title_not_found = False
+        self.titulo_coincidencia = int(0)
 
 
         if not self.direct_comparison:
@@ -84,6 +85,21 @@ class FILETOFIND:
         }
 
         return reporte_data
+
+    def get_coincidencia_favorita(self):
+        if self.hay_coincidencia_preferida:
+            reemplazo_tags_linea = crear_reemplazo_tags_linea(
+                ruta_archivo=self.ruta_archivo,
+                tags=self.tags,
+                coincidencias=self.coincidencias,
+                coincidencia_preferida=self.coincidencia_preferida,
+                artists1=self.artists1,
+                artists2=self.artists2,
+                coincidencia_titulo=self.titulo_coincidencia
+            )
+            return reemplazo_tags_linea
+        else:
+            return None
 
     def representa(self):
         # Determinar color de fondo basado en el número de frame
