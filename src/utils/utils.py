@@ -835,3 +835,5 @@ def guardar_archivo_output(tipo, dataframe, encabezados=None):
             dataframe.to_csv(file, index=False, sep=';', header=True)
 
     print(f'{tipo.capitalize()} guardados en: {file_path}')
+
+    return file_path

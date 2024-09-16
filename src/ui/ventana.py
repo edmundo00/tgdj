@@ -817,20 +817,15 @@ class Ventana:
                             tags=archivos.tags,
                             coincidencia_titulo=archivos.titulo_coincidencia
                         )
-                        reemplazo_tags.append(reemplazo_tags_linea)
+                        self.df_reporte_coincidencia_favorita = pd.concat(
+                            [self.df_reporte_coincidencia_favorita, reemplazo_tags_linea], ignore_index=True)
                         tageados += 1  # Incrementar el contador de tageados
                     # Actualizar la barra de estado con el progreso
                     self.actualizar_barra_estado(analizados, total_archivos, tageados)
 
         # Crear DataFrame y guardar en un archivo CSV
-        reemplazo_tags_df = pd.DataFrame(reemplazo_tags)
 
-        # Obtener la fecha y hora actual para nombrar el archivo
-        now = datetime.now()
-        timestamp = now.strftime('%Y%m%d_%H%M%S')
-        filename = f'tagsbackup_{timestamp}.csv'
-        file_path = os.path.join(output_folder, filename)
-        reemplazo_tags_df.to_csv(file_path, index=False, sep=';')
+        file_path = guardar_archivo_output("tags_aplicadas", self.df_reporte_coincidencia_favorita, encabezados=None)
 
         # Resetear la barra de estado al mensaje por defecto
         self.resetear_barra_estado()
