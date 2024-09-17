@@ -111,23 +111,71 @@ class Ventana:
             setattr(self, f"{icon_name}_icon", tk.PhotoImage(file=icon_paths[icon_name]))
 
         # Button definitions and grid placement
+
+    # Define buttons and sections as in your original setup
         buttons = [
-            (self.archivo_icon, self.load_music_file),
-            (self.directorio_icon, self.load_music_folder),
-            (self.correr_icon, None),
-            (self.transfer_icon, self.aplicartags),
-            (self.trash_icon, self.borrar_todo),
-            (self.searchdb_icon, self.searchdb),
-            (self.presentacion_icon, self.open_presentation_popup),
-            (self.playlist_icon, self.open_playlist),
-            (self.convert_playlist_icon, self.playlist_operations.convert_playlist),
-            (self.merge_icon, self.playlist_operations.merge_playlist),
-            (self.musicbee_icon, self.open_musicbee_library)
+            (self.archivo_icon, self.load_music_file, "Load a music file to compare"),
+            (self.directorio_icon, self.load_music_folder, "Load a music folder to compare"),
+            (self.playlist_icon, self.open_playlist, "Open a playlist to compare"),
+            (self.musicbee_icon, self.open_musicbee_library, "Open MusicBee Library to compare"),
+
+            (self.transfer_icon, self.aplicartags, "Apply tags"),
+            (self.trash_icon, self.borrar_todo, "Delete all"),
+
+            (self.convert_playlist_icon, self.playlist_operations.convert_playlist, "Convert playlist"),
+            (self.merge_icon, self.playlist_operations.merge_playlist, "Merge playlist"),
+
+            (self.presentacion_icon, self.open_presentation_popup, "Open presentation"),
+
+            (self.searchdb_icon, self.searchdb, "Search database"),
+
+            (self.correr_icon, None, "Run")
         ]
 
-        for i, (icon, command) in enumerate(buttons):
-            btn = tk.Button(self.icon_bar, image=icon, relief=tk.FLAT, command=command)
-            btn.grid(row=0, column=i, padx=self.pad, pady=self.pad)
+        sections = [
+            ("Compare", buttons[:4]),
+            ("Tools", buttons[4:6]),
+            ("Playlist Tools", buttons[6:8]),
+            ("Slides", buttons[8:9]),
+            ("DB", buttons[9:10]),
+            ("Others", buttons[10:11])
+        ]
+
+        column_placement_icons = 0
+        column_placement_titles = 0
+        for s, (section_title, section_buttons) in enumerate(sections):
+            # Create section label
+            label = tk.Label(
+                self.icon_bar,
+                text=section_title,
+                font=("Arial", 10, 'bold'),
+                relief=tk.SOLID,  # Set border style (SOLID, RAISED, SUNKEN, etc.)
+                bd=2,  # Set border width
+                padx=5,  # Optional: add padding for better appearance
+                pady=2
+            )
+            label.grid(row=0, column=column_placement_titles, columnspan=len(section_buttons)+2, sticky="ew")
+            column_placement_titles +=len(section_buttons)+2
+
+               # Add a separator before section buttons
+            separator = tk.Frame(self.icon_bar, width=2, bg='gray')  # Create a visible separator
+            separator.grid(row=1, column=column_placement_icons, rowspan=2, sticky="nsew")  # Expand vertically
+            column_placement_icons += 1  # Increment to account for the separator space
+
+            # Create section buttons
+            for i, (icon, command, tooltip) in enumerate(section_buttons):
+                btn = tk.Button(self.icon_bar, image=icon, relief=tk.FLAT, command=command)
+                btn.grid(row=2, column=column_placement_icons, padx=5, pady=5)  # Adjust padding as needed
+                # Add tooltip functionality if defined
+                # self.add_tooltip(btn, tooltip)  # Uncomment and implement add_tooltip function
+                column_placement_icons += 1
+
+            separator = tk.Frame(self.icon_bar, width=2, bg='gray')  # Create a visible separator
+            separator.grid(row=1, column=column_placement_icons, rowspan=2, sticky="nsew")  # Expand vertically
+            column_placement_icons += 1  # Increment to account for the separator space
+
+            checkbutton_frame = tk.Frame(self.icon_bar, height=2, bg='gray')
+            checkbutton_frame.grid(row=3, column=0, columnspan=column_placement_icons, sticky="nsew")
 
         checkbuttons = [
             ("Date Checked", self.date_checked),
@@ -141,13 +189,29 @@ class Ventana:
             ("Direct tagging", self.direct_tagging)
         ]
 
-        for i, (text, variable) in enumerate(checkbuttons, start=len(buttons)):
-            # Asigna 'red' a los colores solo si el texto es "Comparacion directa", de lo contrario None
+        checkbutton_frame = tk.Frame(self.icon_bar)
+        checkbutton_frame.grid(row=4, column=0, columnspan=column_placement_icons+10, sticky="ew")
+
+        for i, (text, variable) in enumerate(checkbuttons):
+            # Asigna 'red' a los colores solo si el texto es "Direct tagging", de lo contrario None
             color = 'red' if text == "Direct tagging" else None
-            # Crea el Checkbutton con los colores correspondientes
-            chk = tk.Checkbutton(self.icon_bar, text=text, variable=variable,
+            # Crea el Checkbutton con los colores correspondientes dentro del nuevo frame
+            chk = tk.Checkbutton(checkbutton_frame, text=text, variable=variable,
                                  bg=color, selectcolor=color)
             chk.grid(row=0, column=i, padx=self.pad, pady=self.pad)
+
+    def add_tooltip(self, widget, text):
+        """Add a tooltip to a widget."""
+        tooltip = tk.Label(self.root, text=text, background="yellow", relief=tk.SOLID, borderwidth=1, padx=2, pady=2, font=("Arial", 8))
+
+        def show_tooltip(event):
+            tooltip.place(x=event.x_root, y=event.y_root)
+
+        def hide_tooltip(event):
+            tooltip.place_forget()
+
+        widget.bind("<Enter>", show_tooltip)
+        widget.bind("<Leave>", hide_tooltip)
 
     def configure_scrollable_frames(self):
         """Configure all scrollable frames in self.scrollable_frame to expand and fill their canvases."""
