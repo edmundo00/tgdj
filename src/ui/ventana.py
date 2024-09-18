@@ -781,7 +781,7 @@ class Ventana:
                                     font=("Helvetica", 12, "bold"))
         label_sin_titulo.grid(row=4, column=0, padx=10, pady=10)
 
-        label_sin_titulo = tk.Label(popup, text=f"Numero de canciones sin coincidencia perfecta: {no_coincidencia_preferida}",
+        label_sin_titulo = tk.Label(popup, text=f"Numero de canciones sin coincidencia preferida: {no_coincidencia_preferida}",
                                     font=("Helvetica", 12, "bold"))
         label_sin_titulo.grid(row=5, column=0, padx=10, pady=10)
 
@@ -850,7 +850,7 @@ class Ventana:
         analizados = 0  # Contador de archivos analizados
         tageados = 0  # Contador de archivos efectivamente etiquetados
 
-        if self.direct_comparison:
+        if self.direct_comparison.get():
             # Aplicar directamente los tags para las instancias con coincidencia preferida
             for archivos in filetofind_list:
                 analizados += 1  # Incrementar el contador de analizados

@@ -88,10 +88,11 @@ def separar_artistas(artistas):
 
 
 def unir_artistas(orquesta, cantor, caracter_separacion):
-    if cantor and cantor != "":
-        artista = f'{orquesta}{caracter_separacion}{cantor}'
+    # Verificamos si cantor es NaN o si es una cadena vacía o de espacios
+    if cantor and not (isinstance(cantor, float) and math.isnan(cantor)) and cantor.strip():
+        artista = f'{orquesta}{caracter_separacion}{cantor.strip()}'
     else:
-        artista = f'{orquesta}'
+        artista = orquesta
 
     return artista
 

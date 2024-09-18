@@ -160,10 +160,10 @@ columnas_config = {
 }
 
 default_milonga_data = {
-    'nombre': "Glorieta de los miércoles",
-    'fecha': "4 de Septiembre de 2024",
-    'hora_inicio': '20:00',
-    'hora_final': '22:00'
+    'nombre': "Milonga El Desbande",
+    'fecha': "20 de Septiembre de 2024",
+    'hora_inicio': '22:00',
+    'hora_final': '01:30'
 }
 
 
