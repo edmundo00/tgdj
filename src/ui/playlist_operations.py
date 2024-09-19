@@ -3,6 +3,7 @@ from tkinter import filedialog, messagebox, ttk, Toplevel, Frame
 import tkinter as tk
 from src.config.config import playlist_path_map
 from datetime import datetime
+from src.utils.utils import find_similar_lines
 
 class PlaylistOperations:
     def __init__(self, root, m3u_start_folder, path_map):
@@ -31,16 +32,23 @@ class PlaylistOperations:
 
     def convert_playlist(self):
         """
-        Allow the user to select and display a single M3U playlist for conversion.
+        Allow the user to select and convert multiple M3U playlists.
         """
-        m3u_file_path = self._prompt_for_file("Select M3U Playlist")
-        if not m3u_file_path:
+        # Prompt the user to select multiple files
+        m3u_file_paths = self._prompt_for_files("Select M3U Playlists to Convert")
+
+        if not m3u_file_paths:
             return
 
-        m3u_lines = self._read_file_lines(m3u_file_path)
-        if m3u_lines is not None:
-            filename = os.path.splitext(os.path.basename(m3u_file_path))[0]
-            self._show_playlist_in_popup(m3u_lines, m3u_file_path, filename)
+        # Iterate over each selected file and process it
+        for m3u_file_path in m3u_file_paths:
+            m3u_lines = self._read_file_lines(m3u_file_path)
+
+            if m3u_lines is not None:
+                # Extract the filename without the extension for each file
+                filename = os.path.splitext(os.path.basename(m3u_file_path))[0]
+                # Directly call convert_and_save without showing popup
+                self.convert_and_save(m3u_lines, filename)
 
     def _prompt_for_files(self, title):
         """
@@ -75,22 +83,28 @@ class PlaylistOperations:
 
     def _extract_unique_titles(self, file_paths):
         """
-        Extract unique file paths from multiple M3U files.
+        Extract unique file paths from multiple M3U files, normalizing paths to avoid case-sensitive duplicates
+        and ignoring special characters and small differences.
         """
+        import re  # For handling special character removal
         unique_titles = {}
 
-        def extract_title_from_path(line):
-            split_point = line.lower().find('dropbox')
-            return line[split_point + len('Dropbox'):] if split_point != -1 else line
+        def normalize_title(line):
+            # Convert to lowercase, remove special characters (like _, -, etc.), and strip spaces
+            normalized_line = re.sub(r'[^a-zA-Z0-9]', '', line.lower().strip())
+            return normalized_line
 
         for file_path in file_paths:
             with open(file_path, 'r', encoding='utf-8') as file:
                 for line in file:
                     line = line.strip()
                     if line and not line.startswith("#"):  # Skip empty lines and comments
-                        title = extract_title_from_path(line)
-                        if title not in unique_titles:
-                            unique_titles[title] = line
+                        normalized_title = normalize_title(line)
+
+                        # Add to unique_titles if it's not already there
+                        if normalized_title not in unique_titles:
+                            unique_titles[normalized_title] = line  # Store the original line
+
         return unique_titles
 
     def _show_playlist_in_popup(self, m3u_lines, m3u_file_path, filename):
@@ -179,6 +193,11 @@ class PlaylistOperations:
         Convert playlist paths to match different Dropbox paths and save them for each computer.
         """
         path_map = self.path_map
+
+        for computer_name in path_map.keys():
+            if f"_{computer_name}" in filename:
+                # Remove the computer_name part from the filename
+                filename = filename.replace(f"_{computer_name}", "")
 
         def get_computer_name_for_path(path):
             for computer_name, dropbox_path in path_map.items():

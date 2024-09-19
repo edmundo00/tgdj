@@ -13,6 +13,7 @@ from mutagen.mp4 import MP4
 from mutagen.mp3 import MP3
 from mutagen.easyid3 import EasyID3
 from datetime import datetime
+import difflib
 
 def convertir_segundos(segundos, formato='x\'x\'\''):
     """
@@ -838,3 +839,30 @@ def guardar_archivo_output(tipo, dataframe, encabezados=None):
     print(f'{tipo.capitalize()} guardados en: {file_path}')
 
     return file_path
+
+
+def find_similar_lines(merged_lines, similarity_threshold=0.97):
+    """
+    Find and print lines in merged_lines that are very similar to each other.
+    Lines are considered similar if their similarity ratio is above the given threshold.
+    """
+    similar_pairs = []
+
+    # Compare each line with every other line
+    for i, line1 in enumerate(merged_lines):
+        for j, line2 in enumerate(merged_lines):
+            if i != j:  # Avoid comparing the same line with itself
+                # Calculate similarity ratio
+                similarity = difflib.SequenceMatcher(None, line1, line2).ratio()
+                if similarity >= similarity_threshold:
+                    # Add the pair if they are similar enough
+                    similar_pairs.append((i, line1, j, line2, similarity))
+
+    if similar_pairs:
+        print("Similar lines found:")
+        for pair in similar_pairs:
+            print(f"Line {pair[0]}: {pair[1]}")
+            print(f"Line {pair[2]}: {pair[3]}")
+            print(f"Similarity: {pair[4]:.2f}\n")
+    else:
+        print("No similar lines found.")
