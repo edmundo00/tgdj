@@ -888,15 +888,15 @@ class PresentationApp:
                 "Duracion_Milonga": {"left": Cm(1), "top": Cm(17.25), "right": Cm(1), "height": Cm(2)},
                 "firma": {"left": Cm(1), "top": Cm(15.5), "right": Cm(24), "height": Cm(2.8)},
                 "linea_divisoria": {"left": Cm(13.5), "top": Cm(4.5), "right": Cm(1), "height": Cm(0)},
-                "tandas_start": {"left": Cm(3), "top": Cm(4), "right": Cm(1), "height": Cm(15)},
-                "tandas_spacing" : Cm(0.7),
+                "tandas_start": {"left": Cm(3), "top": Cm(3.75), "right": Cm(1), "height": Cm(15)},
+                "tandas_spacing" : Cm(0.575),
                 "offset_shadow": Cm(0.06),
                 "maxima_anchura_image": 1,
                 "fuentes": {
                     "Milonga": {"tamaño": 60, "tipo_fuente": "Arial"},
                     "Fecha_Milonga": {"tamaño": 20, "tipo_fuente": "Arial"},
                     "Duracion_Milonga": {"tamaño": 16, "tipo_fuente": "Arial"},
-                    "tandas": {"tamaño": 15, "tipo_fuente": "Bernard MT Condensed"},
+                    "tandas": {"tamaño": 12, "tipo_fuente": "Bernard MT Condensed"},
                     "duracion_estimada": {"tamaño": 16, "tipo_fuente": "Arial"},
                     "firma": {"tamaño": 20, "tipo_fuente": "Arial"}
                 }
