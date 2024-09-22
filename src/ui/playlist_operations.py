@@ -25,8 +25,7 @@ class PlaylistOperations:
         unique_titles = self._extract_unique_titles(file_paths)
         merged_lines = list(unique_titles.values())
 
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        filename = f"merge{timestamp}"
+        filename = f"merge{generar_timestamp()}"
 
         self._show_playlist_in_popup(merged_lines, "merged_playlist.m3u", filename)
 

@@ -9,6 +9,7 @@ from src.config.config import columnas_config, musicbee_tags, df_reporte
 import tkinter as tk
 from src.ui.playlist_operations import PlaylistOperations
 from src.utils.MusicBeeLibraryTools import MusicBeeLibraryTools
+from src.ui.owndatabase import owndatabase
 
 class Ventana:
     def __init__(self, root):
@@ -25,6 +26,8 @@ class Ventana:
 
         # Initialize PlaylistOperations
         self.playlist_operations = PlaylistOperations(self.root, m3u_start_path, path_map)
+
+        self.owndb = owndatabase(self.actualizar_barra_estado)
 
         self.root.title("Tkinter Window with Menu, Icon, and Status Bar")
         self.root.geometry('1700x800')
@@ -100,35 +103,30 @@ class Ventana:
         self.edit_menu.add_command(label="Paste")
 
     def create_icon_bar(self):
-        """Create the icon bar with buttons below the menu bar."""
+        """Create the icon bar with different frames for sections below the menu bar."""
         self.icon_bar = tk.Frame(self.root, relief=tk.RAISED, bd=2)
         self.icon_bar.grid(row=self.icon_bar_row, column=0, columnspan=self.icon_bar_colspan, sticky="ew")
 
         # Define icons and their commands
         icon_names = ['archivo', 'directorio', 'correr', 'transfer', 'trash', 'searchdb', 'presentacion', 'playlist',
-                      'convert_playlist', 'merge', 'musicbee']
+                      'convert_playlist', 'merge', 'musicbee', 'createdb', 'comparedb']
         for icon_name in icon_names:
             setattr(self, f"{icon_name}_icon", tk.PhotoImage(file=icon_paths[icon_name]))
 
-        # Button definitions and grid placement
-
-    # Define buttons and sections as in your original setup
+        # Define buttons
         buttons = [
             (self.archivo_icon, self.load_music_file, "Load a music file to compare"),
             (self.directorio_icon, self.load_music_folder, "Load a music folder to compare"),
             (self.playlist_icon, self.open_playlist, "Open a playlist to compare"),
             (self.musicbee_icon, self.open_musicbee_library, "Open MusicBee Library to compare"),
-
             (self.transfer_icon, self.aplicartags, "Apply tags"),
             (self.trash_icon, self.borrar_todo, "Delete all"),
-
             (self.convert_playlist_icon, self.playlist_operations.convert_playlist, "Convert playlist"),
             (self.merge_icon, self.playlist_operations.merge_playlist, "Merge playlist"),
-
-            (self.presentacion_icon, self.open_presentation_popup, "Open presentation"),
-
+            (self.createdb_icon, self.createdb, "Create database"),
+            (self.comparedb_icon, self.comparedb, "Compare database"),
             (self.searchdb_icon, self.searchdb, "Search database"),
-
+            (self.presentacion_icon, self.open_presentation_popup, "Open presentation"),
             (self.correr_icon, None, "Run")
         ]
 
@@ -136,46 +134,35 @@ class Ventana:
             ("Compare", buttons[:4]),
             ("Tools", buttons[4:6]),
             ("Playlist Tools", buttons[6:8]),
-            ("Slides", buttons[8:9]),
-            ("DB", buttons[9:10]),
-            ("Others", buttons[10:11])
+            ("Own DB", buttons[8:10]),
+            ("Search DB", buttons[10:11]),
+            ("Slides", buttons[11:12]),
+            ("Others", buttons[12:13])
         ]
 
-        column_placement_icons = 0
-        column_placement_titles = 0
-        for s, (section_title, section_buttons) in enumerate(sections):
-            # Create section label
-            label = tk.Label(
-                self.icon_bar,
-                text=section_title,
-                font=("Arial", 10, 'bold'),
-                relief=tk.SOLID,  # Set border style (SOLID, RAISED, SUNKEN, etc.)
-                bd=2,  # Set border width
-                padx=5,  # Optional: add padding for better appearance
-                pady=2
-            )
-            label.grid(row=0, column=column_placement_titles, columnspan=len(section_buttons)+2, sticky="ew")
-            column_placement_titles +=len(section_buttons)+2
+        # Configure the icon_bar to allow columns to resize based on content
+        self.icon_bar.grid_columnconfigure(0, weight=0)
+        self.icon_bar.grid_columnconfigure(1, weight=0)
 
-               # Add a separator before section buttons
-            separator = tk.Frame(self.icon_bar, width=2, bg='gray')  # Create a visible separator
-            separator.grid(row=1, column=column_placement_icons, rowspan=2, sticky="nsew")  # Expand vertically
-            column_placement_icons += 1  # Increment to account for the separator space
+        # Create a frame for each section and place them in columns
+        for column_index, (section_title, section_buttons) in enumerate(sections):
+            section_frame = tk.Frame(self.icon_bar, relief=tk.GROOVE, bd=2, padx=5, pady=5)
+            section_frame.grid(row=0, column=column_index, sticky="nsew", padx=5, pady=5)
 
-            # Create section buttons
+            # Add a label for the section
+            label = tk.Label(section_frame, text=section_title, font=("Arial", 10, 'bold'))
+            label.grid(row=0, column=0, columnspan=len(section_buttons), sticky="ew")
+
+            # Create buttons within the section
             for i, (icon, command, tooltip) in enumerate(section_buttons):
-                btn = tk.Button(self.icon_bar, image=icon, relief=tk.FLAT, command=command)
-                btn.grid(row=2, column=column_placement_icons, padx=5, pady=5)  # Adjust padding as needed
+                btn = tk.Button(section_frame, image=icon, relief=tk.FLAT, command=command)
+                btn.grid(row=1, column=i, padx=5, pady=5)
                 # Add tooltip functionality if defined
-                # self.add_tooltip(btn, tooltip)  # Uncomment and implement add_tooltip function
-                column_placement_icons += 1
+                # self.add_tooltip(btn, tooltip)
 
-            separator = tk.Frame(self.icon_bar, width=2, bg='gray')  # Create a visible separator
-            separator.grid(row=1, column=column_placement_icons, rowspan=2, sticky="nsew")  # Expand vertically
-            column_placement_icons += 1  # Increment to account for the separator space
-
-            checkbutton_frame = tk.Frame(self.icon_bar, height=2, bg='gray')
-            checkbutton_frame.grid(row=3, column=0, columnspan=column_placement_icons, sticky="nsew")
+        # Checkbuttons section
+        checkbutton_frame = tk.Frame(self.icon_bar)
+        checkbutton_frame.grid(row=1, column=0, columnspan=len(sections), sticky="ew", pady=10)
 
         checkbuttons = [
             ("Date Checked", self.date_checked),
@@ -189,16 +176,14 @@ class Ventana:
             ("Direct tagging", self.direct_tagging)
         ]
 
-        checkbutton_frame = tk.Frame(self.icon_bar)
-        checkbutton_frame.grid(row=4, column=0, columnspan=column_placement_icons+10, sticky="ew")
-
         for i, (text, variable) in enumerate(checkbuttons):
-            # Asigna 'red' a los colores solo si el texto es "Direct tagging", de lo contrario None
             color = 'red' if text == "Direct tagging" else None
-            # Crea el Checkbutton con los colores correspondientes dentro del nuevo frame
-            chk = tk.Checkbutton(checkbutton_frame, text=text, variable=variable,
-                                 bg=color, selectcolor=color)
-            chk.grid(row=0, column=i, padx=self.pad, pady=self.pad)
+            chk = tk.Checkbutton(checkbutton_frame, text=text, variable=variable, bg=color, selectcolor=color)
+            chk.grid(row=0, column=i, padx=5, pady=5)
+
+        # Configure the main frame to not expand and adjust based on content
+        for i in range(len(sections)):
+            self.icon_bar.grid_columnconfigure(i, weight=0)
 
     def add_tooltip(self, widget, text):
         """Add a tooltip to a widget."""
@@ -212,6 +197,8 @@ class Ventana:
 
         widget.bind("<Enter>", show_tooltip)
         widget.bind("<Leave>", hide_tooltip)
+
+
 
     def configure_scrollable_frames(self):
         """Configure all scrollable frames in self.scrollable_frame to expand and fill their canvases."""
@@ -968,3 +955,33 @@ class Ventana:
             progress_text = f"Progress: {int(value)}% ({current} de {total} canciones)" if current and total else f"Progress: {int(value)}%"
             self.status_label.config(text=progress_text)
             self.root.update_idletasks()  # Refrescar la interfaz para mostrar los cambios
+
+    def createdb(self):
+        """Create an instance of the `owndatabase` class."""
+        self.owndb.create_database()
+
+    def comparedb(self):
+
+
+        self.borrar_todo()  # Limpiar la lista de archivos existentes
+        numero_canciones = 0
+
+        if hasattr(self.owndb, 'owndf_rep') and isinstance(self.owndb.owndf_rep, pd.DataFrame):
+            # Filter `owndf` rows where 'Coincidencia perfecta' is False
+            filtered_df = self.owndb.owndf[~self.owndb.owndf_rep['Coincidencia perfecta']]
+
+
+            # Extract file paths and tags for the filtered rows
+            lines = filtered_df['file_path'].tolist()
+            tags = filtered_df
+        else:
+            # If `owndf_rep` does not exist, use all rows from `owndf`
+            lines = self.owndb.owndf['file_path'].tolist()
+            tags = self.owndb.owndf
+
+        self.procesar_archivos(lines, numero_canciones, from_musicbee=True, show_progress=True,
+                               origen='OwnDB', tags=tags)
+
+        # db_report_path = os.path.join(DATA_FOLDER, 'owndatabase_report.csv')
+        # self.df_reporte.to_csv(db_report_path, index=False)
+

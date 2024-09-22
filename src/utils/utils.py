@@ -14,6 +14,7 @@ from mutagen.mp3 import MP3
 from mutagen.easyid3 import EasyID3
 from datetime import datetime
 import difflib
+from tinytag import TinyTag
 
 def convertir_segundos(segundos, formato='x\'x\'\''):
     """
@@ -108,46 +109,6 @@ def palabras_mas_comunes(db, columna):
     most_common_words = word_count.most_common()
 
 
-def extract_year(date_str):
-    # Define a regular expression pattern to match the year
-    pattern = r'\b(\d{4})\b'
-
-    # Match the pattern
-    match = re.search(pattern, date_str)
-
-    # If there's a match, return the year
-    if match:
-        return match.group(1)
-    else:
-        return ""
-
-
-def convert_date_format(date_str):
-    """
-    Convert a date from DD/MM/YYYY format to YYYY-MM-DD format.
-    Args:
-        date_str (str): Date string in DD/MM/YYYY format.
-    Returns:
-        str: Date string in YYYY-MM-DD format.
-    """
-    pattern_yyyymmdd = r'^[0-9]{4}-(0[0-9]|1[0-2])-(0[0-9]|[12][0-9]|3[01])$'
-
-    if re.match(pattern_yyyymmdd, date_str):
-        if date_str.endswith('-00-00'):
-            # Remove the last three characters
-            return date_str[:-6]
-        if date_str.endswith('-00'):
-            # Remove the last three characters
-            return date_str[:-3]
-        new_date_str = date_str
-    else:
-        # Parse the input date string
-        date_object = datetime.strptime(date_str, "%d/%m/%Y")
-
-        # Convert to the desired format
-        new_date_str = date_object.strftime("%Y-%m-%d")
-
-    return new_date_str
 
 
 def coincidencias_a_colores(bool_coincidencias, perfect_match):
@@ -313,13 +274,6 @@ def aplicartag_archivo(ruta_archivo, coincidencias, coincidencia_preferida,coinc
 
     return reemplazo_tags_linea
 
-def extraer_cuatro_numeros(cadena):
-    # Usamos la expresión regular \d{4} para encontrar cuatro dígitos consecutivos
-    resultado = re.search(r'\d{4}', cadena)
-    if resultado:
-        return resultado.group()
-    else:
-        return None
 
 
 def crear_reemplazo_tags_linea(
@@ -608,6 +562,7 @@ def buscar_titulo(database, tag):
 def compare_tags(artista_coincidencia, titulo_coincidencia, database, tag):
     coincidencias = {}
     artista_original, cantor_original = separar_artistas(tag.artist)
+    artista_buscar = unidecode(artista_original).lower().strip()
     cantor_buscar = unidecode(cantor_original).lower()
 
     database_length = len(database)
@@ -636,14 +591,36 @@ def compare_tags(artista_coincidencia, titulo_coincidencia, database, tag):
     tag.genre = tag.genre or ""
     tag.composer = tag.composer or ""
 
+    # Extraer el año
     if extraer_cuatro_numeros(tag.year):
         ano = int(extraer_cuatro_numeros(tag.year))
     else:
         ano = ""
 
+    # Comprobación de coincidencias exactas
     coincidencias[TagLabels.FECHA_EXACTA] = database["fecha"] == tag.year
+
     coincidencias[TagLabels.FECHA] = database["fecha_ano"] == ano
-    if (not (tag.year) or tag.year == ""):
+
+    # Intentar obtener la fecha de fallecimiento del director
+    try:
+        fallecimiento_director = fallecimiento[artista_buscar]
+    except KeyError:
+        # Si el artista no está en la lista, asignamos la fecha actual como indicación de "futuro"
+        fallecimiento_director = datetime.now().date()
+        # print(f"Fallecimiento de {artista_buscar} NO encontrado: {fallecimiento_director}")
+
+
+    # Intentamos convertir tag.year a una fecha
+    tag_year_date = parse_year(tag.year)
+
+    # Si la fecha no es None, realizamos la comparación; si es None, asumimos que no falleció
+    if tag_year_date is not None:
+        Fallecio = fallecimiento_director < tag_year_date
+    else:
+        Fallecio = False  # Si no se puede obtener la fecha, no se considera que falleció
+
+    if not tag.year or tag.year == "" or Fallecio:
         coincidencias[TagLabels.FECHA_PARCIAL] = pd.Series([True] * database_length, index=database.index)
     else:
         coincidencias[TagLabels.FECHA_PARCIAL] = pd.Series([False] * database_length, index=database.index)
@@ -841,6 +818,10 @@ def guardar_archivo_output(tipo, dataframe, encabezados=None):
     return file_path
 
 
+def leer_tags(ruta_archivo):
+    tags = TinyTag.get(ruta_archivo)
+    return tags
+
 def find_similar_lines(merged_lines, similarity_threshold=0.97):
     """
     Find and print lines in merged_lines that are very similar to each other.
@@ -866,3 +847,86 @@ def find_similar_lines(merged_lines, similarity_threshold=0.97):
             print(f"Similarity: {pair[4]:.2f}\n")
     else:
         print("No similar lines found.")
+
+
+from datetime import datetime
+
+def parse_year(tag_year):
+    # Definir los formatos de fecha que se van a intentar
+    formatos_fecha = ["%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y", "%Y%m%d"]
+
+    # Si el valor es un entero, lo tratamos como un año
+    if isinstance(tag_year, int):
+        return datetime(tag_year, 1, 1).date()
+
+    # Si es una cadena, intentamos convertirla a una fecha usando múltiples formatos
+    elif isinstance(tag_year, str):
+        tag_year = tag_year.strip()  # Limpiamos espacios
+
+        # Intentamos cada formato de fecha
+        for formato in formatos_fecha:
+            try:
+                parsed_date = datetime.strptime(tag_year, formato).date()
+                return parsed_date
+            except ValueError:
+                # Si falla, seguimos intentando con otros formatos
+                continue
+
+    # Si no se pudo convertir a fecha válida, retornamos None
+    return None
+
+
+
+def extraer_cuatro_numeros(cadena):
+    # Usamos la expresión regular \d{4} para encontrar cuatro dígitos consecutivos
+    resultado = re.search(r'\d{4}', cadena)
+    if resultado:
+        return resultado.group()
+    else:
+        return None
+
+def generar_timestamp():
+    return datetime.now().strftime("%Y%m%d%H%M%S")
+
+
+def extract_year(date_str):
+    # Define a regular expression pattern to match the year
+    pattern = r'\b(\d{4})\b'
+
+    # Match the pattern
+    match = re.search(pattern, date_str)
+
+    # If there's a match, return the year
+    if match:
+        return match.group(1)
+    else:
+        return ""
+
+
+def convert_date_format(date_str):
+    """
+    Convert a date from DD/MM/YYYY format to YYYY-MM-DD format.
+    Args:
+        date_str (str): Date string in DD/MM/YYYY format.
+    Returns:
+        str: Date string in YYYY-MM-DD format.
+    """
+    pattern_yyyymmdd = r'^[0-9]{4}-(0[0-9]|1[0-2])-(0[0-9]|[12][0-9]|3[01])$'
+
+    if re.match(pattern_yyyymmdd, date_str):
+        if date_str.endswith('-00-00'):
+            # Remove the last three characters
+            return date_str[:-6]
+        if date_str.endswith('-00'):
+            # Remove the last three characters
+            return date_str[:-3]
+        new_date_str = date_str
+    else:
+        # Parse the input date string
+        date_object = datetime.strptime(date_str, "%d/%m/%Y")
+
+        # Convert to the desired format
+        new_date_str = date_object.strftime("%Y-%m-%d")
+
+    return new_date_str
+

@@ -1,4 +1,3 @@
-from tinytag import TinyTag
 from tkinter import ttk
 from src.utils.utils import *
 from src.config.database import Database
@@ -41,7 +40,7 @@ class FILETOFIND:
         # Estados de los checkbuttons
 
         if tags is None:
-            self.tags = self.leer_tags()
+            self.tags = leer_tags(self.ruta_archivo)
         else:
             self.tags = self.listoid3(tags)
 
@@ -403,9 +402,7 @@ class FILETOFIND:
         )
         stop_button.grid(row=row, column=column, sticky="ne", padx=self.padx, pady=self.pady)
 
-    def leer_tags(self):
-        tags = TinyTag.get(self.ruta_archivo)
-        return tags
+
 
     def buscar(self):
         # Inicialización de variables
@@ -616,7 +613,7 @@ class FILETOFIND:
         update_tags(*etiquetas_actualizadas)
         popup.destroy()
 
-        self.leer_tags()
+        leer_tags(self.ruta_archivo)
 
         self.buscar()
 
