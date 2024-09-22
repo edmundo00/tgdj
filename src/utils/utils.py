@@ -180,7 +180,7 @@ def update_tags(file_path, title=None, artist=None, year=None, genre=None, compo
         audio = MP4(file_path)
     else:
         print(f"Unsupported file format: {ext}")
-        return
+        return False
 
     # Update tags
     if title:
@@ -211,6 +211,7 @@ def update_tags(file_path, title=None, artist=None, year=None, genre=None, compo
 
     # Save changes
     audio.save()
+    return True
 
 
 def capitalize_uppercase_words(text):
@@ -261,6 +262,21 @@ def aplicartag_archivo(ruta_archivo, coincidencias, coincidencia_preferida,coinc
         composer=coincidencias.compositor_autor.iloc[coincidencia_preferida]
     )
 
+    reporte_data = {
+        'title': coincidencias.titulo.iloc[coincidencia_preferida],
+        'artist': artist,
+        'year': coincidencias.fecha.iloc[coincidencia_preferida],
+        'genre': coincidencias.estilo.iloc[coincidencia_preferida],
+        'composer': coincidencias.compositor_autor.iloc[coincidencia_preferida],
+        'file_path': ruta_archivo,
+        "Artista encontrado": False,
+        "Titulo encontrado": False,
+        "Numero de coincidencias": 1,
+        "Hay coincidencia preferida": False,
+        "No hay coincidencia preferida": False,
+        "Coincidencia perfecta": True
+    }
+
     # Crear el diccionario de reemplazo de tags
     reemplazo_tags_linea = crear_reemplazo_tags_linea(
         ruta_archivo=ruta_archivo,
@@ -272,7 +288,7 @@ def aplicartag_archivo(ruta_archivo, coincidencias, coincidencia_preferida,coinc
         coincidencia_titulo=coincidencia_titulo
     )
 
-    return reemplazo_tags_linea
+    return reemplazo_tags_linea, reporte_data
 
 
 

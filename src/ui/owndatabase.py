@@ -5,28 +5,22 @@ from src.utils.utils import *
 import os
 import pandas as pd
 
+
 class owndatabase:
     def __init__(self, update_status=None):
         """Initialize the class and load or create the database."""
         self.update_status = update_status
         self.db_path = os.path.join(DATA_FOLDER, 'owndatabase.csv')
-        self.db_report_path = os.path.join(DATA_FOLDER, 'owndatabase_report.csv')
+
+
 
         # Load or create the main database
         if os.path.exists(self.db_path):
             self.owndf = pd.read_csv(self.db_path).fillna("")
-        else:
-            columns = ['title', 'artist', 'year', 'genre', 'composer', 'file_path']
-            self.owndf = pd.DataFrame(columns=columns)
-            self.owndf.to_csv(self.db_path, index=False)
-
-
-        # Load or create the report database
-        if os.path.exists(self.db_report_path):
-            self.owndf_rep = pd.read_csv(self.db_report_path).fillna("")
-        else:
-            self.owndf_rep = pd.DataFrame(columns=columns)
-            self.owndf_rep.to_csv(self.db_report_path, index=False)
+            self.owndf.set_index('file_path', inplace=True, drop=False)
+        # else:
+        #     columns = ['title', 'artist', 'year', 'genre', 'composer', 'file_path', "Titulo encontrado","Numero de coincidencias", "Hay coincidencia preferida","No hay coincidencia preferida","Coincidencia perfecta"  ]
+        #     self.owndf = pd.DataFrame(columns=columns)
 
     # Columnas del DataFrame `self.owndf_rep`:
     #
@@ -98,6 +92,16 @@ class owndatabase:
 
             # Save the collected data into the CSV
             self.owndf = pd.DataFrame(data)
+
+            # Añadir las nuevas columnas con valores por defecto
+            self.owndf['Artista encontrado'] = False
+            self.owndf['Titulo encontrado'] = False
+            self.owndf['Numero de coincidencias'] = 0
+            self.owndf['Hay coincidencia preferida'] = False
+            self.owndf['No hay coincidencia preferida'] = False
+            self.owndf['Coincidencia perfecta'] = False
+
+
             self.owndf.to_csv(self.db_path, index=False)
             if not folder_selected:  # Show message only in GUI context
                 messagebox.showinfo("Database Created", "Database created and saved successfully.")
@@ -116,3 +120,37 @@ class owndatabase:
     def leer_tags(self, ruta_archivo):
         """Read the tags from the file."""
         return TinyTag.get(ruta_archivo)
+
+    def get_artist_counts(self, output_folder):
+        """Filtrar los artistas no encontrados y contar repeticiones"""
+        filtered_df = self.owndf[
+            (~self.owndf_rep['Coincidencia perfecta']) & (self.owndf_rep['Artista encontrado'])
+        ]
+        artist_counts = filtered_df['artist'].value_counts()
+
+        archivo_artistas_no_encontrados = os.path.join(output_folder, 'artistas_no_encontrados.csv')
+        artist_counts.to_csv(archivo_artistas_no_encontrados, index=True)
+
+        print(f"Artistas no encontrados guardados en {archivo_artistas_no_encontrados}")
+
+    def process_file_dates(self, output_folder):
+        """Buscar fechas en los nombres de archivo, formatearlas y guardarlas en un CSV"""
+        date_pattern = r"\((\d{2})-(\d{2})-(\d{4})\)"
+        filtered_df = self.owndf[self.owndf['file_path'].str.contains(date_pattern, na=False)]
+        filtered_df['formatted_date'] = None
+
+        for index, row in filtered_df.iterrows():
+            match = re.search(date_pattern, row['file_path'])
+            if match and len(match.groups()) == 3:
+                day, month, year = match.groups()
+                formatted_date = f"{year}-{month}-{day}"
+                filtered_df.at[index, 'formatted_date'] = formatted_date
+
+                # (Opcional) Llamar a update_tags si es necesario
+                # update_tags(row['file_path'], year=formatted_date)
+
+        archivos_con_fechas = os.path.join(output_folder, 'archivos_con_fechas.csv')
+        filtered_df.to_csv(archivos_con_fechas, index=True)
+
+        print(f"Fechas procesadas guardadas en {archivos_con_fechas}")
+

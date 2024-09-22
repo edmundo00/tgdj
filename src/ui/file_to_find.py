@@ -17,8 +17,8 @@ class FILETOFIND:
             self.show_title_not_found, self.show_remaining, self.direct_comparison = lista_checks
         self.ruta_archivo = ruta_archivo
         self.frame_number = frame_number
-        self.artist_not_found = False
-        self.title_not_found = False
+        self.artist_not_found = True
+        self.title_not_found = True
         self.titulo_coincidencia = int(0)
 
 
@@ -75,11 +75,17 @@ class FILETOFIND:
             pd.DataFrame: Un DataFrame con las variables clave del reporte.
         """
         reporte_data = {
-            "Artista encontrado": self.artist_not_found,
-            "Titulo encontrado": self.title_not_found,
+            'title': self.tags.title,
+            'artist': self.tags.artist,
+            'year': self.tags.year,
+            'genre': self.tags.genre,
+            'composer': self.tags.composer,
+            'file_path': self.ruta_archivo,
+            "Artista encontrado": not self.artist_not_found,
+            "Titulo encontrado": not self.title_not_found,
             "Numero de coincidencias": len(self.coincidencias) if self.coincidencias is not None else 0,
             "Hay coincidencia preferida": self.hay_coincidencia_preferida,
-            "No hay coincidencia preferida": self.no_hay_coincidencia_preferida,
+            "No hay coincidencia preferida": not self.hay_coincidencia_preferida,
             "Coincidencia perfecta": self.perfect_match
         }
 
@@ -424,6 +430,7 @@ class FILETOFIND:
             self.artist_not_found =True
             return
 
+        self.artist_not_found = False
         # Obtener las canciones del artista
         artist_songs = self.obtener_canciones_artista(artista_key)
 
@@ -435,9 +442,10 @@ class FILETOFIND:
             self.coincidencias = self.db.iloc[0:0]
             self.hay_coincidencia_preferida = False
             self.coincidencia_preferida = 0
-            self.title_not_found =True
+            self.title_not_found = True
             return
 
+        self.title_not_found = False
         # Comparar tags y generar coincidencias
         self.bool_coincidencias, self.perfect_match, perfect_match_index = compare_tags(
             self.artista_coincidencia, self.titulo_coincidencia, database_titulo, self.tags

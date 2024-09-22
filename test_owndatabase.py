@@ -1,28 +1,25 @@
 import os
 from src.ui.owndatabase import owndatabase  # Asegúrate de que el módulo owndatabase está en el mismo directorio o en el PYTHONPATH
 from src.config.config import *
+import re
+from src.utils.utils import *
 
 def test_owndatabase():
     print("Iniciando prueba de la clase owndatabase...")
 
-    # Crear una instancia de owndatabase sin update_status (para pruebas sin GUI)
+    # Crear una instancia de owndatabase
     db = owndatabase()
 
-    # Filtrar las filas donde 'Coincidencia perfecta' es False y 'Artista encontrado' es True
-    filtered_df = db.owndf[
-        (~db.owndf_rep['Coincidencia perfecta']) &
-        (db.owndf_rep['Artista encontrado'])
-    ]
+    # Llamar a las funciones definidas en la clase
+    output_folder = OUTPUT_FOLDER
 
-    # Obtener la lista de artistas y el número de repeticiones
-    artist_counts = filtered_df['artist'].value_counts()
+    # Obtener la lista de artistas no encontrados y sus recuentos
+    db.get_artist_counts(output_folder)
 
-    # Imprimir la lista de artistas y cuántas veces se repiten
-    print(artist_counts)
+    # Procesar fechas en los nombres de archivo
+    db.process_file_dates(output_folder)
 
-    archivo_artistas_no_encontrados = os.path.join(OUTPUT_FOLDER, 'artistas_no_encontrados.csv')
 
-    artist_counts.to_csv(archivo_artistas_no_encontrados, index=True)
 
 if __name__ == '__main__':
     test_owndatabase()

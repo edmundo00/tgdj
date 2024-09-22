@@ -126,6 +126,13 @@ merged_images_folder = os.path.join(IMAGE_FOLDER,"orquestas_con_fondo")
 
 archivotest = os.path.join(output_folder, "pythontest.csv")
 
+# Lista de nombres de las carpetas
+music_folders = ["Angel", "Camilo Gatica", "Carlos Gardel", "Dan", "Edmundo", "Eduardo",
+           "Eva", "HistoTango", "Leandro", "Osvaldo LA YUMBA"]
+
+# Crear las rutas completas de cada carpeta
+music_folder_paths = [os.path.join(dropbox_path, "MUSICA", "MP3", "TANGO", folder) for folder in music_folders]
+
 filetofind_list = []
 numero_canciones = 0
 articulos_preposiciones_comunes = [

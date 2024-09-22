@@ -17,8 +17,9 @@ class Ventana:
         self.root = root
         self.colour = 'white'
         self.pad = 0
-        self.df_reporte = df_reporte
+        self.df_reporte = pd.DataFrame()
         self.df_reporte_coincidencia_favorita = df_reporte_coincidencia_favorita
+
 
         # Inicializar los diccionarios para almacenar los frames de columnas
         self.frames_columnas_archivo = {}
@@ -685,8 +686,8 @@ class Ventana:
     def procesar_archivos(self, archivos, numero_canciones, from_playlist=False, from_musicbee= False, show_progress=False, origen=None, tags=None):
         """Procesa una lista de archivos y actualiza la interfaz."""
 
-        self.df_reporte.drop(self.df_reporte.index, inplace=True)
         total_archivos = len(archivos)
+        self.df_reporte = pd.DataFrame()
 
         # Configurar la barra de progreso si es necesario
         if show_progress:
@@ -718,7 +719,17 @@ class Ventana:
                     tags = tags_aplicar
                 )
 
-                self.df_reporte = pd.concat([self.df_reporte, pd.DataFrame([report_archivo])], ignore_index=True)
+                # Comprobar si self.df_reporte está definido o no
+                if self.df_reporte is None:
+                    # Si no está definido, inicializar con el primer DataFrame
+                    self.df_reporte = pd.DataFrame([report_archivo])
+                else:
+                    # Si ya existe, concatenar el nuevo reporte
+                    self.df_reporte = pd.concat([self.df_reporte, pd.DataFrame([report_archivo])], ignore_index=True)
+
+                # Establecer 'file_path' como índice pero mantenerlo como columna
+                self.df_reporte.set_index('file_path', inplace=True, drop=False)
+
                 if self.guardar_coincidencias.get():
                     self.df_reporte_coincidencia_favorita = pd.concat([self.df_reporte_coincidencia_favorita, coinc_fav], ignore_index=True)
 
@@ -833,6 +844,7 @@ class Ventana:
 
     def aplicartags(self):
         reemplazo_tags = []
+        reporte_tags = pd.DataFrame()
         total_archivos = len(filetofind_list)
         analizados = 0  # Contador de archivos analizados
         tageados = 0  # Contador de archivos efectivamente etiquetados
@@ -843,16 +855,27 @@ class Ventana:
                 analizados += 1  # Incrementar el contador de analizados
                 if archivos.hay_coincidencia_preferida:
                     # Usar aplicartag_archivo para aplicar los cambios
-                    reemplazo_tags_linea = aplicartag_archivo(
+                    reemplazo_tags_linea, reporte = aplicartag_archivo(
                         ruta_archivo=archivos.ruta_archivo,
                         coincidencias=archivos.coincidencias,
                         coincidencia_preferida=archivos.coincidencia_preferida,
                         tags=archivos.tags,
                         coincidencia_titulo = archivos.titulo_coincidencia
                     )
+                    # Comprobar si self.df_reporte está definido o no
+                    if reporte_tags is None:
+                        # Si no está definido, inicializar con el primer DataFrame
+                        reporte_tags = pd.DataFrame([reporte])
+                    else:
+                        # Si ya existe, concatenar el nuevo reporte
+                        reporte_tags = pd.concat([reporte_tags, pd.DataFrame([reporte])],
+                                                    ignore_index=True)
+
+
                     reemplazo_tags.append(reemplazo_tags_linea)
                     tageados += 1  # Incrementar el contador de tageados
                 # Actualizar la barra de estado con el progreso
+                reporte_tags.set_index('file_path', inplace=True, drop=False)
                 self.actualizar_barra_estado(analizados, total_archivos, tageados)
         else:
             # Operar sobre las variables vars si no hay comparación directa
@@ -861,17 +884,26 @@ class Ventana:
                     analizados += 1  # Incrementar el contador de analizados
                     if check.get():
                         # Usar aplicartag_archivo para simplificar la lógica de asignación de tags
-                        reemplazo_tags_linea = aplicartag_archivo(
+                        reemplazo_tags_linea, reporte = aplicartag_archivo(
                             ruta_archivo=archivos.ruta_archivo,
                             coincidencias=archivos.coincidencias,
                             coincidencia_preferida=index,
                             tags=archivos.tags,
                             coincidencia_titulo=archivos.titulo_coincidencia
                         )
+                        if reporte_tags is None:
+                            # Si no está definido, inicializar con el primer DataFrame
+                            reporte_tags = pd.DataFrame([reporte])
+                        else:
+                            # Si ya existe, concatenar el nuevo reporte
+                            reporte_tags = pd.concat([reporte_tags, pd.DataFrame([reporte])],
+                                                     ignore_index=True)
+
                         self.df_reporte_coincidencia_favorita = pd.concat(
                             [self.df_reporte_coincidencia_favorita, reemplazo_tags_linea], ignore_index=True)
                         tageados += 1  # Incrementar el contador de tageados
                     # Actualizar la barra de estado con el progreso
+                    reporte_tags.set_index('file_path', inplace=True, drop=False)
                     self.actualizar_barra_estado(analizados, total_archivos, tageados)
 
         # Crear DataFrame y guardar en un archivo CSV
@@ -958,7 +990,16 @@ class Ventana:
 
     def createdb(self):
         """Create an instance of the `owndatabase` class."""
-        self.owndb.create_database()
+
+        # Preguntar si se desea elegir las carpetas o usar las predeterminadas
+        use_default_folders = messagebox.askyesno("Carpetas por defecto", "¿Quieres usar las carpetas predeterminadas?")
+
+        if use_default_folders:
+            self.owndb.create_database(music_folder_paths)
+        else:
+            self.owndb.create_database()
+
+
 
     def comparedb(self):
 
@@ -966,22 +1007,14 @@ class Ventana:
         self.borrar_todo()  # Limpiar la lista de archivos existentes
         numero_canciones = 0
 
-        if hasattr(self.owndb, 'owndf_rep') and isinstance(self.owndb.owndf_rep, pd.DataFrame):
-            # Filter `owndf` rows where 'Coincidencia perfecta' is False
-            filtered_df = self.owndb.owndf[~self.owndb.owndf_rep['Coincidencia perfecta']]
-
-
-            # Extract file paths and tags for the filtered rows
-            lines = filtered_df['file_path'].tolist()
-            tags = filtered_df
-        else:
-            # If `owndf_rep` does not exist, use all rows from `owndf`
-            lines = self.owndb.owndf['file_path'].tolist()
-            tags = self.owndb.owndf
+        lines = self.owndb.owndf['file_path'].tolist()
+        tags = self.owndb.owndf
 
         self.procesar_archivos(lines, numero_canciones, from_musicbee=True, show_progress=True,
                                origen='OwnDB', tags=tags)
 
-        # db_report_path = os.path.join(DATA_FOLDER, 'owndatabase_report.csv')
-        # self.df_reporte.to_csv(db_report_path, index=False)
+        db_report_path = os.path.join(DATA_FOLDER, 'owndatabase_report.csv')
+        self.df_reporte.to_csv(db_report_path, index=False)
+        self.owndb.owndf.update(self.df_reporte)
+        self.owndb.owndf.to_csv(os.path.join(DATA_FOLDER, 'owndatabase.csv'), index=False)
 
