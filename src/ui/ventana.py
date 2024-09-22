@@ -1003,7 +1003,6 @@ class Ventana:
 
     def comparedb(self):
 
-
         self.borrar_todo()  # Limpiar la lista de archivos existentes
         numero_canciones = 0
 
@@ -1013,8 +1012,6 @@ class Ventana:
         self.procesar_archivos(lines, numero_canciones, from_musicbee=True, show_progress=True,
                                origen='OwnDB', tags=tags)
 
-        db_report_path = os.path.join(DATA_FOLDER, 'owndatabase_report.csv')
-        self.df_reporte.to_csv(db_report_path, index=False)
         self.owndb.owndf.update(self.df_reporte)
         self.owndb.owndf.to_csv(os.path.join(DATA_FOLDER, 'owndatabase.csv'), index=False)
 
