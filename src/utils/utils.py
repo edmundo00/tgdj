@@ -165,54 +165,61 @@ def coincidencias_a_colores(bool_coincidencias, perfect_match):
 
 
 def update_tags(file_path, title=None, artist=None, year=None, genre=None, composer=None):
-    # Get the file extension
-    _, ext = os.path.splitext(file_path)
-    ext = ext.lower()
+    if tagear:
+        try:
+            # Get the file extension
+            _, ext = os.path.splitext(file_path)
+            ext = ext.lower()
 
-    if ext == '.mp3':
-        # Load the MP3 file
-        audio = MP3(file_path, ID3=EasyID3)
-    elif ext == '.flac':
-        # Load the FLAC file
-        audio = FLAC(file_path)
-    elif ext == '.m4a':
-        # Load the M4A file
-        audio = MP4(file_path)
+            # Load the appropriate file format
+            if ext == '.mp3':
+                audio = MP3(file_path, ID3=EasyID3)
+            elif ext == '.flac':
+                audio = FLAC(file_path)
+            elif ext == '.m4a':
+                audio = MP4(file_path)
+            else:
+                print(f"Unsupported file format: {ext}")
+                return False
+
+            # Update tags if values are provided
+            if title:
+                if ext == '.m4a':
+                    audio['\xa9nam'] = title  # Title tag for M4A
+                else:
+                    audio['title'] = title
+            if artist:
+                if ext == '.m4a':
+                    audio['\xa9ART'] = artist  # Artist tag for M4A
+                else:
+                    audio['artist'] = artist
+            if year:
+                if ext == '.m4a':
+                    audio['\xa9day'] = year  # Year tag for M4A
+                else:
+                    audio['date'] = year
+            if genre:
+                if ext == '.m4a':
+                    audio['\xa9gen'] = genre  # Genre tag for M4A
+                else:
+                    audio['genre'] = genre
+            if composer:
+                if ext == '.m4a':
+                    audio['\xa9wrt'] = composer  # Composer tag for M4A
+                else:
+                    audio['composer'] = composer
+
+            # Save changes
+            audio.save()
+            return True  # Return True if the operation is successful
+
+        except Exception as e:
+            # Catch any exception and print the error message for debugging
+            print(f"An error occurred while updating tags: {e}")
+            return False  # Return False if there is any failure
     else:
-        print(f"Unsupported file format: {ext}")
+        print(f"Archivo: {file_path} no tageado, tagear = \'False\'")
         return False
-
-    # Update tags
-    if title:
-        if ext == '.m4a':
-            audio['\xa9nam'] = title  # Tag for composer in M4A files
-        else:
-            audio['title'] = title
-    if artist:
-        if ext == '.m4a':
-            audio['\xa9ART'] = artist  # Tag for composer in M4A files
-        else:
-            audio['artist'] = artist
-    if year:
-        if ext == '.m4a':
-            audio['\xa9day'] = year  # Tag for composer in M4A files
-        else:
-            audio['date'] = year
-    if genre:
-        if ext == '.m4a':
-            audio['\xa9gen'] = genre  # Tag for composer in M4A files
-        else:
-            audio['genre'] = genre
-    if composer:
-        if ext == '.m4a':
-            audio['\xa9wrt'] = composer  # Tag for composer in M4A files
-        else:
-            audio['composer'] = composer
-
-    # Save changes
-    audio.save()
-    return True
-
 
 def capitalize_uppercase_words(text):
     words = text.split()
@@ -253,7 +260,8 @@ def aplicartag_archivo(ruta_archivo, coincidencias, coincidencia_preferida,coinc
     )
 
     # Actualizar tags usando un solo llamado a la función update_tags
-    update_tags(
+
+    tageado = update_tags(
         ruta_archivo,
         title=coincidencias.titulo.iloc[coincidencia_preferida],
         artist=artist,
@@ -288,7 +296,7 @@ def aplicartag_archivo(ruta_archivo, coincidencias, coincidencia_preferida,coinc
         coincidencia_titulo=coincidencia_titulo
     )
 
-    return reemplazo_tags_linea, reporte_data
+    return reemplazo_tags_linea, reporte_data, tageado
 
 
 

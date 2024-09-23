@@ -10,6 +10,7 @@ import tkinter as tk
 from src.ui.playlist_operations import PlaylistOperations
 from src.utils.MusicBeeLibraryTools import MusicBeeLibraryTools
 from src.ui.owndatabase import owndatabase
+from src.ui.ReportManager import ReportManager
 
 class Ventana:
     def __init__(self, root):
@@ -19,6 +20,7 @@ class Ventana:
         self.pad = 0
         self.df_reporte = pd.DataFrame()
         self.df_reporte_coincidencia_favorita = df_reporte_coincidencia_favorita
+        self.origen_archivos = None
 
 
         # Inicializar los diccionarios para almacenar los frames de columnas
@@ -28,7 +30,7 @@ class Ventana:
         # Initialize PlaylistOperations
         self.playlist_operations = PlaylistOperations(self.root, m3u_start_path, path_map)
 
-        self.owndb = owndatabase(self.actualizar_barra_estado)
+        self.owndb = owndatabase(self.update_progress_and_status)
 
         self.root.title("Tkinter Window with Menu, Icon, and Status Bar")
         self.root.geometry('1700x800')
@@ -199,8 +201,6 @@ class Ventana:
         widget.bind("<Enter>", show_tooltip)
         widget.bind("<Leave>", hide_tooltip)
 
-
-
     def configure_scrollable_frames(self):
         """Configure all scrollable frames in self.scrollable_frame to expand and fill their canvases."""
         for canvas, scrollable_frame in zip(self.canvas, self.scrollable_frame):
@@ -301,7 +301,6 @@ class Ventana:
         )
         self.configure_scrollable_frames()
 
-
     def create_and_configure_subframe(self, subframe_bg, subframe_row, subframe_column, title_config, scrollable_bg,
                                       frames_columnas, canvas_attr_name):
         """Helper function to create and configure a subframe and its components."""
@@ -326,7 +325,6 @@ class Ventana:
 
         # Create frames inside the scrollable area according to the provided configuration
         self.crear_frames_en_columnas(title_config, scrollable_frame, frames_columnas)
-
     def on_mouse_wheel(self, event):
         """Handle mouse wheel scrolling only when the window is on top and focused."""
         # Check if the root window is focused
@@ -442,13 +440,11 @@ class Ventana:
         """Devuelve los frames de columnas del subframe2 (resultado)."""
         return self.frames_columnas_resultado
 
-
     def create_status_bar(self):
         """Create a status bar at the bottom of the window."""
         self.status_bar = tk.Label(self.root, text="Status: Ready", bd=1, relief=tk.SUNKEN, anchor=tk.W)
         # Set the grid for the status bar, ensuring it spans across the required columns
         self.status_bar.grid(row=self.status_bar_row, column=0, columnspan=self.status_bar_colspan, sticky="ew")
-
 
     def open_presentation_popup(self):
         # Inicializa la ventana si no existe o si ha sido destruida
@@ -459,7 +455,6 @@ class Ventana:
             app = PresentationApp(self.presentation_window)
         else:
             self.presentation_window.lift()
-
 
     def searchdb(self):
         def update_table():
@@ -603,20 +598,23 @@ class Ventana:
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
     def load_music_file(self):
-        self.borrar_todo()  # Limpiar la lista de archivos existentes
+        self.borrar_todo()  # Clear the list of existing files
         numero_canciones = 0
 
-        # Abrir un diálogo para seleccionar un archivo de música
+        # Open a dialog to select a music file
         file_path = filedialog.askopenfilename(
             filetypes=[("MUSIC files", ".mp3 .wav .flac .ogg .m4a"), ("All files", "*.*")]
         )
 
         if file_path:
-            # Usar el método crear_y_actualizar_filetofind para crear la instancia de FILETOFIND
-            numero_canciones = self.crear_y_actualizar_filetofind(
-                ruta_archivo=file_path,
-                frame_number=numero_canciones
-            )
+            # Create a list with a single file to reuse the same processing logic as for the folder
+            music_files = [file_path]
+
+            # Process the file using the same method as the folder, passing the file and folder path
+            folder_path = os.path.dirname(file_path)  # Folder of the selected file
+
+            self.origen_archivos = 'file'
+            self.procesar_archivos(music_files, numero_canciones, show_progress=False, origen=folder_path)
 
     def open_musicbee_library(self):
 
@@ -636,6 +634,7 @@ class Ventana:
                 lines = self.musicbee_tool.library_df['file_path'].tolist()
                 tagsml_df = self.musicbee_tool.library_df[['title', 'artist', 'year', 'genre', 'composer','file_path']]
 
+                self.origen_archivos = 'musicbee'
                 self.procesar_archivos(lines, numero_canciones, from_musicbee=True, show_progress=True,
                                        origen=file_path, tags=tagsml_df)
 
@@ -668,6 +667,7 @@ class Ventana:
                 #lines es una lista con todos los paths de las canciones
                 # numero_canciones es un contador que se define aqui mismo
 
+                self.origen_archivos = 'playlist'
                 self.procesar_archivos(lines, numero_canciones, from_playlist=True, show_progress=True,origen=self.m3u_file_path)
 
     def load_music_folder(self):
@@ -681,13 +681,14 @@ class Ventana:
                            if filename.endswith(('.mp3', '.wav', '.flac', '.ogg', '.m4a'))]
 
             # Process files from the directory
+            self.origen_archivos = 'folder'
             self.procesar_archivos(music_files, numero_canciones, show_progress=True,origen=folder_path)
 
     def procesar_archivos(self, archivos, numero_canciones, from_playlist=False, from_musicbee= False, show_progress=False, origen=None, tags=None):
         """Procesa una lista de archivos y actualiza la interfaz."""
 
         total_archivos = len(archivos)
-        self.df_reporte = pd.DataFrame()
+        self.archivos_comparado = ReportManager()
 
         # Configurar la barra de progreso si es necesario
         if show_progress:
@@ -697,7 +698,7 @@ class Ventana:
             tags_aplicar = None
             # Update progress if required
             if show_progress:
-                self.update_progress_bar(current= index + 1, total= total_archivos)
+                self.update_progress_and_status(current= index + 1, total= total_archivos)
 
 
             # Process each file
@@ -719,21 +720,25 @@ class Ventana:
                     tags = tags_aplicar
                 )
 
-                # Comprobar si self.df_reporte está definido o no
-                if self.df_reporte is None:
-                    # Si no está definido, inicializar con el primer DataFrame
-                    self.df_reporte = pd.DataFrame([report_archivo])
-                else:
-                    # Si ya existe, concatenar el nuevo reporte
-                    self.df_reporte = pd.concat([self.df_reporte, pd.DataFrame([report_archivo])], ignore_index=True)
+                self.archivos_comparado.add_row(report_archivo)
 
-                # Establecer 'file_path' como índice pero mantenerlo como columna
-                self.df_reporte.set_index('file_path', inplace=True, drop=False)
+                # # Comprobar si self.df_reporte está definido o no
+                # if self.df_reporte is None:
+                #     # Si no está definido, inicializar con el primer DataFrame
+                #     self.df_reporte = pd.DataFrame([report_archivo])
+                # else:
+                #     # Si ya existe, concatenar el nuevo reporte
+                #     self.df_reporte = pd.concat([self.df_reporte, pd.DataFrame([report_archivo])], ignore_index=True)
+
+
 
                 if self.guardar_coincidencias.get():
                     self.df_reporte_coincidencia_favorita = pd.concat([self.df_reporte_coincidencia_favorita, coinc_fav], ignore_index=True)
 
-        self.mostrar_popup_reporte(self.df_reporte)
+        # Establecer 'file_path' como índice pero mantenerlo como columna
+        self.archivos_comparado.finalize_report()
+
+        self.mostrar_popup_reporte(self.archivos_comparado.report_df)
         if self.guardar_coincidencias.get():
             guardar_archivo_output(tipo='coincidencias', dataframe=self.df_reporte_coincidencia_favorita, encabezados=None)
         # Guardar residuos si se requiere
@@ -797,7 +802,6 @@ class Ventana:
         self.progress_bar = ttk.Progressbar(self.status_bar, variable=self.progress_var, maximum=100, length=150)
         self.progress_bar.pack(side=tk.RIGHT, padx=self.pad)
 
-
     def cleanup_progress_bar(self):
         """Elimina la barra de progreso y la etiqueta de estado."""
         self.progress_bar.pack_forget()
@@ -844,90 +848,86 @@ class Ventana:
 
     def aplicartags(self):
         reemplazo_tags = []
-        reporte_tags = pd.DataFrame()
+        self.reporte_tags = ReportManager()
+        self.setup_progress_bar()
+
         total_archivos = len(filetofind_list)
         analizados = 0  # Contador de archivos analizados
         tageados = 0  # Contador de archivos efectivamente etiquetados
 
+        def procesar_archivo(archivo, coincidencia_preferida):
+            """Helper function to process each file and update the reports."""
+            nonlocal analizados, tageados, reemplazo_tags
+            analizados += 1  # Incrementar el contador de analizados
+            reemplazo_tags_linea, reporte, tageado = aplicartag_archivo(
+                ruta_archivo=archivo.ruta_archivo,
+                coincidencias=archivo.coincidencias,
+                coincidencia_preferida=coincidencia_preferida,
+                tags=archivo.tags,
+                coincidencia_titulo=archivo.titulo_coincidencia
+            )
+            self.reporte_tags.add_row(reporte)
+            if tageado:
+                tageados += 1  # Incrementar el contador de tageados
+
+            self.update_progress_and_status(current=analizados, total=total_archivos, tageados=tageados)
+
         if self.direct_comparison.get():
-            # Aplicar directamente los tags para las instancias con coincidencia preferida
-            for archivos in filetofind_list:
-                analizados += 1  # Incrementar el contador de analizados
-                if archivos.hay_coincidencia_preferida:
-                    # Usar aplicartag_archivo para aplicar los cambios
-                    reemplazo_tags_linea, reporte = aplicartag_archivo(
-                        ruta_archivo=archivos.ruta_archivo,
-                        coincidencias=archivos.coincidencias,
-                        coincidencia_preferida=archivos.coincidencia_preferida,
-                        tags=archivos.tags,
-                        coincidencia_titulo = archivos.titulo_coincidencia
-                    )
-                    # Comprobar si self.df_reporte está definido o no
-                    if reporte_tags is None:
-                        # Si no está definido, inicializar con el primer DataFrame
-                        reporte_tags = pd.DataFrame([reporte])
-                    else:
-                        # Si ya existe, concatenar el nuevo reporte
-                        reporte_tags = pd.concat([reporte_tags, pd.DataFrame([reporte])],
-                                                    ignore_index=True)
-
-
-                    reemplazo_tags.append(reemplazo_tags_linea)
-                    tageados += 1  # Incrementar el contador de tageados
-                # Actualizar la barra de estado con el progreso
-                reporte_tags.set_index('file_path', inplace=True, drop=False)
-                self.actualizar_barra_estado(analizados, total_archivos, tageados)
+            # Procesar archivos con coincidencia preferida
+            for archivo in filetofind_list:
+                if archivo.hay_coincidencia_preferida:
+                    procesar_archivo(archivo, archivo.coincidencia_preferida)
         else:
-            # Operar sobre las variables vars si no hay comparación directa
-            for archivos in filetofind_list:
-                for index, check in enumerate(archivos.vars):
-                    analizados += 1  # Incrementar el contador de analizados
+            # Operar sobre las variables `vars` si no hay comparación directa
+            for archivo in filetofind_list:
+                for index, check in enumerate(archivo.vars):
                     if check.get():
-                        # Usar aplicartag_archivo para simplificar la lógica de asignación de tags
-                        reemplazo_tags_linea, reporte = aplicartag_archivo(
-                            ruta_archivo=archivos.ruta_archivo,
-                            coincidencias=archivos.coincidencias,
-                            coincidencia_preferida=index,
-                            tags=archivos.tags,
-                            coincidencia_titulo=archivos.titulo_coincidencia
-                        )
-                        if reporte_tags is None:
-                            # Si no está definido, inicializar con el primer DataFrame
-                            reporte_tags = pd.DataFrame([reporte])
-                        else:
-                            # Si ya existe, concatenar el nuevo reporte
-                            reporte_tags = pd.concat([reporte_tags, pd.DataFrame([reporte])],
-                                                     ignore_index=True)
+                        procesar_archivo(archivo, index)
 
-                        self.df_reporte_coincidencia_favorita = pd.concat(
-                            [self.df_reporte_coincidencia_favorita, reemplazo_tags_linea], ignore_index=True)
-                        tageados += 1  # Incrementar el contador de tageados
-                    # Actualizar la barra de estado con el progreso
-                    reporte_tags.set_index('file_path', inplace=True, drop=False)
-                    self.actualizar_barra_estado(analizados, total_archivos, tageados)
+        self.reporte_tags.finalize_report()
+
+        if self.origen_archivos == 'owndb':
+            self.owndb.owndf.update(self.reporte_tags.report_df)
+            self.owndb.owndf.to_csv(os.path.join(DATA_FOLDER, 'owndatabase.csv'), index=False)
+
 
         # Crear DataFrame y guardar en un archivo CSV
-
         file_path = guardar_archivo_output("tags_aplicadas", self.df_reporte_coincidencia_favorita, encabezados=None)
 
         # Resetear la barra de estado al mensaje por defecto
-        self.resetear_barra_estado()
+        self.cleanup_progress_bar()
 
         # Mostrar mensaje de confirmación con un enlace para abrir el archivo y el resumen final
         self.mostrar_mensaje_confirmacion(file_path, analizados, tageados)
 
-    def actualizar_barra_estado(self, analizados, total, tageados):
-        # Actualizar la barra de estado con el mensaje de progreso
-        mensaje = f"Archivos analizados: {analizados} de {total}, tageados: {tageados}"
-        # Suponiendo que tienes una barra de estado en tu aplicación, por ejemplo, un Label o un StatusBar
-        self.status_bar.config(text=mensaje)
-        self.status_bar.update_idletasks()  # Refrescar la barra de estado
+    def update_progress_and_status(self, value=None, current=None, total=None, tageados=None):
+        """
+        Update the progress bar and status message.
 
-    def resetear_barra_estado(self):
-        # Restablecer la barra de estado al mensaje por defecto
-        mensaje_defecto = "Listo"
-        self.status_bar.config(text=mensaje_defecto)
-        self.status_bar.update_idletasks()
+        Parameters:
+        - value: Progress value in percentage (optional).
+        - current: Current progress value (optional).
+        - total: Total value to calculate the percentage (optional).
+        - tageados: Number of tagged files (optional).
+
+        If `current` and `total` are provided, `value` is ignored and progress is calculated.
+        """
+        if current is not None and total is not None:
+            value = (current / total) * 100  # Calculate progress as a percentage
+
+        # Check if progress bar exists and update it
+        if hasattr(self, 'progress_var') and value is not None:
+            self.progress_var.set(int(value))  # Update progress variable
+            progress_text = f"Progress: {int(value)}% ({current} de {total} canciones)" if current and total else f"Progress: {int(value)}%"
+            self.status_label.config(text=progress_text)
+
+        # Update status bar with analyzed and tagged files if information is available
+        if current is not None and total is not None and tageados is not None:
+            status_message = f"Archivos analizados: {current} de {total}, tageados: {tageados}"
+            self.status_bar.config(text=status_message)
+
+        # Refresh the interface to show updates
+        self.root.update_idletasks()
 
     def mostrar_mensaje_confirmacion(self, file_path, analizados, tageados):
         # Crear una ventana emergente para mostrar el mensaje de confirmación
@@ -969,28 +969,9 @@ class Ventana:
             archivos.destroy()
         filetofind_list.clear()
 
-    def update_progress_bar(self, value=None, current=None, total=None):
-        """
-        Actualiza la barra de progreso con el estado actual.
-
-        Parameters:
-        - value: Valor de progreso en porcentaje (opcional).
-        - current: Valor actual en el progreso (opcional).
-        - total: Valor total para calcular el porcentaje de progreso (opcional).
-
-        Si `current` y `total` son proporcionados, `value` se ignora y el progreso se calcula.
-        """
-        if current is not None and total is not None:
-            value = (current / total) * 100  # Calcula el progreso como un porcentaje
-        if value is not None:
-            self.progress_var.set(int(value))
-            progress_text = f"Progress: {int(value)}% ({current} de {total} canciones)" if current and total else f"Progress: {int(value)}%"
-            self.status_label.config(text=progress_text)
-            self.root.update_idletasks()  # Refrescar la interfaz para mostrar los cambios
-
     def createdb(self):
         """Create an instance of the `owndatabase` class."""
-
+        self.setup_progress_bar()
         # Preguntar si se desea elegir las carpetas o usar las predeterminadas
         use_default_folders = messagebox.askyesno("Carpetas por defecto", "¿Quieres usar las carpetas predeterminadas?")
 
@@ -999,7 +980,7 @@ class Ventana:
         else:
             self.owndb.create_database()
 
-
+        self.cleanup_progress_bar()
 
     def comparedb(self):
 
@@ -1009,9 +990,10 @@ class Ventana:
         lines = self.owndb.owndf['file_path'].tolist()
         tags = self.owndb.owndf
 
+        self.origen_archivos = 'owndb'
         self.procesar_archivos(lines, numero_canciones, from_musicbee=True, show_progress=True,
                                origen='OwnDB', tags=tags)
 
-        self.owndb.owndf.update(self.df_reporte)
+        self.owndb.owndf.update(self.archivos_comparado.report_df)
         self.owndb.owndf.to_csv(os.path.join(DATA_FOLDER, 'owndatabase.csv'), index=False)
 

@@ -318,3 +318,5 @@ fallecimiento = {
 #     print("Osvaldo Pugliese falleció después que Aníbal Troilo")
 # else:
 #     print("Osvaldo Pugliese falleció antes que Aníbal Troilo")
+
+tagear = False

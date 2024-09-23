@@ -88,7 +88,10 @@ class owndatabase:
 
                 # Update the status bar (only if update_status is provided)
                 if self.update_status:
-                    self.update_status(index + 1, total_files, len(data))
+                    self.update_status(current= index + 1, total=total_files)
+                # Force the UI to update after each iteration
+                if hasattr(self, 'root'):
+                    self.root.update_idletasks()
 
             # Save the collected data into the CSV
             self.owndf = pd.DataFrame(data)
