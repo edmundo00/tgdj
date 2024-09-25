@@ -734,6 +734,9 @@ class Ventana:
 
                 if self.guardar_coincidencias.get():
                     self.df_reporte_coincidencia_favorita = pd.concat([self.df_reporte_coincidencia_favorita, coinc_fav], ignore_index=True)
+            if show_progress:
+                # Ensure UI updates properly
+                self.root.after(10, self.update_progress_and_status(current=index + 1, total=total_archivos))
 
         # Establecer 'file_path' como índice pero mantenerlo como columna
         self.archivos_comparado.finalize_report()
@@ -855,7 +858,7 @@ class Ventana:
         analizados = 0  # Contador de archivos analizados
         tageados = 0  # Contador de archivos efectivamente etiquetados
 
-        def procesar_archivo(archivo, coincidencia_preferida):
+        def procesar_archivo_tags(archivo, coincidencia_preferida):
             """Helper function to process each file and update the reports."""
             nonlocal analizados, tageados, reemplazo_tags
             analizados += 1  # Incrementar el contador de analizados
@@ -876,13 +879,13 @@ class Ventana:
             # Procesar archivos con coincidencia preferida
             for archivo in filetofind_list:
                 if archivo.hay_coincidencia_preferida:
-                    procesar_archivo(archivo, archivo.coincidencia_preferida)
+                    procesar_archivo_tags(archivo, archivo.coincidencia_preferida)
         else:
             # Operar sobre las variables `vars` si no hay comparación directa
             for archivo in filetofind_list:
                 for index, check in enumerate(archivo.vars):
                     if check.get():
-                        procesar_archivo(archivo, index)
+                        procesar_archivo_tags(archivo, index)
 
         self.reporte_tags.finalize_report()
 
@@ -899,6 +902,8 @@ class Ventana:
 
         # Mostrar mensaje de confirmación con un enlace para abrir el archivo y el resumen final
         self.mostrar_mensaje_confirmacion(file_path, analizados, tageados)
+
+
 
     def update_progress_and_status(self, value=None, current=None, total=None, tageados=None):
         """
@@ -920,11 +925,6 @@ class Ventana:
             self.progress_var.set(int(value))  # Update progress variable
             progress_text = f"Progress: {int(value)}% ({current} de {total} canciones)" if current and total else f"Progress: {int(value)}%"
             self.status_label.config(text=progress_text)
-
-        # Update status bar with analyzed and tagged files if information is available
-        if current is not None and total is not None and tageados is not None:
-            status_message = f"Archivos analizados: {current} de {total}, tageados: {tageados}"
-            self.status_bar.config(text=status_message)
 
         # Refresh the interface to show updates
         self.root.update_idletasks()

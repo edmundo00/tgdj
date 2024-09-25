@@ -234,3 +234,22 @@ class PlaylistOperations:
             [os.path.join(self.playlist_path_map[cn], f"{filename}_{cn}.m3u") for cn in path_map.keys()]
         )
         messagebox.showinfo("Success", f"Playlists converted and saved successfully at:\n{saved_files}")
+
+    def convert_and_save1(self, m3u_lines, filename):
+        # Define the path to replace
+        old_path = 'D:\\Dropbox\\MUSICA\\MP3\\TANGO\\'
+        new_path = 'D:\\Dropbox\\TDJ\\MUSICA\\'
+
+        # Create a new list with the updated paths
+        updated_lines = [line.replace(old_path, new_path) for line in m3u_lines]
+
+        # Save the updated lines to the specified filename
+        output_file = os.path.join(self.m3u_start_folder, f"{filename}.m3u")
+
+        try:
+            with open(output_file, 'w', encoding='utf-8') as file:
+                file.writelines(updated_lines)
+            messagebox.showinfo("Success", f"Playlist saved as {output_file}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Error saving file: {e}")
+

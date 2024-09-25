@@ -97,12 +97,12 @@ project_root = PROJECT_ROOT
 #directorio_raiz = dropbox_path + "\\MUSICA\\MP3\\TANGO\\other_stuff\\"
 directorio_raiz = MUSIC_PATH
 dropbox_path=MUSIC_PATH
-m3u_start_path = os.path.join(dropbox_path, "MUSICA", "MP3", "TANGO", "other_stuff", "playlists")
-musicbee_start_folder = os.path.join(dropbox_path, "MUSICA", "MP3", "TANGO", "other_stuff", "MUSICBEE DATABASES")
+m3u_start_path = os.path.join(dropbox_path, "TDJ", "playlists")
+musicbee_start_folder = os.path.join(dropbox_path, "TDJ", "MUSICBEE DATABASES")
 
 data_folder = DATA_FOLDER
 csv_grabaciones = os.path.join(data_folder, 'todo.csv')
-mp3_dir = os.path.join(dropbox_path, "MUSICA", "MP3", "TANGO", "other_stuff", "tangolinkdatabase", "MP3")
+mp3_dir = os.path.join(dropbox_path, "TDJ", "tangolinkdatabase", "MP3")
 output_folder = os.path.join(project_root, "output")
 
 image_folder = IMAGE_FOLDER
@@ -111,9 +111,6 @@ background_image_path = image_paths['background']
 
 data_folder = os.path.join(project_root, "data")
 dbpath = os.path.join(data_folder, 'db.csv')
-csv_grabaciones = os.path.join(data_folder, 'todo.csv')
-mp3_dir = os.path.join(dropbox_path, "MUSICA", "MP3", "TANGO", "other_stuff", "tangolinkdatabase", "MP3")
-output_folder = os.path.join(project_root, "output")
 
 font_folder = os.path.join(project_root, "Fonts")
 orchestra_folder = os.path.join(IMAGE_FOLDER, "orquestas")
@@ -131,7 +128,7 @@ music_folders = ["Angel", "Camilo Gatica", "Carlos Gardel", "Dan", "Edmundo", "E
            "Eva", "HistoTango", "Leandro", "Osvaldo LA YUMBA"]
 
 # Crear las rutas completas de cada carpeta
-music_folder_paths = [os.path.join(dropbox_path, "MUSICA", "MP3", "TANGO", folder) for folder in music_folders]
+music_folder_paths = [os.path.join(dropbox_path,  "TDJ", "MUSICA", folder) for folder in music_folders]
 
 filetofind_list = []
 numero_canciones = 0
@@ -177,9 +174,9 @@ default_milonga_data = {
 
 
 path_map = {
-    "WINDOW-COMPUTER": "E:\\Dropbox",
+    "WINDOW-COMPUTER": "D:\\Dropbox",
     "CAD065": "D:\\Dropbox",
-    "LAPTOP-ABRSCER9": "C:\\Users\\diana\\Dropbox"
+    "LAPTOP-ABRSCER9": "C:\\Dropbox"
 }
 
 playlist_path_map = {
@@ -319,4 +316,4 @@ fallecimiento = {
 # else:
 #     print("Osvaldo Pugliese falleció antes que Aníbal Troilo")
 
-tagear = False
+tagear = True

@@ -8,10 +8,14 @@ from unidecode import unidecode
 from pptx.util import Pt
 from src.config.config import *
 from src.constants.enums import TagLabels
+from mutagen.mp3 import MP3
 from mutagen.flac import FLAC
 from mutagen.mp4 import MP4
-from mutagen.mp3 import MP3
+from mutagen.asf import ASF
+from mutagen.aiff import AIFF
 from mutagen.easyid3 import EasyID3
+from mutagen.id3 import TIT2, TPE1, TDRC, ID3NoHeaderError
+from mutagen.wave import WAVE
 from datetime import datetime
 import difflib
 from tinytag import TinyTag
@@ -165,61 +169,75 @@ def coincidencias_a_colores(bool_coincidencias, perfect_match):
 
 
 def update_tags(file_path, title=None, artist=None, year=None, genre=None, composer=None):
-    if tagear:
-        try:
-            # Get the file extension
-            _, ext = os.path.splitext(file_path)
-            ext = ext.lower()
+    try:
+        # Get the file extension
+        _, ext = os.path.splitext(file_path)
+        ext = ext.lower()
 
-            # Load the appropriate file format
-            if ext == '.mp3':
-                audio = MP3(file_path, ID3=EasyID3)
-            elif ext == '.flac':
-                audio = FLAC(file_path)
-            elif ext == '.m4a':
-                audio = MP4(file_path)
-            else:
-                print(f"Unsupported file format: {ext}")
+        # Load the appropriate file format
+        if ext == '.mp3':
+            audio = MP3(file_path, ID3=EasyID3)
+        elif ext == '.flac':
+            audio = FLAC(file_path)
+        elif ext == '.m4a':
+            audio = MP4(file_path)
+        elif ext == '.wma':
+            audio = ASF(file_path)
+        elif ext == '.aif' or ext == '.aiff':
+            # AIFF tagging should be handled differently (skip ID3 tagging)
+            try:
+                audio = AIFF(file_path)
+            except Exception as e:
+                print(f"Error processing AIFF file '{file_path}': {e}")
                 return False
+        elif ext == '.wav':
+            audio = WAVE(file_path)
+        else:
+            print(f"Unsupported file format: {file_path} with extension '{ext}'")
+            return False
 
-            # Update tags if values are provided
+        # Apply tags based on the file format
+        if ext not in ['.aif', '.aiff']:
             if title:
-                if ext == '.m4a':
-                    audio['\xa9nam'] = title  # Title tag for M4A
-                else:
+                try:
                     audio['title'] = title
+                except Exception as e:
+                    print(f"Failed to apply title '{title}' to file '{file_path}' with extension '{ext}': {e}")
             if artist:
-                if ext == '.m4a':
-                    audio['\xa9ART'] = artist  # Artist tag for M4A
-                else:
+                try:
                     audio['artist'] = artist
+                except Exception as e:
+                    print(f"Failed to apply artist '{artist}' to file '{file_path}' with extension '{ext}': {e}")
             if year:
-                if ext == '.m4a':
-                    audio['\xa9day'] = year  # Year tag for M4A
-                else:
+                try:
                     audio['date'] = year
+                except Exception as e:
+                    print(f"Failed to apply year '{year}' to file '{file_path}' with extension '{ext}': {e}")
             if genre:
-                if ext == '.m4a':
-                    audio['\xa9gen'] = genre  # Genre tag for M4A
-                else:
+                try:
                     audio['genre'] = genre
+                except Exception as e:
+                    print(f"Failed to apply genre '{genre}' to file '{file_path}' with extension '{ext}': {e}")
             if composer:
-                if ext == '.m4a':
-                    audio['\xa9wrt'] = composer  # Composer tag for M4A
-                else:
+                try:
                     audio['composer'] = composer
+                except Exception as e:
+                    print(f"Failed to apply composer '{composer}' to file '{file_path}' with extension '{ext}': {e}")
 
-            # Save changes
+        # Save changes for formats other than AIFF
+        if ext not in ['.aif', '.aiff']:
             audio.save()
-            return True  # Return True if the operation is successful
 
-        except Exception as e:
-            # Catch any exception and print the error message for debugging
-            print(f"An error occurred while updating tags: {e}")
-            return False  # Return False if there is any failure
-    else:
-        print(f"Archivo: {file_path} no tageado, tagear = \'False\'")
-        return False
+        return True  # Return True if the operation is successful
+
+    except Exception as e:
+        print(f"An error occurred while updating tags for file '{file_path}' with extension '{ext}': {e}")
+        return False  # Return False if there is any failure
+
+
+
+
+
 
 def capitalize_uppercase_words(text):
     words = text.split()
