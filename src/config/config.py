@@ -317,3 +317,9 @@ fallecimiento = {
 #     print("Osvaldo Pugliese falleció antes que Aníbal Troilo")
 
 tagear = True
+
+full_screen = False
+
+maximized = True
+
+showpopupinfo = False

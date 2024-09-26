@@ -35,6 +35,15 @@ class Ventana:
         self.root.title("Tkinter Window with Menu, Icon, and Status Bar")
         self.root.geometry('1700x800')
 
+        # Set Fullscreen Mode if the flag is enabled
+        if full_screen:
+            self.root.attributes('-fullscreen', True)  # Fullscreen enabled
+            self.root.bind("<Escape>", self.exit_fullscreen)  # Press Escape to exit fullscreen mode
+
+        # Set Maximized Mode if the flag is enabled
+        if maximized:
+            self.root.state('zoomed')  # Maximizes the window
+
         # Setup layout configurations
         self.layout_configurations()
 
@@ -56,8 +65,9 @@ class Ventana:
         # Create UI components
         self.create_menu_bar()
         self.create_icon_bar()
-        self.create_title_frame()
-        self.create_main_content_area()
+        if not self.direct_tagging:
+            self.create_title_frame()
+            self.create_main_content_area()
         self.create_status_bar()  # Ensure this is called to add the status bar
 
         # Start the event loop
@@ -168,20 +178,26 @@ class Ventana:
         checkbutton_frame.grid(row=1, column=0, columnspan=len(sections), sticky="ew", pady=10)
 
         checkbuttons = [
-            ("Date Checked", self.date_checked),
-            ("Perfect Matches", self.perfect_matches),
-            ("Artist Not Found", self.artist_not_found),
-            ("Title Not Found", self.title_not_found),
-            ("Visualizar Resto", self.view_remaining),
-            ("Guardar coincidencias", self.guardar_coincidencias),
-            ("Guardar residuos", self.guardar_residuos),
-            ("No mostrar comparativa", self.direct_comparison),
-            ("Direct tagging", self.direct_tagging)
+            ("Date Checked", self.date_checked, None, None),
+            ("Perfect Matches", self.perfect_matches, None, None),
+            ("Artist Not Found", self.artist_not_found, None, None),
+            ("Title Not Found", self.title_not_found, None, None),
+            ("Visualizar Resto", self.view_remaining, None, None),
+            ("Guardar coincidencias", self.guardar_coincidencias, None, None),
+            ("Guardar residuos", self.guardar_residuos, None, None),
+            ("No mostrar comparativa", self.direct_comparison, self.toggle_direct_tagging, None),
+            ("Direct tagging", self.direct_tagging, None, 'red')
         ]
 
-        for i, (text, variable) in enumerate(checkbuttons):
-            color = 'red' if text == "Direct tagging" else None
-            chk = tk.Checkbutton(checkbutton_frame, text=text, variable=variable, bg=color, selectcolor=color)
+        for i, (text, variable, command, color) in enumerate(checkbuttons):
+            chk = tk.Checkbutton(
+                checkbutton_frame,
+                text=text,
+                variable=variable,
+                bg=color if color else None,  # Use color if provided, otherwise default
+                selectcolor=color if color else None,  # Apply color for when selected
+                command=command
+            )
             chk.grid(row=0, column=i, padx=5, pady=5)
 
         # Configure the main frame to not expand and adjust based on content
@@ -224,6 +240,31 @@ class Ventana:
         # Ensure the grid inside the scrollable frame allows content to expand
         scrollable_frame.grid_rowconfigure(0, weight=1)  # Ensuring the row expands
         scrollable_frame.grid_columnconfigure(0, weight=1)  # Ensuring the column expands
+
+    def toggle_direct_tagging(self):
+        """Toggle the direct tagging and reset or clear the layout based on the checkbutton state."""
+        if self.direct_tagging.get():  # If it's checked, destroy frames and deactivate
+            # Clear layout variables
+            self.title_frame_row = 1
+            self.title_frame_colspan = 3
+            self.main_content_row = 2
+            self.main_content_colspan = 3
+
+            # Destroy the existing frames if they exist
+            if hasattr(self, 'title_frame'):
+                self.title_frame.destroy()
+            if hasattr(self, 'main_content'):
+                self.main_content.destroy()
+
+            self.direct_tagging.set(False)  # Uncheck the button
+
+        else:  # If it's unchecked, create the frames and activate
+            # Create UI components
+            self.create_title_frame()
+            self.create_main_content_area()
+
+            self.direct_tagging.set(True)  # Check the button
+
 
     def create_title_frame(self):
         """Create the title frame with 'File Tags' and 'Database Tags' labels."""
@@ -741,7 +782,9 @@ class Ventana:
         # Establecer 'file_path' como índice pero mantenerlo como columna
         self.archivos_comparado.finalize_report()
 
-        self.mostrar_popup_reporte(self.archivos_comparado.report_df)
+        if showpopupinfo:
+            self.mostrar_popup_reporte(self.archivos_comparado.report_df)
+
         if self.guardar_coincidencias.get():
             guardar_archivo_output(tipo='coincidencias', dataframe=self.df_reporte_coincidencia_favorita, encabezados=None)
         # Guardar residuos si se requiere
@@ -816,12 +859,16 @@ class Ventana:
         y la añade a la lista global de filetofind_list.
         """
         # Crear instancia de FILETOFIND con los parámetros constantes
-        lista_frames = [
-            self.scrollable_frame[0],  # Corresponds to ff
-            self.scrollable_frame[1],  # Corresponds to fd
-            self.frames_columnas_archivo,
-            self.frames_columnas_resultado
-        ]
+        if self.direct_tagging.get():
+            lista_frames = [
+                self.scrollable_frame[0],  # Corresponds to ff
+                self.scrollable_frame[1],  # Corresponds to fd
+                self.frames_columnas_archivo,
+                self.frames_columnas_resultado
+            ]
+        else:
+            lista_frames = [None, None, None, None]
+
         lista_checks = [
             self.date_checked.get(),  # Corresponds to show_date_checked
             self.perfect_matches.get(),  # Corresponds to show_perfect_matches
@@ -970,17 +1017,23 @@ class Ventana:
         filetofind_list.clear()
 
     def createdb(self):
-        """Create an instance of the `owndatabase` class."""
+        """Create an instance of the `owndatabase` class and update UI with Treeview."""
         self.setup_progress_bar()
-        # Preguntar si se desea elegir las carpetas o usar las predeterminadas
+
+        # Ask if user wants to use default folders
         use_default_folders = messagebox.askyesno("Carpetas por defecto", "¿Quieres usar las carpetas predeterminadas?")
 
+        # Create the database
         if use_default_folders:
             self.owndb.create_database(music_folder_paths)
         else:
             self.owndb.create_database()
 
+        # Clean up the progress bar
         self.cleanup_progress_bar()
+
+        # Once the DB is created, show it in the UI
+        self.show_db_in_treeview()
 
     def comparedb(self):
 
@@ -997,3 +1050,102 @@ class Ventana:
         self.owndb.owndf.update(self.archivos_comparado.report_df)
         self.owndb.owndf.to_csv(os.path.join(DATA_FOLDER, 'owndatabase.csv'), index=False)
 
+        self.update_treeview()
+
+    def update_treeview(self):
+        """Clear and update the Treeview with new data, create if not exists."""
+
+        # Check if the Treeview exists, if not create it
+        if not hasattr(self, 'tree'):
+            self.show_db_in_treeview()
+
+        # Clear existing rows in the Treeview
+        for row in self.tree.get_children():
+            self.tree.delete(row)
+
+        # Re-insert the updated data into the Treeview
+        for index, row in self.owndb.owndf.iterrows():
+            self.tree.insert("", "end", values=list(row))
+
+    def show_db_in_treeview(self):
+        """Display the contents of owndb.owndf in a Treeview widget."""
+        if hasattr(self, 'title_frame'):
+            self.title_frame.destroy()
+        if hasattr(self, 'main_content'):
+            self.main_content.destroy()
+
+        # Create a new frame for the Treeview (using title_frame's grid position)
+        self.title_frame = tk.Frame(self.root, relief=tk.RAISED, bd=2)
+        self.title_frame.grid(row=self.title_frame_row, column=0, rowspan=2, columnspan=self.title_frame_colspan, sticky="nsew")
+
+        # Create the Treeview and hide the first column (tree column)
+        self.tree = ttk.Treeview(self.title_frame, show="headings")  # "headings" hides the implicit tree column
+
+        # Define columns from owndf
+        columns = list(self.owndb.owndf.columns)
+        self.tree["columns"] = columns
+
+        self.column_widths = {
+            'title': 150,
+            'artist': 200,
+            'year': 50,
+            'genre': 50,
+            'composer': 250,
+            'file_path': 450,
+            'Artista encontrado': 3,
+            'Titulo encontrado': 3,
+            'Numero de coincidencias': 3,
+            'Hay coincidencia preferida': 3,
+            'No hay coincidencia preferida': 3,
+            'Coincidencia perfecta': 5
+        }
+
+        # Define column headings and widths
+        for col in columns:
+            width = self.column_widths.get(col, 150)  # Default to 150 if the column isn't in the dictionary
+            self.tree.heading(col, text=col, command=lambda _col=col: self.sort_column(self.tree, _col, False))
+            self.tree.column(col, width=width, anchor="w")
+
+        # Insert the data into the Treeview
+        for index, row in self.owndb.owndf.iterrows():
+            self.tree.insert("", "end", values=list(row))
+
+        # Add a vertical scrollbar for the Treeview
+        scrollbar = ttk.Scrollbar(self.title_frame, orient="vertical", command=self.tree.yview)
+        self.tree.configure(yscrollcommand=scrollbar.set)
+
+        # Grid the Treeview and scrollbar
+        self.tree.grid(row=0, column=0, sticky="nsew")
+        scrollbar.grid(row=0, column=1, sticky="ns")
+
+        # Make sure the title_frame expands as needed
+        self.title_frame.grid_rowconfigure(0, weight=1)
+        self.title_frame.grid_columnconfigure(0, weight=1)
+
+    def sort_column(self, tree, col, reverse):
+        """Sort the Treeview column when a header is clicked."""
+        # Fetch the data in the treeview
+        data = [(self.convert_type(tree.set(item, col)), item) for item in tree.get_children('')]
+
+        # Sort data
+        data.sort(reverse=reverse)
+
+        # Rearrange items in sorted positions
+        for index, (_, item) in enumerate(data):
+            tree.move(item, '', index)
+
+        # Reverse sort order for next click
+        tree.heading(col, command=lambda: self.sort_column(tree, col, not reverse))
+
+    def convert_type(self, value):
+        """Convert value to appropriate data type for sorting."""
+        try:
+            # Try to convert to float (handles both integers and floats)
+            return float(value)
+        except ValueError:
+            # If conversion fails, return the original string
+            return value
+
+    def exit_fullscreen(self, event=None):
+        """Exit fullscreen mode."""
+        self.root.attributes("-fullscreen", False)
