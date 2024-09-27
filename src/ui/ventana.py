@@ -689,8 +689,10 @@ class Ventana:
                 messagebox.showerror("Error", f"Failed to load library: {e}")
 
     def open_playlist(self):
+        """Open an M3U playlist and process the files."""
         self.borrar_todo()
         numero_canciones = 0
+
         # Open file dialog
         self.m3u_file_path = filedialog.askopenfilename(
             initialdir=m3u_start_path,
@@ -704,15 +706,13 @@ class Ventana:
 
             self.m3u_audio_files = []  # Clear the audio files list
 
-            # Load the M3U file and extract data
-            with open(self.m3u_file_path, 'r', encoding='utf-8') as file:
-                lines = [line.strip() for line in file if line.strip() and not line.startswith("#")]
-                # Process lines from M3U file
-                #lines es una lista con todos los paths de las canciones
-                # numero_canciones es un contador que se define aqui mismo
+            # Use the helper function to load M3U file
+            lines = load_m3u_file_helper(self.m3u_file_path)
 
-                self.origen_archivos = 'playlist'
-                self.procesar_archivos(lines, numero_canciones, from_playlist=True, show_progress=True,origen=self.m3u_file_path)
+            # Process lines from the M3U file
+            self.origen_archivos = 'playlist'
+            self.procesar_archivos(lines, numero_canciones, from_playlist=True, show_progress=True,
+                                   origen=self.m3u_file_path)
 
     def load_music_folder(self):
         self.borrar_todo()
@@ -956,8 +956,6 @@ class Ventana:
         # Mostrar mensaje de confirmación con un enlace para abrir el archivo y el resumen final
         self.mostrar_mensaje_confirmacion(file_path, analizados, tageados)
 
-
-
     def update_progress_and_status(self, value=None, current=None, total=None, tageados=None):
         """
         Update the progress bar and status message.
@@ -1023,22 +1021,26 @@ class Ventana:
         filetofind_list.clear()
 
     def createdb(self):
-        """Create an instance of the `owndatabase` class and update UI with Treeview."""
-        self.setup_progress_bar()
+        """Launch the popup and proceed with creating the database."""
+        db_name, selected_files, include_subdirs, selected_folders = self.open_database_creation_popup()
 
-        db_name = simpledialog.askstring("Nombre de la Base de Datos", "Introduce un nombre para la base de datos:")
-
-        if not db_name:  # Si no se introduce un nombre, mostrar un error y detener el proceso
-            messagebox.showerror("Error", "Debe introducir un nombre para la base de datos.")
-
+        # Continue after the popup closes
+        if not selected_files:
+            messagebox.showerror("Error", "No files or folders selected.")
             return
 
+        if not db_name:
+            messagebox.showerror("Error", "Please provide a name for the database.")
+            return
 
-        # Crear una instancia de `owndatabase` solo cuando se llama a este método
+        self.setup_progress_bar()
+
+        # Create a new instance of owndatabase
         self.owndb = owndatabase(self.update_progress_and_status)
+
         def tarea_pesada():
-            # Llamar al método create_database de owndatabase para crear la base de datos con el nombre proporcionado
-            self.owndb.create_database(db_name=db_name)
+            # Pass the list of files directly to create_database
+            self.owndb.create_database(db_name, files=selected_files)
 
             # Clean up the progress bar
             self.cleanup_progress_bar()
@@ -1046,6 +1048,7 @@ class Ventana:
             # Once the DB is created, show it in the UI
             self.show_db_in_treeview()
 
+        # Run the task in a separate thread
         hilo = threading.Thread(target=tarea_pesada)
         hilo.start()
 
@@ -1299,3 +1302,82 @@ class Ventana:
 
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load the database: {e}")
+
+    def open_database_creation_popup(self):
+        """Open a popup to select folders or a playlist, and return the list of files."""
+        popup = tk.Toplevel(self.root)
+        popup.grab_set()  # Make the popup modal
+        popup.title("Create Database")
+        popup.geometry("400x400")
+
+        # Entry for database name
+        tk.Label(popup, text="Database Name:").pack(pady=5)
+        db_name_entry = tk.Entry(popup)
+        db_name_entry.pack(pady=5)
+
+        # Checkbox for including subdirectories
+        include_subdirs = tk.BooleanVar(value=True)
+        subdirs_checkbox = tk.Checkbutton(popup, text="Include Subdirectories", variable=include_subdirs)
+        subdirs_checkbox.pack(pady=5)
+
+        # List to hold the selected files and folders
+        selected_files = []
+        selected_folders = []
+
+        def add_folder():
+            """Add files from the selected folder."""
+            folder = filedialog.askdirectory(title="Select Folder")
+            if folder:
+                selected_folders.append(folder)  # Keep track of the selected folders
+                selected_files.extend(self.scan_files_from_folder(folder, include_subdirs.get()))
+                folder_listbox.insert(tk.END, folder)  # Display the folder in the listbox
+
+        # Listbox to display selected folders
+        folder_listbox = tk.Listbox(popup)
+        folder_listbox.pack(pady=5, fill=tk.BOTH, expand=True)
+
+        def load_playlist():
+            """Load files from a selected M3U playlist and close the popup."""
+            m3u_file = filedialog.askopenfilename(filetypes=[("M3U files", "*.m3u")])
+            if m3u_file:
+                playlist_files = load_m3u_file_helper(m3u_file)
+                selected_files.extend(playlist_files)
+                self.owndb.db_name = db_name_entry.get()
+                popup.destroy()  # Automatically close the popup
+
+        # Button for adding folders
+        add_folder_button = tk.Button(popup, text="Add Folder", command=add_folder)
+        add_folder_button.pack(pady=5)
+
+        # Button for loading playlists
+        load_playlist_button = tk.Button(popup, text="Load Playlist", command=load_playlist)
+        load_playlist_button.pack(pady=5)
+
+        # Button to manually close the popup and return values
+        def close_popup():
+            # Get all values before closing the popup
+            self.owndb.db_name = db_name_entry.get()
+            popup.destroy()  # Close the popup after capturing the values
+            return selected_files, include_subdirs.get(), selected_folders
+
+        create_db_button = tk.Button(popup, text="Create Database", command=close_popup)
+        create_db_button.pack(pady=5)
+
+        # Wait for the popup to close and get the values
+        popup.wait_window()
+
+        # Retrieve the values before destroying the popup
+        return self.owndb.db_name, selected_files, include_subdirs.get(), selected_folders
+
+    def scan_files_from_folder(self, folder, include_subfolders=False):
+        """Scan for files in the folder and return the list of files."""
+        file_list = []
+        for root, dirs, files in os.walk(folder):
+            for file in files:
+                if file.lower().endswith(('.mp3', '.wav', '.flac', '.ogg', '.m4a')):
+                    file_list.append(os.path.join(root, file))
+            if not include_subfolders:
+                break
+        return file_list
+
+

@@ -993,3 +993,14 @@ def is_valid_filename(filename):
         return False
 
     return True
+
+def load_m3u_file_helper(m3u_file_path):
+    """Helper function to load M3U file with proper encoding handling."""
+    try:
+        # Try to load the file with UTF-8 encoding
+        with open(m3u_file_path, 'r', encoding='utf-8') as file:
+            return [line.strip() for line in file if line.strip() and not line.startswith("#")]
+    except UnicodeDecodeError:
+        # Fallback to the system's default encoding if UTF-8 fails
+        with open(m3u_file_path, 'r', encoding='cp1252', errors='ignore') as file:
+            return [line.strip() for line in file if line.strip() and not line.startswith("#")]

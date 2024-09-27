@@ -47,76 +47,45 @@ class owndatabase:
     # Filtrar donde 'Coincidencia perfecta' es False utilizando el operador ~ (negación)
     # filtered_df_false = self.owndf[~self.owndb.owndf_rep['Coincidencia perfecta']]
 
-    def create_database(self, db_name, folder_selected=None, include_subfolders=False):
-        """Crear la base de datos con el nombre proporcionado y escanear archivos."""
+    def create_database(self, db_name, files):
+        """Create the database based on the list of files."""
         self.db_name = db_name
-
-        # Crear el path usando el nombre de la base de datos proporcionado
         self.db_path = os.path.join(DATABASE_FOLDER, f'{self.db_name}.csv')
 
-        # Escoger carpetas para escanear si no se han pasado
-        if not folder_selected:
-            folder_selected = []
-            while True:
-                folder = filedialog.askdirectory(title="Selecciona la carpeta para escanear (Cancelar para detener)")
-                if folder:
-                    folder_selected.append(folder)
-                    another_folder = messagebox.askyesno("Otra Carpeta?", "¿Quieres seleccionar otra carpeta?")
-                    if not another_folder:
-                        break
-                else:
-                    break
+        # Process files and save the database
+        data = []
+        total_files = len(files)
+        for index, file in enumerate(files):
+            try:
+                tags = self.leer_tags(file)
+                data.append({
+                    'title': tags.title,
+                    'artist': tags.artist,
+                    'year': tags.year,
+                    'genre': tags.genre,
+                    'composer': tags.composer,
+                    'file_path': file
+                })
+            except Exception as e:
+                print(f"Error reading {file}: {e}")
 
-        # Procesar los archivos de las carpetas seleccionadas
-        if folder_selected:
-            if not include_subfolders:
-                include_subfolders = messagebox.askyesno("¿Incluir subcarpetas?", "¿Quieres incluir subcarpetas?")
+            # Update progress if needed
+            if self.update_status:
+                self.update_status(current=index + 1, total=total_files)
 
-            file_list = []
-            for folder in folder_selected:
-                file_list.extend(self.scan_files(folder, include_subfolders))
+        # Create DataFrame and additional columns
+        self.owndf = pd.DataFrame(data)
+        self.owndf['Artista encontrado'] = False
+        self.owndf['Titulo encontrado'] = False
+        self.owndf['Numero de coincidencias'] = 0
+        self.owndf['Hay coincidencia preferida'] = False
+        self.owndf['No hay coincidencia preferida'] = False
+        self.owndf['Coincidencia perfecta'] = False
 
-            # Procesar los archivos y recolectar las etiquetas
-            data = []
-            total_files = len(file_list)
-
-
-            for index, file in enumerate(file_list):
-                try:
-                    tags = self.leer_tags(file)
-                    data.append({
-                        'title': tags.title,
-                        'artist': tags.artist,
-                        'year': tags.year,
-                        'genre': tags.genre,
-                        'composer': tags.composer,
-                        'file_path': file
-                    })
-                except Exception as e:
-                    print(f"Error leyendo {file}: {e}")
-
-                # Actualizar la barra de progreso si se provee `update_status`
-                if self.update_status:
-                    self.update_status(current=index + 1, total=total_files)
-            print('todo cargado')
-            # Crear el DataFrame con los datos recolectados y añadir columnas adicionales
-            self.owndf = pd.DataFrame(data)
-            self.owndf['Artista encontrado'] = False
-            self.owndf['Titulo encontrado'] = False
-            self.owndf['Numero de coincidencias'] = 0
-            self.owndf['Hay coincidencia preferida'] = False
-            self.owndf['No hay coincidencia preferida'] = False
-            self.owndf['Coincidencia perfecta'] = False
-            print('columnas extras echas')
-
-            self.owndf.set_index('file_path', inplace=True, drop=False)
-
-            print('indice hecho')
-
-            self.guardar_base_de_datos()
-            print('salvado a csv')
-            messagebox.showinfo("Base de Datos Creada",
-                                f"La base de datos '{self.db_name}' ha sido creada exitosamente.")
+        # Set 'file_path' as index
+        self.owndf.set_index('file_path', inplace=True, drop=False)
+        self.guardar_base_de_datos()
+        messagebox.showinfo("Database Created", f"Database '{self.db_name}' has been successfully created.")
 
     def guardar_base_de_datos(self):
         try:
