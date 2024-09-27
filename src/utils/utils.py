@@ -982,3 +982,14 @@ def convert_date_format(date_str):
 
     return new_date_str
 
+def is_valid_filename(filename):
+    """
+    Check if the filename contains any invalid characters.
+    """
+    # Define invalid characters for Windows
+    invalid_chars = '<>:"/\\|?*'
+
+    if any(char in filename for char in invalid_chars):
+        return False
+
+    return True

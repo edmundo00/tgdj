@@ -5,7 +5,8 @@ from src.utils.utils import *
 import os
 import pandas as pd
 import threading
-
+import string
+import subprocess
 
 
 class owndatabase:
@@ -117,14 +118,41 @@ class owndatabase:
             messagebox.showinfo("Base de Datos Creada",
                                 f"La base de datos '{self.db_name}' ha sido creada exitosamente.")
 
-
-
-
-
-
     def guardar_base_de_datos(self):
-        # Guardar la base de datos en el archivo CSV con el nombre proporcionado
-        self.owndf.to_csv(self.db_path, index=False)
+        try:
+            # Verificar si el DataFrame es None
+            if self.owndf is None:
+                raise ValueError("El DataFrame owndf es None. Asegúrate de que esté inicializado correctamente.")
+
+            # Verificar si self.owndf es un DataFrame válido
+            if not isinstance(self.owndf, pd.DataFrame):
+                raise ValueError("El objeto owndf no es un DataFrame válido.")
+
+            # Verificar si el DataFrame tiene filas
+            if self.owndf.empty:
+                raise ValueError("El DataFrame está vacío, no se puede guardar.")
+
+            # Continuar con el guardado...
+            total_rows = len(self.owndf)
+            chunksize = 10000
+            with open(self.db_path, 'w', newline='', encoding='utf-8') as f:
+                for i, chunk in enumerate(range(0, total_rows, chunksize)):
+                    self.owndf.iloc[chunk:chunk + chunksize].to_csv(f, index=False, header=(i == 0))
+
+            # Mostrar mensaje de confirmación
+            response = messagebox.askyesno("Confirmación",
+                                           "La base de datos se ha guardado correctamente. ¿Deseas abrir el archivo?")
+            if response:
+                if os.name == 'nt':
+                    os.startfile(self.db_path)
+                elif os.name == 'posix':
+                    subprocess.call(('open', self.db_path) if sys.platform == 'darwin' else ('xdg-open', self.db_path))
+
+        except ValueError as ve:
+            messagebox.showerror("Error", f"Error: {ve}")
+
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo guardar la base de datos: {e}")
 
     def scan_files(self, folder, include_subfolders):
         """Scan files in the folder and optionally in subfolders."""

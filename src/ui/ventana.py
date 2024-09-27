@@ -1289,6 +1289,7 @@ class Ventana:
                 self.owndb = owndatabase()
 
             self.owndb.owndf = df_loaded
+            self.owndb.db_path = file_path
 
             # Display success message
             messagebox.showinfo("Success", f"Database loaded successfully from {os.path.basename(file_path)}.")
