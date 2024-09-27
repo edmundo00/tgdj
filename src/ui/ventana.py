@@ -141,7 +141,7 @@ class Ventana:
             (self.createdb_icon, self.createdb, "Create database"),
             (self.loaddb_icon, self.loaddb, "Load database"),
             (self.comparedb_icon, self.comparedb, "Compare database"),
-            (self.filterdb_icon, None, "Filter database"),
+            (self.filterdb_icon, self.filterdb, "Filter database"),
             (self.presentacion_icon, self.open_presentation_popup, "Open presentation"),
             (self.correr_icon, None, "Run")
         ]
@@ -1068,7 +1068,7 @@ class Ventana:
 
 
             # Save to CSV
-            self.owndb.owndf.to_csv(os.path.join(DATA_FOLDER, 'owndatabase.csv'), index=False)
+            self.owndb.guardar_base_de_datos()
 
             # Update the treeview
             self.update_treeview()
@@ -1077,21 +1077,95 @@ class Ventana:
         hilo.start()
 
     def update_treeview(self):
-        """Clear and update the Treeview with new data, create if not exists."""
+        """Destroy and recreate the Treeview with new data."""
 
-        # Check if the Treeview exists, if not create it
-        if not hasattr(self, 'tree'):
-            self.show_db_in_treeview()
+        # Destroy the existing Treeview widget, if it exists
+        if hasattr(self, 'tree'):
+            self.tree.destroy()
 
-        # Clear existing rows in the Treeview
-        for row in self.tree.get_children():
-            self.tree.delete(row)
+        # Call the method to recreate the Treeview with the updated data
+        self.show_db_in_treeview()
 
-        # Re-insert the updated data into the Treeview
-        for index, row in self.owndb.owndf.iterrows():
-            self.tree.insert("", "end", values=list(row))
+    def filterdb(self):
+        """Open a popup window to filter the database and show filtered results in Treeview."""
 
-    def show_db_in_treeview(self):
+        def apply_filters():
+            """Apply filters based on user input and show the filtered database."""
+            df = self.owndb.owndf.copy()  # Create a copy of the database to filter
+
+            # Apply string filters
+            for field, entry in string_filters.items():
+                filter_value = entry.get().strip()
+                filter_option = string_filter_vars[field].get()  # Get the selected option from the StringVar
+                if filter_value:
+                    if filter_option == 'contains':
+                        df = df[df[field].str.contains(filter_value, case=False, na=False)]
+                    elif filter_option == 'equals':
+                        df = df[df[field] == filter_value]
+                    elif filter_option == 'starts with':
+                        df = df[df[field].str.startswith(filter_value, na=False)]
+                    elif filter_option == 'ends with':
+                        df = df[df[field].str.endswith(filter_value, na=False)]
+
+            # Apply boolean filters
+            for field, var in boolean_filters.items():
+                selected_option = var.get()
+                if selected_option == 'True':
+                    df = df[df[field] == True]
+                elif selected_option == 'False':
+                    df = df[df[field] == False]
+
+            # Show filtered data in Treeview
+            self.show_db_in_treeview(df)
+
+        # Popup window
+        popup = tk.Toplevel(self.root)
+        popup.title("Filter Database")
+        popup.geometry("400x400")
+
+        # Dictionary to store filter entries and options
+        string_filters = {}
+        string_filter_vars = {}  # Store StringVars for the OptionMenus
+        boolean_filters = {}
+
+        # Fields for string filters with options like "contains", "equals", etc.
+        string_fields = ['title', 'artist', 'genre', 'composer']  # You can add more fields as needed
+        for idx, field in enumerate(string_fields):
+            tk.Label(popup, text=f"{field.capitalize()}:", font=('Helvetica', 12)).grid(row=idx, column=0, padx=10,
+                                                                                        pady=5)
+            string_filters[field] = tk.Entry(popup)
+            string_filters[field].grid(row=idx, column=1, padx=10, pady=5)
+
+            # Create a StringVar for the dropdown options
+            filter_option_var = tk.StringVar(value="contains")
+            string_filter_vars[field] = filter_option_var
+            filter_option_menu = tk.OptionMenu(popup, filter_option_var, "contains", "equals", "starts with",
+                                               "ends with")
+            filter_option_menu.grid(row=idx, column=2, padx=10, pady=5)
+
+        # Fields for boolean filters with options like "True", "False", "All"
+        boolean_fields = ['Artista encontrado', 'Titulo encontrado', 'Coincidencia perfecta']
+        for idx, field in enumerate(boolean_fields):
+            tk.Label(popup, text=f"{field.replace('_', ' ').capitalize()}:", font=('Helvetica', 12)).grid(
+                row=len(string_fields) + idx, column=0, padx=10, pady=5)
+
+            var = tk.StringVar(value="All")
+            boolean_filters[field] = var
+            boolean_filter_menu = tk.OptionMenu(popup, var, "All", "True", "False")
+            boolean_filter_menu.grid(row=len(string_fields) + idx, column=1, padx=10, pady=5)
+
+        # Apply button
+        apply_button = tk.Button(popup, text="Apply Filters", command=apply_filters)
+        apply_button.grid(row=len(string_fields) + len(boolean_fields), column=0, columnspan=3, pady=20)
+
+    def show_db_in_treeview(self, filtered_df=None):
+        """Display the contents of the filtered or full database in a Treeview widget."""
+        df_to_show = filtered_df if filtered_df is not None else self.owndb.owndf
+
+        # The rest of the function remains the same as the original show_db_in_treeview()
+        # but using df_to_show instead of self.owndb.owndf to display the filtered data.
+
+
         """Display the contents of owndb.owndf in a Treeview widget."""
         if hasattr(self, 'title_frame'):
             self.title_frame.destroy()
@@ -1106,7 +1180,7 @@ class Ventana:
         self.tree = ttk.Treeview(self.title_frame, show="headings")  # "headings" hides the implicit tree column
 
         # Define columns from owndf
-        columns = list(self.owndb.owndf.columns)
+        columns = list(df_to_show.columns)
         self.tree["columns"] = columns
 
         self.column_widths = {
@@ -1131,7 +1205,7 @@ class Ventana:
             self.tree.column(col, width=width, anchor="w")
 
         # Insert the data into the Treeview
-        for index, row in self.owndb.owndf.iterrows():
+        for index, row in df_to_show.iterrows():
             self.tree.insert("", "end", values=list(row))
 
         # Add a vertical scrollbar for the Treeview

@@ -112,8 +112,7 @@ class owndatabase:
 
             print('indice hecho')
 
-            # Guardar la base de datos en el archivo CSV con el nombre proporcionado
-            self.owndf.to_csv(self.db_path, index=False)
+            self.guardar_base_de_datos()
             print('salvado a csv')
             messagebox.showinfo("Base de Datos Creada",
                                 f"La base de datos '{self.db_name}' ha sido creada exitosamente.")
@@ -123,6 +122,9 @@ class owndatabase:
 
 
 
+    def guardar_base_de_datos(self):
+        # Guardar la base de datos en el archivo CSV con el nombre proporcionado
+        self.owndf.to_csv(self.db_path, index=False)
 
     def scan_files(self, folder, include_subfolders):
         """Scan files in the folder and optionally in subfolders."""
