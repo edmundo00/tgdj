@@ -4,20 +4,20 @@ from src.config.config import *
 from src.utils.utils import *
 import os
 import pandas as pd
+import threading
+
 
 
 class owndatabase:
     def __init__(self, update_status=None):
         """Initialize the class and load or create the database."""
         self.update_status = update_status
-        self.db_path = os.path.join(DATA_FOLDER, 'owndatabase.csv')
+        self.db_name = None
+        self.db_path = None
+        self.owndf = pd.DataFrame()
 
 
 
-        # Load or create the main database
-        if os.path.exists(self.db_path):
-            self.owndf = pd.read_csv(self.db_path).fillna("")
-            self.owndf.set_index('file_path', inplace=True, drop=False)
         # else:
         #     columns = ['title', 'artist', 'year', 'genre', 'composer', 'file_path', "Titulo encontrado","Numero de coincidencias", "Hay coincidencia preferida","No hay coincidencia preferida","Coincidencia perfecta"  ]
         #     self.owndf = pd.DataFrame(columns=columns)
@@ -46,32 +46,40 @@ class owndatabase:
     # Filtrar donde 'Coincidencia perfecta' es False utilizando el operador ~ (negación)
     # filtered_df_false = self.owndf[~self.owndb.owndf_rep['Coincidencia perfecta']]
 
-    def create_database(self, folder_selected=None, include_subfolders=False):
-        """Create or update the database by scanning files in selected folders."""
-        # If no folder is passed, use a dialog to select one (for GUI use)
+    def create_database(self, db_name, folder_selected=None, include_subfolders=False):
+        """Crear la base de datos con el nombre proporcionado y escanear archivos."""
+        self.db_name = db_name
+
+        # Crear el path usando el nombre de la base de datos proporcionado
+        self.db_path = os.path.join(DATABASE_FOLDER, f'{self.db_name}.csv')
+
+        # Escoger carpetas para escanear si no se han pasado
         if not folder_selected:
             folder_selected = []
             while True:
-                folder = filedialog.askdirectory(title="Select Folder to Scan (Cancel to stop)")
+                folder = filedialog.askdirectory(title="Selecciona la carpeta para escanear (Cancelar para detener)")
                 if folder:
                     folder_selected.append(folder)
-                    another_folder = messagebox.askyesno("Another Folder?", "Would you like to select another folder?")
+                    another_folder = messagebox.askyesno("Otra Carpeta?", "¿Quieres seleccionar otra carpeta?")
                     if not another_folder:
                         break
                 else:
                     break
 
-        # If folders are selected or provided, process the files
+        # Procesar los archivos de las carpetas seleccionadas
         if folder_selected:
             if not include_subfolders:
-                include_subfolders = messagebox.askyesno("Include Subfolders?", "Would you like to include subfolders?")
+                include_subfolders = messagebox.askyesno("¿Incluir subcarpetas?", "¿Quieres incluir subcarpetas?")
+
             file_list = []
             for folder in folder_selected:
                 file_list.extend(self.scan_files(folder, include_subfolders))
 
-            # Process each file and collect the tags
+            # Procesar los archivos y recolectar las etiquetas
             data = []
             total_files = len(file_list)
+
+
             for index, file in enumerate(file_list):
                 try:
                     tags = self.leer_tags(file)
@@ -84,30 +92,37 @@ class owndatabase:
                         'file_path': file
                     })
                 except Exception as e:
-                    print(f"Error reading {file}: {e}")
+                    print(f"Error leyendo {file}: {e}")
 
-                # Update the status bar (only if update_status is provided)
+                # Actualizar la barra de progreso si se provee `update_status`
                 if self.update_status:
-                    self.update_status(current= index + 1, total=total_files)
-                # Force the UI to update after each iteration
-                if hasattr(self, 'root'):
-                    self.root.update_idletasks()
-
-            # Save the collected data into the CSV
+                    self.update_status(current=index + 1, total=total_files)
+            print('todo cargado')
+            # Crear el DataFrame con los datos recolectados y añadir columnas adicionales
             self.owndf = pd.DataFrame(data)
-
-            # Añadir las nuevas columnas con valores por defecto
             self.owndf['Artista encontrado'] = False
             self.owndf['Titulo encontrado'] = False
             self.owndf['Numero de coincidencias'] = 0
             self.owndf['Hay coincidencia preferida'] = False
             self.owndf['No hay coincidencia preferida'] = False
             self.owndf['Coincidencia perfecta'] = False
+            print('columnas extras echas')
 
+            self.owndf.set_index('file_path', inplace=True, drop=False)
 
+            print('indice hecho')
+
+            # Guardar la base de datos en el archivo CSV con el nombre proporcionado
             self.owndf.to_csv(self.db_path, index=False)
-            if not folder_selected:  # Show message only in GUI context
-                messagebox.showinfo("Database Created", "Database created and saved successfully.")
+            print('salvado a csv')
+            messagebox.showinfo("Base de Datos Creada",
+                                f"La base de datos '{self.db_name}' ha sido creada exitosamente.")
+
+
+
+
+
+
 
     def scan_files(self, folder, include_subfolders):
         """Scan files in the folder and optionally in subfolders."""

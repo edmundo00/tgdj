@@ -1,4 +1,4 @@
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, simpledialog
 from tkinter import ttk
 from datetime import datetime
 from presentation_app import PresentationApp
@@ -11,6 +11,7 @@ from src.ui.playlist_operations import PlaylistOperations
 from src.utils.MusicBeeLibraryTools import MusicBeeLibraryTools
 from src.ui.owndatabase import owndatabase
 from src.ui.ReportManager import ReportManager
+import threading
 
 class Ventana:
     def __init__(self, root):
@@ -22,6 +23,7 @@ class Ventana:
         self.df_reporte_coincidencia_favorita = df_reporte_coincidencia_favorita
         self.origen_archivos = None
 
+        self.owndb = None
 
         # Inicializar los diccionarios para almacenar los frames de columnas
         self.frames_columnas_archivo = {}
@@ -122,7 +124,7 @@ class Ventana:
 
         # Define icons and their commands
         icon_names = ['archivo', 'directorio', 'correr', 'transfer', 'trash', 'searchdb', 'presentacion', 'playlist',
-                      'convert_playlist', 'merge', 'musicbee', 'createdb', 'comparedb']
+                      'convert_playlist', 'merge', 'musicbee', 'createdb', 'comparedb', 'loaddb', 'filterdb']
         for icon_name in icon_names:
             setattr(self, f"{icon_name}_icon", tk.PhotoImage(file=icon_paths[icon_name]))
 
@@ -137,8 +139,9 @@ class Ventana:
             (self.convert_playlist_icon, self.playlist_operations.convert_playlist, "Convert playlist"),
             (self.merge_icon, self.playlist_operations.merge_playlist, "Merge playlist"),
             (self.createdb_icon, self.createdb, "Create database"),
+            (self.loaddb_icon, self.loaddb, "Load database"),
             (self.comparedb_icon, self.comparedb, "Compare database"),
-            (self.searchdb_icon, self.searchdb, "Search database"),
+            (self.filterdb_icon, None, "Filter database"),
             (self.presentacion_icon, self.open_presentation_popup, "Open presentation"),
             (self.correr_icon, None, "Run")
         ]
@@ -147,10 +150,10 @@ class Ventana:
             ("Compare", buttons[:4]),
             ("Tools", buttons[4:6]),
             ("Playlist Tools", buttons[6:8]),
-            ("Own DB", buttons[8:10]),
-            ("Search DB", buttons[10:11]),
-            ("Slides", buttons[11:12]),
-            ("Others", buttons[12:13])
+            ("Own DB", buttons[8:12]),
+            ("Search DB", buttons[12:13]),
+            ("Slides", buttons[12:13]),
+            ("Others", buttons[13:14])
         ]
 
         # Configure the icon_bar to allow columns to resize based on content
@@ -786,15 +789,18 @@ class Ventana:
             self.mostrar_popup_reporte(self.archivos_comparado.report_df)
 
         if self.guardar_coincidencias.get():
-            guardar_archivo_output(tipo='coincidencias', dataframe=self.df_reporte_coincidencia_favorita, encabezados=None)
+            guardar_archivo_output(tipo='coincidencias', dataframe=self.df_reporte_coincidencia_favorita,
+                                   encabezados=None)
         # Guardar residuos si se requiere
         if self.guardar_residuos.get():
-            residuos_df = pd.DataFrame(residuos, columns=['Titulo Archivo', 'Titulo base de datos', 'Residuo','Ruta completa'])
-            guardar_archivo_output(tipo='residuos',dataframe=residuos_df,encabezados=f"Origen: {origen}\n")
+            residuos_df = pd.DataFrame(residuos, columns=['Titulo Archivo', 'Titulo base de datos', 'Residuo',
+                                                          'Ruta completa'])
+            guardar_archivo_output(tipo='residuos', dataframe=residuos_df, encabezados=f"Origen: {origen}\n")
 
         # Limpiar la barra de progreso si fue utilizada
         if show_progress:
             self.cleanup_progress_bar()
+
 
     def mostrar_popup_reporte(self, df_reporte):
         # Calcular métricas del reporte
@@ -1020,37 +1026,55 @@ class Ventana:
         """Create an instance of the `owndatabase` class and update UI with Treeview."""
         self.setup_progress_bar()
 
-        # Ask if user wants to use default folders
-        use_default_folders = messagebox.askyesno("Carpetas por defecto", "¿Quieres usar las carpetas predeterminadas?")
+        db_name = simpledialog.askstring("Nombre de la Base de Datos", "Introduce un nombre para la base de datos:")
 
-        # Create the database
-        if use_default_folders:
-            self.owndb.create_database(music_folder_paths)
-        else:
-            self.owndb.create_database()
+        if not db_name:  # Si no se introduce un nombre, mostrar un error y detener el proceso
+            messagebox.showerror("Error", "Debe introducir un nombre para la base de datos.")
 
-        # Clean up the progress bar
-        self.cleanup_progress_bar()
+            return
 
-        # Once the DB is created, show it in the UI
-        self.show_db_in_treeview()
+
+        # Crear una instancia de `owndatabase` solo cuando se llama a este método
+        self.owndb = owndatabase(self.update_progress_and_status)
+        def tarea_pesada():
+            # Llamar al método create_database de owndatabase para crear la base de datos con el nombre proporcionado
+            self.owndb.create_database(db_name=db_name)
+
+            # Clean up the progress bar
+            self.cleanup_progress_bar()
+
+            # Once the DB is created, show it in the UI
+            self.show_db_in_treeview()
+
+        hilo = threading.Thread(target=tarea_pesada)
+        hilo.start()
 
     def comparedb(self):
-
-        self.borrar_todo()  # Limpiar la lista de archivos existentes
+        self.borrar_todo()  # Clear existing files
         numero_canciones = 0
 
         lines = self.owndb.owndf['file_path'].tolist()
         tags = self.owndb.owndf
 
+
         self.origen_archivos = 'owndb'
-        self.procesar_archivos(lines, numero_canciones, from_musicbee=True, show_progress=True,
-                               origen='OwnDB', tags=tags)
 
-        self.owndb.owndf.update(self.archivos_comparado.report_df)
-        self.owndb.owndf.to_csv(os.path.join(DATA_FOLDER, 'owndatabase.csv'), index=False)
+        def tarea_pesada():
+            self.procesar_archivos(lines, numero_canciones, from_musicbee=True, show_progress=True, origen='OwnDB',
+                                   tags=tags)
 
-        self.update_treeview()
+            # Perform the DataFrame update
+            self.owndb.owndf.update(self.archivos_comparado.report_df)
+
+
+            # Save to CSV
+            self.owndb.owndf.to_csv(os.path.join(DATA_FOLDER, 'owndatabase.csv'), index=False)
+
+            # Update the treeview
+            self.update_treeview()
+
+        hilo = threading.Thread(target=tarea_pesada)
+        hilo.start()
 
     def update_treeview(self):
         """Clear and update the Treeview with new data, create if not exists."""
@@ -1149,3 +1173,54 @@ class Ventana:
     def exit_fullscreen(self, event=None):
         """Exit fullscreen mode."""
         self.root.attributes("-fullscreen", False)
+
+    def loaddb(self):
+        """Load a CSV file into the owndatabase instance, ensuring it mirrors the characteristics of self.owndf."""
+        # Open a file dialog to select the CSV file
+        file_path = filedialog.askopenfilename(
+            title="Select CSV File",
+            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+            initialdir=DATABASE_FOLDER
+        )
+
+        if not file_path:
+            messagebox.showerror("Error", "No file selected!")
+            return
+
+        try:
+            # Load the CSV into a DataFrame
+            df_loaded = pd.read_csv(file_path)
+
+            # Ensure the loaded DataFrame has the same structure as self.owndf
+            expected_columns = ['title', 'artist', 'year', 'genre', 'composer', 'file_path',
+                                'Artista encontrado', 'Titulo encontrado', 'Numero de coincidencias',
+                                'Hay coincidencia preferida', 'No hay coincidencia preferida',
+                                'Coincidencia perfecta']
+
+            # Verify if the CSV has the required columns
+            if not all(col in df_loaded.columns for col in expected_columns):
+                messagebox.showerror("Error", "The selected file does not have the required columns.")
+                return
+
+            # Restore the index and ensure column types are correct
+            df_loaded.set_index('file_path', inplace=True, drop=False)
+            df_loaded['Artista encontrado'] = df_loaded['Artista encontrado'].astype(bool)
+            df_loaded['Titulo encontrado'] = df_loaded['Titulo encontrado'].astype(bool)
+            df_loaded['Hay coincidencia preferida'] = df_loaded['Hay coincidencia preferida'].astype(bool)
+            df_loaded['No hay coincidencia preferida'] = df_loaded['No hay coincidencia preferida'].astype(bool)
+            df_loaded['Coincidencia perfecta'] = df_loaded['Coincidencia perfecta'].astype(bool)
+
+            # Assign the loaded DataFrame to the owndatabase instance
+            if self.owndb is None:
+                self.owndb = owndatabase()
+
+            self.owndb.owndf = df_loaded
+
+            # Display success message
+            messagebox.showinfo("Success", f"Database loaded successfully from {os.path.basename(file_path)}.")
+
+            # Optionally, update the UI to reflect the loaded data
+            self.update_treeview()
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load the database: {e}")

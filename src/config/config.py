@@ -31,7 +31,9 @@ def load_resources_paths():
         'merge': os.path.join(ICON_FOLDER, 'merge.png'),
         'musicbee': os.path.join(ICON_FOLDER, 'musicbee.png'),
         'createdb': os.path.join(ICON_FOLDER, 'createdb.png'),
-        'comparedb': os.path.join(ICON_FOLDER, 'comparedb.png')
+        'loaddb': os.path.join(ICON_FOLDER, 'loaddb.png'),
+        'comparedb': os.path.join(ICON_FOLDER, 'comparedb.png'),
+        'filterdb': os.path.join(ICON_FOLDER, 'filterdb.png')
     } 
 
     # Load Images
@@ -79,6 +81,7 @@ IMAGE_FOLDER = os.path.join(RESOURCES_PATH, 'images')
 FONTS_FOLDER = os.path.join(RESOURCES_PATH, 'fonts')
 
 DATA_FOLDER = os.path.join(PROJECT_ROOT, 'data')
+DATABASE_FOLDER = os.path.join(PROJECT_ROOT, 'databases')
 TEST_FILES_FOLDER = os.path.join(PROJECT_ROOT, 'tests', 'music_files')
 
 OUTPUT_FOLDER = os.path.join(PROJECT_ROOT, 'output')

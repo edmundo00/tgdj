@@ -76,6 +76,10 @@ def convertir_segundos(segundos, formato='x\'x\'\''):
 
 
 def separar_artistas(artistas):
+    # Verificar si la entrada es una cadena
+    if not isinstance(artistas, str):
+        return "", ""  # Return empty strings if the input is not a string
+
     # Define regex pattern to capture the first match of " / ", " feat. ", or " canta: "
     pattern = re.compile(r" / | feat\. | canta: ")
 
@@ -532,7 +536,9 @@ def buscar_titulo(database, tag):
     """
 
     # Normaliza y limpia el título original; si está vacío, usa el nombre del archivo sin extensión
-    titulo_original = ftfy.fix_text(tag.title).strip() if tag.title else get_file_name_without_extension(tag._filename)
+    titulo_original = ftfy.fix_text(str(tag.title)).strip() if tag.title and isinstance(tag.title,
+                                                                                        str) else get_file_name_without_extension(
+        tag._filename)
     titulo_buscar_min = unidecode(convert_numbers_to_words(titulo_original)).lower().strip()
 
     # Verifica si el título es válido para la búsqueda
@@ -920,6 +926,10 @@ def parse_year(tag_year):
 
 
 def extraer_cuatro_numeros(cadena):
+    # Verificar si la entrada es una cadena
+    if not isinstance(cadena, str):
+        return None  # O también puedes lanzar una excepción: raise ValueError("Input must be a string")
+
     # Usamos la expresión regular \d{4} para encontrar cuatro dígitos consecutivos
     resultado = re.search(r'\d{4}', cadena)
     if resultado:
