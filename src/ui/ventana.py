@@ -1120,11 +1120,27 @@ class Ventana:
 
             # Show filtered data in Treeview
             self.show_db_in_treeview(df)
+            return df  # Return the filtered DataFrame
+
+        def export_to_m3u(df):
+            """Export the file_path column of the filtered DataFrame as an M3U file."""
+            file_paths = df['file_path'].tolist()
+            if file_paths:
+                m3u_file_path = tk.filedialog.asksaveasfilename(defaultextension=".m3u",
+                                                                filetypes=[("M3U Playlist", "*.m3u")])
+                if m3u_file_path:
+                    with open(m3u_file_path, 'w', encoding='utf-8') as f:
+                        f.write("#EXTM3U\n")
+                        for file_path in file_paths:
+                            f.write(f"{file_path}\n")
+                    tk.messagebox.showinfo("Success", "M3U file exported successfully!")
+            else:
+                tk.messagebox.showwarning("Warning", "No file paths to export.")
 
         # Popup window
         popup = tk.Toplevel(self.root)
         popup.title("Filter Database")
-        popup.geometry("400x400")
+        popup.geometry("500x500")  # Adjusted width and height to fit the contents without scrolling
 
         # Dictionary to store filter entries and options
         string_filters = {}
@@ -1147,7 +1163,8 @@ class Ventana:
             filter_option_menu.grid(row=idx, column=2, padx=10, pady=5)
 
         # Fields for boolean filters with options like "True", "False", "All"
-        boolean_fields = ['Artista encontrado', 'Titulo encontrado', 'Coincidencia perfecta']
+        boolean_fields = ['Artista encontrado', 'Titulo encontrado', 'Numero de coincidencias',
+                          'Hay coincidencia preferida', 'No hay coincidencia preferida', 'Coincidencia perfecta']
         for idx, field in enumerate(boolean_fields):
             tk.Label(popup, text=f"{field.replace('_', ' ').capitalize()}:", font=('Helvetica', 12)).grid(
                 row=len(string_fields) + idx, column=0, padx=10, pady=5)
@@ -1157,9 +1174,14 @@ class Ventana:
             boolean_filter_menu = tk.OptionMenu(popup, var, "All", "True", "False")
             boolean_filter_menu.grid(row=len(string_fields) + idx, column=1, padx=10, pady=5)
 
-        # Apply button
-        apply_button = tk.Button(popup, text="Apply Filters", command=apply_filters)
-        apply_button.grid(row=len(string_fields) + len(boolean_fields), column=0, columnspan=3, pady=20)
+        # Apply Filters button
+        apply_button = tk.Button(popup, text="Apply Filters", command=lambda: apply_filters())
+        apply_button.grid(row=len(string_fields) + len(boolean_fields), column=0, columnspan=3, pady=10)
+
+        # Export to M3U button
+        export_button = tk.Button(popup, text="Export to M3U",
+                                  command=lambda: export_to_m3u(apply_filters()))  # Apply filters and then export
+        export_button.grid(row=len(string_fields) + len(boolean_fields) + 1, column=0, columnspan=3, pady=10)
 
     def show_db_in_treeview(self, filtered_df=None):
         """Display the contents of the filtered or full database in a Treeview widget."""
