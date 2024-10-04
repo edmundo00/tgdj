@@ -169,10 +169,10 @@ columnas_config = {
 }
 
 default_milonga_data = {
-    'nombre': "Milonga El Desbande",
-    'fecha': "20 de Septiembre de 2024",
-    'hora_inicio': '22:00',
-    'hora_final': '01:30'
+    'nombre': "Milonga Mia",
+    'fecha': "15 de Octubre de 2024",
+    'hora_inicio': '21:00',
+    'hora_final': '00:00'
 }
 
 
