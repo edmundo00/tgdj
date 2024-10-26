@@ -9,3 +9,5 @@ num2words
 pygame
 mutagen
 ftfy
+matplotlib
+pywin32

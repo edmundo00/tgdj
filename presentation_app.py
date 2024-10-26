@@ -387,7 +387,7 @@ class PresentationApp:
     def read_audio_tags(self, file_path):
         # Check if the DataFrame is already initialized, if not, initialize it
         if not hasattr(self, 'df'):
-            columns = ['title', 'artist1', 'artist2', 'album', 'year', 'genre', 'composer', 'lyrics', 'bpm', 'duration',
+            columns = ['title','artist', 'artist1', 'artist2', 'album', 'year', 'genre', 'composer', 'lyrics', 'bpm', 'duration',
                        'extension', 'bitrate']
             self.df = pd.DataFrame(columns=columns)
 
@@ -403,6 +403,7 @@ class PresentationApp:
             # Prepare a dictionary with the extracted tags
             tag_data = {
                 "title": tags.title if tags.title else "Unknown Title",
+                "artist": tags.artist if tags.artist else "Unknown Artist",
                 "artist1": self.artists1 if tags.artist else "Unknown Artist",
                 "artist2": self.artists2 if tags.artist else "Unknown Artist",
                 "album": tags.album if tags.album else "Unknown Album",
@@ -562,7 +563,7 @@ class PresentationApp:
 
         combined.save(self.merged_image_path, "PNG")
 
-    def create_slide_for_tanda(self, prs, tanda_number, titulo, titulo_orquesta, subtitulo, genero, lista_canciones, positions_initial):
+    def create_slide_for_tanda(self, prs, tanda_number, titulo, titulo_orquesta, subtitulo, genero, lista_canciones, positions_initial, tags_string):
 
         # self.apply_gradient_overlay()
 
@@ -582,6 +583,10 @@ class PresentationApp:
         # Add a slide with a title and content layout
         slide_layout = prs.slide_layouts[5]  # Use a blank layout
         slide = prs.slides.add_slide(slide_layout)
+
+        # Add the "Artist - Song" string to the slide notes
+        notes_slide = slide.notes_slide
+        notes_slide.notes_text_frame.text = tags_string
 
         # Set the merged background image with gradient
         slide.shapes.add_picture(self.merged_image_path, 0, 0, width=prs.slide_width, height=prs.slide_height)
@@ -915,6 +920,9 @@ class PresentationApp:
 
             subtitulo = self.result.iloc[tanda_number - 1]['genero_autores'] + " " + self.result.iloc[tanda_number - 1]['intervalo_anos']
 
+            tags = self.canciones_tanda(tanda_number, ['artist' , 'title'])
+            tags_string = '\n'.join([f"{artist} - {song}" for artist, song in tags])
+
             canciones = self.canciones_tanda(tanda_number, ['title', 'ano', 'composer'])
 
             positions_initial = {
@@ -940,7 +948,7 @@ class PresentationApp:
             }
         }
 
-            self.create_slide_for_tanda(prs, tanda_number, titulo, titulo_orquesta, subtitulo, genero, canciones, positions_initial)
+            self.create_slide_for_tanda(prs, tanda_number, titulo, titulo_orquesta, subtitulo, genero, canciones, positions_initial, tags_string)
 
         # Save the presentation
         try:
