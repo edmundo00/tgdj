@@ -491,11 +491,12 @@ class Ventana:
         self.status_bar.grid(row=self.status_bar_row, column=0, columnspan=self.status_bar_colspan, sticky="ew")
 
     def open_presentation_popup(self):
-        # Inicializa la ventana si no existe o si ha sido destruida
-        if self.presentation_window is None or not tk.Toplevel.winfo_exists(self.presentation_window):
-            self.presentation_window = tk.Toplevel(self.root)
-            self.presentation_window.title("Presentation Window")
-            # Añade más configuración para la ventana si es necesario
+        # Comprueba si el frame de presentación ya existe
+        if self.presentation_window is None:
+            # Crea un nuevo frame en lugar de Toplevel
+            self.presentation_window = tk.Frame(self.root)
+            self.presentation_window.grid(row=2, column=0, columnspan=3, sticky="nsew")
+            # Crea una instancia de PresentationApp en el frame
             app = PresentationApp(self.presentation_window)
         else:
             self.presentation_window.lift()

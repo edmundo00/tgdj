@@ -89,8 +89,11 @@ from src.utils.calcular_ancho_fuentes import FontWidthCalculator
 class PresentationApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Presentation Creator")
-        self.root.geometry('1500x800')  # Define el tamaño inicial de la ventana
+        # Verifica si `root` es una ventana o un Frame
+        if isinstance(self.root, tk.Tk) or isinstance(self.root, tk.Toplevel):
+            self.root.title("Presentation Creator")
+            self.root.geometry('1500x800')  # Tamaño inicial solo si es una ventana
+            self.setup_menu()  # Configura el menú solo si es ventana
 
         # Uso de la clase FontWidthCalculator
         self.calculadora = FontWidthCalculator()
@@ -111,19 +114,6 @@ class PresentationApp:
         self.m3u_file_path = None
         self.audio_files = []
         # self.audio_tags = []
-
-        # Create Menu
-        menubar = tk.Menu(root)
-        root.config(menu=menubar)
-
-        file_menu = tk.Menu(menubar, tearoff=0)
-        file_menu.add_command(label="Open", command=self.open_m3u_file)
-        menubar.add_cascade(label="File", menu=file_menu)
-
-        preferences_menu = tk.Menu(menubar, tearoff=0)
-        preferences_menu.add_command(label="Preferences", command=self.open_preferences)
-        menubar.add_cascade(label="Preferences", menu=preferences_menu)
-
 
 
         # Entrada del Nombre de la Milonga
@@ -196,6 +186,22 @@ class PresentationApp:
         root.grid_rowconfigure(4, weight=1)
         root.grid_columnconfigure(1, weight=1)
         root.grid_columnconfigure(2, weight=1)
+
+
+    def setup_menu(self):
+        """Configura el menú solo si el root es una ventana."""
+        menubar = tk.Menu(self.root)
+        file_menu = tk.Menu(menubar, tearoff=0)
+        file_menu.add_command(label="Open", command=self.open_m3u_file)
+        menubar.add_cascade(label="File", menu=file_menu)
+
+        preferences_menu = tk.Menu(menubar, tearoff=0)
+        preferences_menu.add_command(label="Preferences", command=self.open_preferences)
+        menubar.add_cascade(label="Preferences", menu=preferences_menu)
+
+        # Asigna el menú solo si es una ventana principal o emergente
+        self.root.config(menu=menubar)
+
 
     def calcular_duracion(self, event=None):
         formato_hora = "%H:%M"
