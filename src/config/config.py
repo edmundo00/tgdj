@@ -101,6 +101,7 @@ project_root = PROJECT_ROOT
 directorio_raiz = MUSIC_PATH
 dropbox_path=MUSIC_PATH
 m3u_start_path = os.path.join(dropbox_path, "TDJ", "playlists")
+presentations_start_path = os.path.join(dropbox_path, "TDJ", "Presentacion")
 musicbee_start_folder = os.path.join(dropbox_path, "TDJ", "MUSICBEE DATABASES")
 
 data_folder = DATA_FOLDER
@@ -169,10 +170,10 @@ columnas_config = {
 }
 
 default_milonga_data = {
-    'nombre': "Milonga Mia",
-    'fecha': "15 de Octubre de 2024",
-    'hora_inicio': '21:00',
-    'hora_final': '00:00'
+    'nombre': "Arrabal Practica",
+    'fecha': "27 de Octubre de 2024",
+    'hora_inicio': '20:00',
+    'hora_final': '23:30'
 }
 
 

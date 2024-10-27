@@ -19,6 +19,33 @@ from mutagen.wave import WAVE
 from datetime import datetime
 import difflib
 from tinytag import TinyTag
+from dateutil import parser
+
+
+def convertir_fecha_a_yymmdd(fecha):
+    # Paso 1: Diccionario de traducción de meses de español a inglés
+    meses_espanol_a_ingles = {
+        "enero": "January", "febrero": "February", "marzo": "March", "abril": "April",
+        "mayo": "May", "junio": "June", "julio": "July", "agosto": "August",
+        "septiembre": "September", "octubre": "October", "noviembre": "November", "diciembre": "December"
+    }
+
+    # Paso 2: Convertimos el texto de entrada a minúsculas para facilitar la búsqueda y reemplazo
+    fecha = fecha.lower()
+
+    # Paso 3: Reemplazamos cada mes en español por su equivalente en inglés
+    for mes_es, mes_en in meses_espanol_a_ingles.items():
+        fecha = re.sub(rf'\b{mes_es}\b', mes_en, fecha)
+
+    # Paso 4: Eliminamos palabras como "de" que pueden interferir
+    fecha = re.sub(r'\bde\b', '', fecha)
+
+    try:
+        # Paso 5: Parseamos la fecha y la formateamos en YYMMDD
+        fecha_datetime = parser.parse(fecha)
+        return fecha_datetime.strftime("%y%m%d")
+    except (ValueError, TypeError):
+        return "Formato de fecha no válido"
 
 def convertir_segundos(segundos, formato='x\'x\'\''):
     """
@@ -1004,3 +1031,5 @@ def load_m3u_file_helper(m3u_file_path):
         # Fallback to the system's default encoding if UTF-8 fails
         with open(m3u_file_path, 'r', encoding='cp1252', errors='ignore') as file:
             return [line.strip() for line in file if line.strip() and not line.startswith("#")]
+
+

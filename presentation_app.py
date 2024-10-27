@@ -11,8 +11,8 @@ from pptx.enum.shapes import MSO_CONNECTOR
 from unidecode import unidecode
 import os
 from os.path import join
-from src.config.config import dropbox_path, image_folder, m3u_start_path, background_image_path, data_folder, output_folder, orchestra_folder, background_image_folder, merged_images_folder, DEFAULT_FONT_NAME, background_tango_degradado, default_milonga_data
-from src.utils.utils import extract_year, separar_artistas, obtener_autores, convertir_segundos, obtener_intervalo_anos
+from src.config.config import dropbox_path, image_folder, m3u_start_path, background_image_path, data_folder, output_folder, orchestra_folder, background_image_folder, merged_images_folder, DEFAULT_FONT_NAME, background_tango_degradado, default_milonga_data, presentations_start_path
+from src.utils.utils import extract_year, separar_artistas, obtener_autores, convertir_segundos, obtener_intervalo_anos, convertir_fecha_a_yymmdd
 from src.utils.funciones_para_diapos import *
 # add_text_to_slide, calculate_positions, adjust_text_size
 from datetime import datetime, timedelta
@@ -878,7 +878,7 @@ class PresentationApp:
             return
 
         # Path to save the presentation
-        output_file = join(output_folder, "presentation.pptx")
+        output_file = join(presentations_start_path, f"{convertir_fecha_a_yymmdd(fecha)} {nombre_milonga}.pptx")
 
         # Create a new PowerPoint presentation
         prs = Presentation()
