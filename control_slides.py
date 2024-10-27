@@ -4,6 +4,21 @@ import win32com.client
 from PyQt5 import QtWidgets, QtGui, QtCore
 from threading import Thread
 from PyQt5.QtWidgets import QFileDialog
+from unidecode import unidecode
+
+
+#
+#
+# CREAR .EXE
+# pip install pyinstaller
+# pyinstaller --onefile --noconsole --clean --distpath . .\control_slides.py
+#
+#
+#
+
+
+
+
 
 class SlideControllerApp(QtWidgets.QWidget):
     def __init__(self):
@@ -154,7 +169,10 @@ class SlideControllerApp(QtWidgets.QWidget):
         for slide in presentation.Slides:
             # Check the slide notes for the search_text
             notes = slide.NotesPage.Shapes.Placeholders(2).TextFrame.TextRange.Text
-            if search_text.lower() in notes.lower():
+
+            notes_lower = unidecode(notes.lower())
+            search_text_lower = unidecode(search_text.lower())
+            if search_text_lower in notes_lower:
                 return slide.SlideNumber
         return None
 

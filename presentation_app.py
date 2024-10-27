@@ -265,7 +265,7 @@ class PresentationApp:
         self.result['group_data'] = group_data_list
 
         # Lista de excepciones donde no se debe añadir "Orquesta de"
-        excepciones = ["Orquesta", "Quinteto", "Sexteto", "Hugo Diaz"]
+        excepciones = ["Orquesta", "Quinteto", "Sexteto", "Hugo Diaz", "Nelly Omar"]
 
         # Añadir la columna 'titulo_orquesta' según las condiciones dadas
         self.result['titulo_orquesta'] = self.result['orchestra_value'].apply(
