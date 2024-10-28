@@ -8,7 +8,14 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from PyQt5.QtCore import QTimer
 import win32gui
+from Levenshtein import distance as levenshtein_distance
+import pythoncom  # Necesario para liberar el objeto COM correctamente
+import gc  # Recolector de basura para asegurar la liberación
 
+
+# Default configuration values
+DEFAULT_SCREEN = 1
+DEFAULT_CORRECTION_FACTOR = 0.5
 
 #
 #
@@ -38,7 +45,7 @@ class TracklistEventHandler(FileSystemEventHandler):
 class SlideControllerApp(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
-        self.current_screen_index = 0
+        self.current_screen_index = DEFAULT_SCREEN
         self.screens = QtWidgets.QApplication.screens()  # Obtener la lista inicial de pantallas
         self.tracklist_path = os.path.expandvars(r'%LocalAppData%\VirtualDJ\History\tracklist.txt')
         self.live_update = False
@@ -56,16 +63,16 @@ class SlideControllerApp(QtWidgets.QWidget):
 
         # Diccionario de configuraciones de posición y tamaño
         layout_settings = {
-            "window": {"x": 100, "y": 100, "width": 600, "height": 280},
+            "window": {"x": 100, "y": 100, "width": 600, "height": 300},
             "open_presentation_button": {"x": 10, "y": 10, "width": 180, "height": 40},
             "button2": {"x": 210, "y": 10, "width": 180, "height": 40},
             "button3": {"x": 410, "y": 10, "width": 180, "height": 40},
             "presentation_label": {"x": 10, "y": 60, "width": 580, "height": 30},
             "song_label": {"x": 10, "y": 90, "width": 580, "height": 30},
-            "slide_label": {"x": 10, "y": 120, "width": 580, "height": 100},
-            "prev_button": {"x": 10, "y": 230, "width": 180, "height": 40},
-            "live_button": {"x": 210, "y": 230, "width": 180, "height": 40},
-            "next_button": {"x": 410, "y": 230, "width": 180, "height": 40}
+            "slide_label": {"x": 10, "y": 120, "width": 580, "height": 120},
+            "prev_button": {"x": 10, "y": 250, "width": 180, "height": 40},
+            "live_button": {"x": 210, "y": 250, "width": 180, "height": 40},
+            "next_button": {"x": 410, "y": 250, "width": 180, "height": 40}
         }
 
         # Configuración de ventana
@@ -104,13 +111,23 @@ class SlideControllerApp(QtWidgets.QWidget):
             }
         """
 
-        # Configuración de los botones
+        # Button for selecting the screen
         self.button2 = QtWidgets.QPushButton("Select Screen", self)
         self.button2.setGeometry(layout_settings["button2"]["x"], layout_settings["button2"]["y"],
-                                 layout_settings["button2"]["width"], layout_settings["button2"]["height"])
+                                 layout_settings["button2"]["width"] - 80, layout_settings["button2"]["height"])
         self.button2.setDisabled(True)
         self.button2.setStyleSheet(disabled_style)
         self.button2.clicked.connect(self.select_screen)
+
+        # Field for correction factor
+        self.correction_factor_input = QtWidgets.QLineEdit(self)
+        self.correction_factor_input.setText(str(DEFAULT_CORRECTION_FACTOR))  # Default correction factor
+        self.correction_factor_input.setGeometry(
+            layout_settings["button2"]["x"] + layout_settings["button2"]["width"] - 70,
+            layout_settings["button2"]["y"], 70, layout_settings["button2"]["height"])
+        self.correction_factor_input.setAlignment(QtCore.Qt.AlignCenter)
+        self.correction_factor_input.setDisabled(True)
+        self.correction_factor_input.setStyleSheet("background-color: lightgray; color: black;")
 
         self.button3 = QtWidgets.QPushButton("GO SLIDE SHOW", self)
         self.button3.setGeometry(layout_settings["button3"]["x"], layout_settings["button3"]["y"],
@@ -178,14 +195,14 @@ class SlideControllerApp(QtWidgets.QWidget):
 
         # Etiqueta para mostrar el estado de la diapositiva
         self.slide_label = QtWidgets.QLabel("No slides Loaded", self)
-        self.slide_label.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+        self.slide_label.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
         self.slide_label.setGeometry(layout_settings["slide_label"]["x"], layout_settings["slide_label"]["y"],
                                      layout_settings["slide_label"]["width"], layout_settings["slide_label"]["height"])
         self.slide_label.setStyleSheet(label_style_disabled)
 
         # Configuración del botón de selección de pantalla con la pantalla inicial
         if self.screens:
-            self.button2.setText(f"Selected: Screen {self.current_screen_index + 1}")
+            self.button2.setText(f"Screen {self.current_screen_index + 1}")
         else:
             self.button2.setText("No Screens Available")
     # Acciones de ejemplo para los nuevos botones superiores
@@ -199,7 +216,7 @@ class SlideControllerApp(QtWidgets.QWidget):
             else:
                 self.current_screen_index = (self.current_screen_index + 1) % len(self.screens)
                 self.change_screen(self.current_screen_index)
-                self.button2.setText(f"Selected: Screen {self.current_screen_index + 1}")
+                self.button2.setText(f"Screen {self.current_screen_index + 1}")
                 print(f"Presentación cambiada a Screen {self.current_screen_index + 1}")
         else:
             QtWidgets.QMessageBox.warning(self, "Advertencia", "Abre una presentación primero.")
@@ -256,7 +273,7 @@ class SlideControllerApp(QtWidgets.QWidget):
                     # Espera un momento y ajusta la posición en la pantalla seleccionada
                     time.sleep(1)  # Asegura que el slideshow se inicie
                     slideshow = self.powerpoint.SlideShowWindows(1)
-                    correction_factor = 0.75
+                    correction_factor = float(self.correction_factor_input.text()) if self.correction_factor_input.text() else DEFAULT_CORRECTION_FACTOR
                     slideshow.Top = screen_rect.top() * correction_factor
                     slideshow.Left = screen_rect.left() * correction_factor
                     slideshow.Height = screen_rect.height() * correction_factor
@@ -300,6 +317,7 @@ class SlideControllerApp(QtWidgets.QWidget):
 
         for label in [self.presentation_label, self.song_label, self.slide_label]:
             label.setStyleSheet(label_style_enabled)
+        self.correction_factor_input.setDisabled(False)
 
     # Abre la presentación seleccionada
     def open_presentation(self):
@@ -319,7 +337,7 @@ class SlideControllerApp(QtWidgets.QWidget):
                     print(f"Presentación cargada correctamente con {self.presentation.Slides.Count} diapositivas.")
                     self.presentation_label.setText(f"Presentation: {filename_only}")
                     self.enable_controls()  # Habilita los botones y etiquetas
-                    self.button2.setText(f"Selected: Screen {self.current_screen_index + 1}")
+                    self.button2.setText(f"Screen {self.current_screen_index + 1}")
                     self.live_update = True  # Activa Live Update por defecto
                     self.live_button.setText("Stop Live Update")
                     self.live_button.setDisabled(False)  # Activa el botón
@@ -394,10 +412,35 @@ class SlideControllerApp(QtWidgets.QWidget):
     # Busca una diapositiva por el contenido en sus notas
     def find_slide_by_notes(self, presentation, search_text):
         try:
+            search_text_normalized = unidecode(search_text.lower())
+            closest_slide = None
+            closest_distance = float('inf')  # Iniciamos con una distancia muy grande
+
+            # Primera pasada: buscar coincidencia exacta
             for slide in presentation.Slides:
                 notes = slide.NotesPage.Shapes.Placeholders(2).TextFrame.TextRange.Text
-                if unidecode(search_text.lower()) in unidecode(notes.lower()):
-                    return slide.SlideNumber
+                notes_normalized = unidecode(notes.lower())
+
+                if search_text_normalized in notes_normalized:
+                    return slide.SlideNumber  # Coincidencia exacta encontrada, salir de inmediato
+
+            # Segunda pasada: buscar la diapositiva más cercana
+            for slide in presentation.Slides:
+                notes = slide.NotesPage.Shapes.Placeholders(2).TextFrame.TextRange.Text
+                notes_normalized = unidecode(notes.lower())
+
+                # Calcular distancia de Levenshtein
+                distance = levenshtein_distance(search_text_normalized, notes_normalized)
+
+                # Actualizar si es la distancia más cercana encontrada hasta ahora
+                if distance < closest_distance:
+                    closest_distance = distance
+                    closest_slide = slide.SlideNumber
+
+            # Si no se encontró coincidencia exacta, devolver la más cercana
+            if closest_slide is not None:
+                print(f"No se encontró coincidencia exacta, mostrando la más cercana (Diapositiva {closest_slide}).")
+                return closest_slide
 
         except Exception as e:
             print(f"Error al acceder a las diapositivas: {e}")
@@ -411,51 +454,66 @@ class SlideControllerApp(QtWidgets.QWidget):
                 slideshow = self.powerpoint.SlideShowWindows(1)
                 slideshow.View.GotoSlide(slide_number)
                 print(f"Saltando a la diapositiva {slide_number} en modo Slideshow.")
-                notes = self.presentation.Slides(slide_number).NotesPage.Shapes.Placeholders(2).TextFrame.TextRange.Text
-                # Replace all line break formats with <br> for QLabel compatibility
-                notes_html = notes.replace('\r\n', '<br>').replace('\r', '<br>').replace('\n', '<br>')
-                self.slide_label.setText(f"Presentation: <br>{notes_html}")
             else:
                 # En modo de edición, selecciona la diapositiva
                 self.presentation.Slides(slide_number).Select()
-                self.current_slide = slide_number  # Actualiza el número de la diapositiva actual
                 print(f"Saltando a la diapositiva {slide_number} en modo edición.")
-                notes = self.presentation.Slides(slide_number).NotesPage.Shapes.Placeholders(2).TextFrame.TextRange.Text
-                # Replace all line break formats with <br> for QLabel compatibility
-                notes_html = notes.replace('\r\n', '<br>').replace('\r', '<br>').replace('\n', '<br>')
-                self.slide_label.setText(f"Presentation: <br>{notes_html}")
+
+            # Actualiza el número de diapositiva actual
+            self.current_slide = slide_number
+
+            # Actualizar etiquetas y contenido de la diapositiva
+            notes = self.presentation.Slides(slide_number).NotesPage.Shapes.Placeholders(2).TextFrame.TextRange.Text
+            notes_html = notes.replace('\r\n', '<br>').replace('\r', '<br>').replace('\n', '<br>')
+            self.slide_label.setText(f"Presentation: <br>{notes_html}")
+            self.song_label.setText(f"Current Slide: {slide_number}")
+
         except Exception as e:
             print(f"Error al intentar cambiar a la diapositiva {slide_number}: {e}")
 
     # Avanza a la siguiente diapositiva
     def next_slide(self):
         try:
-            if self.powerpoint.SlideShowWindows.Count > 0:
-                slideshow = self.powerpoint.SlideShowWindows(1)
-                slideshow.View.Next()
-                print("Avanzando a la siguiente diapositiva en modo Slideshow.")
-            else:
-                # Avanza a la siguiente diapositiva en modo de edición
-                next_slide_number = self.current_slide + 1 if self.current_slide < self.presentation.Slides.Count else 1
-                self.goto_slide(next_slide_number)
-                print(f"Avanzando a la siguiente diapositiva en modo edición, ahora en diapositiva {self.current_slide}.")
+            # Calcular el número de la siguiente diapositiva
+            next_slide_number = self.current_slide + 1 if self.current_slide < self.presentation.Slides.Count else 1
+            # Llamar a goto_slide para actualizar la vista y las etiquetas
+            self.goto_slide(next_slide_number)
         except Exception as e:
             print(f"Error al intentar avanzar a la siguiente diapositiva: {e}")
 
-    # Retrocede a la diapositiva anterior
     def prev_slide(self):
         try:
-            if self.powerpoint.SlideShowWindows.Count > 0:
-                slideshow = self.powerpoint.SlideShowWindows(1)
-                slideshow.View.Previous()
-                print("Retrocediendo a la diapositiva anterior en modo Slideshow.")
-            else:
-                # Retrocede a la diapositiva anterior en modo de edición
-                prev_slide_number = self.current_slide - 1 if self.current_slide > 1 else self.presentation.Slides.Count
-                self.goto_slide(prev_slide_number)
-                print(f"Retrocediendo a la diapositiva anterior en modo edición, ahora en diapositiva {self.current_slide}.")
+            # Calcular el número de la diapositiva anterior
+            prev_slide_number = self.current_slide - 1 if self.current_slide > 1 else self.presentation.Slides.Count
+            # Llamar a goto_slide para actualizar la vista y las etiquetas
+            self.goto_slide(prev_slide_number)
+
         except Exception as e:
             print(f"Error al intentar retroceder a la diapositiva anterior: {e}")
+
+    def closeEvent(self, event):
+        try:
+            # Verificar si hay una presentación abierta y marcarla como guardada
+            if hasattr(self, 'presentation') and self.presentation:
+                self.presentation.Saved = True  # Evita el mensaje de guardado
+                self.presentation.Close()  # Cierra la presentación
+                self.presentation = None  # Liberar la referencia a la presentación
+
+            # Verificar si la aplicación de PowerPoint está abierta y cerrarla
+            if hasattr(self, 'powerpoint') and self.powerpoint:
+                self.powerpoint.Quit()  # Cierra PowerPoint
+                self.powerpoint = None  # Liberar la referencia a la aplicación
+
+            # Liberar los objetos COM manualmente
+            pythoncom.CoUninitialize()
+            gc.collect()  # Llama al recolector de basura para asegurar la liberación
+
+            print("Presentación y aplicación de PowerPoint cerradas.")
+
+        except Exception as e:
+            print(f"Error al cerrar la presentación o PowerPoint: {e}")
+        finally:
+            event.accept()  # Acepta el evento de cierre
 
 
 # ---------------------
