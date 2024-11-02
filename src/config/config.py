@@ -170,10 +170,10 @@ columnas_config = {
 }
 
 default_milonga_data = {
-    'nombre': "Arrabal Practica",
-    'fecha': "27 de Octubre de 2024",
-    'hora_inicio': '20:00',
-    'hora_final': '23:30'
+    'nombre': "La Yumba",
+    'fecha': "8 de Noviembre de 2024",
+    'hora_inicio': '22:00',
+    'hora_final': '01:00'
 }
 
 
