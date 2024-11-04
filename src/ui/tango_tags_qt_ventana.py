@@ -11,6 +11,7 @@ from src.config.config import *
 from src.config.database import Database
 from src.utils.calcular_ancho_fuentes import FontWidthCalculator
 from src.utils.MusicBeeLibraryTools import MusicBeeLibraryTools
+from src.ui.ReportManager import ReportManager
 
 class tango_tags_qt_ventana(QMainWindow):
     def __init__(self):
@@ -39,15 +40,18 @@ class tango_tags_qt_ventana(QMainWindow):
         elif self.maximized:
             self.showMaximized()
 
-        # Crear menús, barra de iconos y barra de estado
-        self.create_icon_bar()
-        self.create_status_bar()
-
         # Configuración de layout principal
         main_widget = QWidget()
         main_layout = QVBoxLayout()
         main_widget.setLayout(main_layout)
         self.setCentralWidget(main_widget)
+
+        # Crear menús, barra de iconos y barra de estado
+        self.create_icon_bar()
+        self.create_checkboxes()  # Añadir los CheckBoxes debajo de la barra de iconos
+        self.create_status_bar()
+
+
 
         # Área principal de contenido
         self.main_content_area = QFrame()
@@ -64,6 +68,34 @@ class tango_tags_qt_ventana(QMainWindow):
         music_bee_btn.triggered.connect(self.load_music_bee)
         self.toolbar.addAction(music_bee_btn)
 
+    def create_checkboxes(self):
+        # Crear un frame para contener los CheckBoxes
+        checkbox_frame = QFrame()
+        checkbox_layout = QHBoxLayout()
+
+        # Definir los CheckBoxes con sus textos y estados predeterminados
+        checkboxes_info = [
+            ("Date Checked", False),
+            ("Perfect Matches", False),
+            ("Artist Not Found", False),
+            ("Title Not Found", False),
+            ("Visualizar Resto", False),
+            ("Guardar coincidencias", False),
+            ("Guardar residuos", False),
+            ("No mostrar comparativa", False),
+            ("Direct tagging", False)
+        ]
+
+        # Crear y añadir los CheckBoxes al layout
+        for text, checked in checkboxes_info:
+            checkbox = QCheckBox(text)
+            checkbox.setChecked(checked)
+            checkbox_layout.addWidget(checkbox)
+
+        # Añadir el layout al frame y el frame al layout principal
+        checkbox_frame.setLayout(checkbox_layout)
+        self.centralWidget().layout().addWidget(checkbox_frame)
+
     def create_status_bar(self):
         self.statusBar().showMessage("Ready")
 
@@ -75,12 +107,16 @@ class tango_tags_qt_ventana(QMainWindow):
         numero_canciones = 0
 
         # Cuadro de diálogo para seleccionar el archivo de biblioteca
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            "Seleccionar archivo de biblioteca de MusicBee",
-            "",
-            "Archivos de biblioteca de MusicBee (*.mbl);;Todos los archivos (*.*)"
-        )
+        test = True
+        if test:
+            file_path = "D:\\Dropbox\\TDJ\\MUSICBEE DATABASES\\tango\\MusicBeeLibrary.mbl"
+        else:
+            file_path, _ = QFileDialog.getOpenFileName(
+                self,
+                "Seleccionar archivo de biblioteca de MusicBee",
+                "",
+                "Archivos de biblioteca de MusicBee (*.mbl);;Todos los archivos (*.*)"
+            )
 
         if file_path:
             try:
@@ -98,7 +134,7 @@ class tango_tags_qt_ventana(QMainWindow):
                     lines,
                     numero_canciones,
                     from_musicbee=True,
-                    show_progress=True,
+                    show_progress=False,
                     origen=file_path,
                     tags=tagsml_df
                 )
@@ -109,6 +145,49 @@ class tango_tags_qt_ventana(QMainWindow):
             except Exception as e:
                 # Mostrar mensaje de error si ocurre algún problema
                 QMessageBox.critical(self, "Error", f"No se pudo cargar la biblioteca: {e}")
+
+    def crear_y_actualizar_filetofind(self, ruta_archivo, frame_number, tags):
+        """
+        Crea una instancia de FILETOFIND, la actualiza según los filtros seleccionados,
+        y la añade a la lista global de filetofind_list.
+        """
+        # Crear instancia de FILETOFIND con los parámetros constantes
+        if self.direct_tagging_checkbox.isChecked():
+            lista_frames = [
+                self.scrollable_frame[0],  # Corresponds to ff
+                self.scrollable_frame[1],  # Corresponds to fd
+                self.frames_columnas_archivo,
+                self.frames_columnas_resultado
+            ]
+        else:
+            lista_frames = [None, None, None, None]
+
+        lista_checks = [
+            self.date_checked.get(),  # Corresponds to show_date_checked
+            self.perfect_matches.get(),  # Corresponds to show_perfect_matches
+            self.artist_not_found.get(),  # Corresponds to show_artist_not_found
+            self.title_not_found.get(),  # Corresponds to show_title_not_found
+            self.view_remaining.get(),  # Corresponds to show_remaining
+            self.direct_comparison.get()  # Corresponds to compare
+        ]
+
+        # Pass the list as a single argument along with other parameters
+        new_filetofind = FILETOFIND(
+            ruta_archivo=ruta_archivo,
+            lista_frames=lista_frames,
+            frame_number=frame_number,
+            lista_checks=lista_checks,
+            tags=tags
+        )
+
+        # Actualizar el número de canciones y añadir a la lista global
+        frame_number = new_filetofind.nextframe
+        reporte = new_filetofind.reporte()
+        coinc_fav = new_filetofind.get_coincidencia_favorita()
+
+        filetofind_list.append(new_filetofind)
+
+        return frame_number, reporte, coinc_fav
 
     def procesar_archivos(self, archivos, numero_canciones, from_playlist=False, from_musicbee=False,
                           show_progress=False, origen=None, tags=None):
