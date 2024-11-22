@@ -118,6 +118,7 @@ class tango_tags_qt_ventana(QMainWindow):
         test = True
         if test:
             file_path = "D:\\Dropbox\\TDJ\\MUSICBEE DATABASES\\test\\MusicBeeLibrary.mbl"
+            #file_path = "D:\\Dropbox\\TDJ\\MUSICBEE DATABASES\\tango\\MusicBeeLibrary.mbl"
         else:
             file_path, _ = QFileDialog.getOpenFileName(
                 self,
@@ -220,28 +221,42 @@ class tango_tags_qt_ventana(QMainWindow):
 
             if coincidencias is None or coincidencias.empty:
                 rows.append({
-                    "Archivo": archivo.ruta_archivo,
-                    "Audio30": link_to_music(archivo.enlace_audio30) if hasattr(archivo, 'enlace_audio30') else "",
-                    "Audio10": link_to_music(archivo.enlace_audio10) if hasattr(archivo, 'enlace_audio10') else "",
-                    "Título": "",
-                    "Artista": "",
-                    "Cantor": "",
-                    "Fecha": "",
-                    "Estilo": "",
+                    "Info": "",
+                    "Título": archivo.tags.title if hasattr(archivo.tags, 'title') else "",
+                    "Artista": archivo.tags.artist if hasattr(archivo.tags, 'artist') else "",
+                    "Año": archivo.tags.year if hasattr(archivo.tags, 'year') else "",
+                    "Género": archivo.tags.genre if hasattr(archivo.tags, 'genre') else "",
+                    "Compositor": archivo.tags.composer if hasattr(archivo.tags, 'composer') else "",
+                    "Audio": archivo.ruta_archivo,
+                    "Check": "",
+                    "Audio30": "",
+                    "Audio10": "",
+                    "Título DB": "",
+                    "Artista DB": "",
+                    "Cantor DB": "",
+                    "Fecha DB": "",
+                    "Estilo DB": "",
                     "Compositor/Autor": ""
                 })
                 current_row += 1
             else:
                 for _, coincidencia in coincidencias.iterrows():
                     rows.append({
-                        "Archivo": archivo.ruta_archivo,
+                        "Info":"",
+                        "Título": archivo.tags.title if hasattr(archivo.tags, 'title') else "",
+                        "Artista": archivo.tags.artist if hasattr(archivo.tags, 'artist') else "",
+                        "Año": archivo.tags.year if hasattr(archivo.tags, 'year') else "",
+                        "Género": archivo.tags.genre if hasattr(archivo.tags, 'genre') else "",
+                        "Compositor": archivo.tags.composer if hasattr(archivo.tags, 'composer') else "",
+                        "Audio": archivo.ruta_archivo,
+                        "Check":"",
                         "Audio30": link_to_music(coincidencia.get("audio30", "")),
                         "Audio10": link_to_music(coincidencia.get("audio10", "")),
-                        "Título": coincidencia.get("titulo", ""),
-                        "Artista": coincidencia.get("artista", ""),
-                        "Cantor": coincidencia.get("cantor", ""),
-                        "Fecha": coincidencia.get("fecha", ""),
-                        "Estilo": coincidencia.get("estilo", ""),
+                        "Titulo DB": coincidencia.get("titulo", ""),
+                        "Artista DB": coincidencia.get("artista", ""),
+                        "Cantor DB": coincidencia.get("cantor", ""),
+                        "Fecha DB": coincidencia.get("fecha", ""),
+                        "Estilo DB": coincidencia.get("estilo", ""),
                         "Compositor/Autor": coincidencia.get("compositor_autor", "")
                     })
                     current_row += 1
@@ -257,7 +272,7 @@ class tango_tags_qt_ventana(QMainWindow):
         # Llenar la tabla con los datos
         for row_idx, row_data in enumerate(rows):
             for col_idx, (key, value) in enumerate(row_data.items()):
-                if key in ["Audio30", "Audio10"] and value:
+                if key in ["Audio", "Audio30", "Audio10"] and value:
                     # Crear botones de reproducción para las columnas de audio
                     self.crear_boton_reproduccion(table_widget, value, row_idx, col_idx, icon_paths.get("play"))
                 else:
@@ -268,7 +283,8 @@ class tango_tags_qt_ventana(QMainWindow):
         # Realizar merge de celdas
         for start, end in merge_ranges:
             if start != end:  # Fusionar solo si hay múltiples filas
-                table_widget.setSpan(start, 0, end - start + 1, 1)
+                for col in range(7):  # Fusionar las columnas 0 a 4
+                    table_widget.setSpan(start, col, end - start + 1, 1)
 
         # Ajustar tamaños de las columnas
         table_widget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
