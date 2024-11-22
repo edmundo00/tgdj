@@ -3,7 +3,7 @@ from PyQt5.QtGui import QPainter, QPen, QFont, QColor, QIcon, QBrush, QPixmap, Q
 from PyQt5.QtWidgets import (
     QMainWindow, QAction, QToolBar, QTableWidget, QTableWidgetItem, QVBoxLayout, QHBoxLayout,
     QWidget, QLabel, QHeaderView, QSpinBox, QDialog, QPushButton, QFileDialog, QComboBox, QLineEdit, QCheckBox, QFrame,
-    QFileDialog, QMessageBox, QProgressBar, QStatusBar
+    QFileDialog, QMessageBox, QProgressBar, QStatusBar, QApplication
 )
 from PyQt5.QtGui import QIcon
 import sys
@@ -70,6 +70,16 @@ class tango_tags_qt_ventana(QMainWindow):
         music_bee_btn.triggered.connect(self.load_music_bee)
         self.toolbar.addAction(music_bee_btn)
 
+        # Botón para parar música
+        stop_music_btn = QAction(QIcon(icon_paths.get("stop")), "Stop Music", self)
+        stop_music_btn.triggered.connect(self.stop_music)
+        self.toolbar.addAction(stop_music_btn)
+
+        # Botón para abrir playlist
+        open_playlist_btn = QAction(QIcon(icon_paths.get("playlist")), "Open Playlist", self)
+        open_playlist_btn.triggered.connect(self.load_playlist)
+        self.toolbar.addAction(open_playlist_btn)
+
     def create_checkboxes(self):
         # Crear un frame para contener los CheckBoxes
         checkbox_frame = QFrame()
@@ -81,10 +91,10 @@ class tango_tags_qt_ventana(QMainWindow):
         # Definir los CheckBoxes con sus textos, estados predeterminados y nombres de atributo
         checkboxes_info = [
             ("Date Checked", False, "date_checked"),
-            ("Perfect Matches", False, "perfect_matches"),
-            ("Artist Not Found", False, "artist_not_found"),
-            ("Title Not Found", False, "title_not_found"),
-            ("Visualizar Resto", False, "view_remaining"),
+            ("Perfect Matches", True, "perfect_matches"),
+            ("Artist Not Found", True, "artist_not_found"),
+            ("Title Not Found", True, "title_not_found"),
+            ("Visualizar Resto", True, "view_remaining"),
             ("Guardar coincidencias", False, "guardar_coincidencias"),
             ("Guardar residuos", False, "guardar_residuos"),
             ("No mostrar comparativa", False, "direct_comparison"),
@@ -95,6 +105,7 @@ class tango_tags_qt_ventana(QMainWindow):
         for text, checked, attribute_name in checkboxes_info:
             checkbox = QCheckBox(text)
             checkbox.setChecked(checked)
+            checkbox.stateChanged.connect(self.crear_tabla_coincidencias)  # Conectar al método para actualizar la tabla
             checkbox_layout.addWidget(checkbox)
 
             # Asignar el checkbox a un atributo de la clase con el nombre especificado
@@ -103,9 +114,51 @@ class tango_tags_qt_ventana(QMainWindow):
         # Añadir el layout al frame y el frame al layout principal
         checkbox_frame.setLayout(checkbox_layout)
         self.centralWidget().layout().addWidget(checkbox_frame)
-
     def create_status_bar(self):
         self.statusBar().showMessage("Ready")
+
+    def load_playlist(self):
+        """Abrir un cuadro de diálogo para seleccionar una playlist y procesar los archivos."""
+        # Limpiar la lista de archivos existentes
+        self.borrar_todo()
+        numero_canciones = 0
+
+        # Cuadro de diálogo para seleccionar el archivo de playlist
+        playlist_file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Seleccionar archivo de Playlist",
+            m3u_start_path,  # Directorio inicial para buscar playlists
+            "Archivos de Playlist (*.m3u *.m3u8);;Todos los archivos (*.*)"
+        )
+
+        if playlist_file_path:
+            try:
+                # Limpiar datos previos si es necesario
+                if hasattr(self, 'df'):
+                    self.df = self.df.iloc[0:0]  # Limpiar el DataFrame pero mantener las columnas
+
+                self.m3u_audio_files = []  # Reiniciar la lista de archivos de audio
+
+                # Usar un helper para cargar los archivos de la playlist
+                lines = load_m3u_file_helper(playlist_file_path)
+
+                # Configurar el origen y procesar los archivos
+                self.origen_archivos = 'playlist'
+                self.procesar_archivos(
+                    lines,
+                    numero_canciones,
+                    from_playlist=True,
+                    show_progress=True,
+                    origen=playlist_file_path
+                )
+
+                # Mostrar un mensaje de éxito
+                self.statusBar().showMessage(f"Playlist cargada: {playlist_file_path}")
+                self.crear_tabla_coincidencias()
+
+            except Exception as e:
+                # Mostrar mensaje de error si ocurre algún problema
+                QMessageBox.critical(self, "Error", f"No se pudo cargar la playlist: {e}")
 
     def load_music_bee(self):
         """Abrir un cuadro de diálogo para seleccionar el archivo de biblioteca de MusicBee y procesarlo."""
@@ -143,7 +196,7 @@ class tango_tags_qt_ventana(QMainWindow):
                     lines,
                     numero_canciones,
                     from_musicbee=True,
-                    show_progress=False,
+                    show_progress=True,
                     origen=file_path,
                     tags=tagsml_df
                 )
@@ -162,15 +215,7 @@ class tango_tags_qt_ventana(QMainWindow):
         y la añade a la lista global de filetofind_list.
         """
         # Crear instancia de FILETOFIND con los parámetros constantes
-        if self.direct_tagging_checkbox.isChecked():
-            lista_frames = [
-                self.scrollable_frame[0],  # Corresponds to ff
-                self.scrollable_frame[1],  # Corresponds to fd
-                self.frames_columnas_archivo,
-                self.frames_columnas_resultado
-            ]
-        else:
-            lista_frames = [None, None, None, None]
+        lista_frames = [None, None, None, None]
 
         lista_checks = [
             self.date_checked.isChecked(),  # Corresponds to show_date_checked
@@ -202,7 +247,6 @@ class tango_tags_qt_ventana(QMainWindow):
     def crear_tabla_coincidencias(self):
         """Crea una tabla en la ventana con las coincidencias de filetofind_list."""
         if not filetofind_list:
-            QMessageBox.warning(self, "Sin Datos", "No se encontraron coincidencias para mostrar.")
             return
 
         # Limpiar el contenido previo
@@ -211,15 +255,46 @@ class tango_tags_qt_ventana(QMainWindow):
             if widget_to_remove is not None:
                 widget_to_remove.deleteLater()
 
+        # Mapeo de columnas en colores a columnas de coincidencias
+        color_mapping = {
+            "ORQUESTA": "Artista DB",
+            "TITULO": "Título DB",
+            "CANTOR": "Cantor DB",
+            "FECHA": "Fecha DB",
+            "COMPOSITOR": "Compositor/Autor",
+        }
+
         rows = []
+        colores_rows = []  # Lista para almacenar los colores de cada fila
         merge_ranges = []
         current_row = 0
 
+        # Obtener los estados de los CheckBoxes
+        check_perfect_matches = self.perfect_matches.isChecked()
+        check_artist_not_found = self.artist_not_found.isChecked()
+        check_title_not_found = self.title_not_found.isChecked()
+        check_view_remaining = self.view_remaining.isChecked()
+
         for archivo in filetofind_list:
+            # Saltar si el archivo no cumple con ninguno de los filtros
+            if (
+                    (not check_perfect_matches and getattr(archivo, 'perfect_match', False)) or
+                    (not check_artist_not_found and getattr(archivo, 'artist_not_found', False)) or
+                    (not check_title_not_found and getattr(archivo, 'title_not_found', False)) or
+                    (not check_view_remaining and not any([
+                        getattr(archivo, 'perfect_match', False),
+                        getattr(archivo, 'artist_not_found', False),
+                        getattr(archivo, 'title_not_found', False)
+                    ]))
+            ):
+                continue
+
             coincidencias = getattr(archivo, 'coincidencias', None)
-            start_row = current_row  # Marca el inicio de las filas para este archivo
+            colores_fila = getattr(archivo, 'colores_labels', None)  # Obtener los colores desde el archivo
+            start_row = current_row
 
             if coincidencias is None or coincidencias.empty:
+                # Si no hay coincidencias, no añadimos colores
                 rows.append({
                     "Info": "",
                     "Título": archivo.tags.title if hasattr(archivo.tags, 'title') else "",
@@ -236,12 +311,15 @@ class tango_tags_qt_ventana(QMainWindow):
                     "Cantor DB": "",
                     "Fecha DB": "",
                     "Estilo DB": "",
-                    "Compositor/Autor": ""
+                    "Compositor/Autor": "",
+                    "InfoDB": ""
                 })
+                colores_rows.append([])  # Añadir fila vacía de colores
                 current_row += 1
             else:
-                for _, coincidencia in coincidencias.iterrows():
+                for idx, (coincidencia_idx, coincidencia) in enumerate(coincidencias.iterrows()):
                     rows.append({
+
                         "Info": "",
                         "Título": archivo.tags.title if hasattr(archivo.tags, 'title') else "",
                         "Artista": archivo.tags.artist if hasattr(archivo.tags, 'artist') else "",
@@ -257,11 +335,21 @@ class tango_tags_qt_ventana(QMainWindow):
                         "Cantor DB": coincidencia.get("cantor", ""),
                         "Fecha DB": coincidencia.get("fecha", ""),
                         "Estilo DB": coincidencia.get("estilo", ""),
-                        "Compositor/Autor": coincidencia.get("compositor_autor", "")
+                        "Compositor/Autor": coincidencia.get("compositor_autor", ""),
+                        "InfoDB": ""
                     })
+
+                    # Agregar los colores correspondientes si el índice está presente
+                    if colores_fila is not None and coincidencia_idx in colores_fila.index:
+                        colores_rows.append(colores_fila.loc[coincidencia_idx])
+                    else:
+                        colores_rows.append([])  # Fila sin colores
                     current_row += 1
 
             merge_ranges.append((start_row, current_row - 1))
+
+        if not rows:
+            return
 
         # Crear el QTableWidget
         table_widget = QTableWidget()
@@ -272,28 +360,36 @@ class tango_tags_qt_ventana(QMainWindow):
         # Llenar la tabla con los datos
         for row_idx, row_data in enumerate(rows):
             for col_idx, (key, value) in enumerate(row_data.items()):
-                if key == "Info":
-                    # Crear botón en la columna Info
-                     self.crear_boton_info(table_widget, row_idx, col_idx, icon_paths.get("info"))
+                if key in ["Info", "InfoDB"]:
+                    self.crear_boton_info(table_widget, row_idx, col_idx, icon_paths.get("info"))
                 elif key == "Check":
-                    # Crear checkbox en la columna Check
                     self.crear_checkbox(table_widget, row_idx, col_idx)
                 elif key in ["Audio", "Audio30", "Audio10"] and value:
-                    # Crear botones de reproducción para las columnas de audio
                     self.crear_boton_reproduccion(table_widget, value, row_idx, col_idx, icon_paths.get("play"))
                 else:
-                    # Agregar datos como texto normal
                     item = QTableWidgetItem(str(value))
+                    # Aplicar colores si están definidos
+                    if key in color_mapping.values() and len(colores_rows[row_idx]) > 0:
+                        color_idx = list(color_mapping.values()).index(key)
+                        if color_idx < len(colores_rows[row_idx]):
+                            color = colores_rows[row_idx].iloc[color_idx]
+                            item.setBackground(QColor(color))
                     table_widget.setItem(row_idx, col_idx, item)
 
         # Realizar merge de celdas
         for start, end in merge_ranges:
             if start != end:  # Fusionar solo si hay múltiples filas
-                for col in range(7):  # Fusionar las columnas 0 a 4
+                for col in range(7):  # Fusionar las columnas necesarias
                     table_widget.setSpan(start, col, end - start + 1, 1)
 
-        # Ajustar tamaños de las columnas
-        table_widget.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # Configurar el modo de redimensionado para cada columna
+        header = table_widget.horizontalHeader()
+        for col_idx, key in enumerate(rows[0].keys()):
+            if key in ["Info", "InfoDB", "Check", "Audio", "Audio30", "Audio10"]:
+                header.setSectionResizeMode(col_idx, QHeaderView.Fixed)  # Fijar la columna
+                table_widget.setColumnWidth(col_idx, 40)  # Ancho fijo de 40 píxeles
+            else:
+                header.setSectionResizeMode(col_idx, QHeaderView.Stretch)  # El resto se estira
 
         # Añadir la tabla al área principal
         self.main_content_area.layout().addWidget(table_widget)
@@ -306,10 +402,19 @@ class tango_tags_qt_ventana(QMainWindow):
         parent.setCellWidget(row, column, boton_info)
 
     def crear_checkbox(self, parent, row, column):
-        """Crea un checkbox en la columna Check."""
+        """Crea un checkbox en la columna Check y lo centra."""
         checkbox = QCheckBox(parent)
         checkbox.setToolTip("Marcar/Desmarcar")
-        parent.setCellWidget(row, column, checkbox)
+
+        # Crear un widget contenedor con un layout centrado
+        container = QWidget()
+        layout = QHBoxLayout(container)
+        layout.addWidget(checkbox)
+        layout.setAlignment(Qt.AlignCenter)
+        layout.setContentsMargins(0, 0, 0, 0)  # Sin márgenes
+
+        # Añadir el contenedor al QTableWidget
+        parent.setCellWidget(row, column, container)
 
     def abrir_ventana_info(self, row):
         """Abre una ventana emergente con información adicional."""
@@ -438,3 +543,16 @@ class tango_tags_qt_ventana(QMainWindow):
             pygame.mixer.music.play()
         except Exception as e:
             print(f"Error reproduciendo el archivo {audio_path}: {e}")
+
+    def stop_music(self):
+        """
+        Detiene la reproducción de música si Pygame está sonando.
+        """
+        try:
+            if pygame.mixer.music.get_busy():
+                pygame.mixer.music.stop()
+                self.statusBar().showMessage("Música detenida")
+            else:
+                self.statusBar().showMessage("No hay música reproduciéndose")
+        except Exception as e:
+            self.statusBar().showMessage(f"Error deteniendo la música: {e}")

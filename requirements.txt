@@ -11,3 +11,4 @@ mutagen
 ftfy
 matplotlib
 pywin32
+PyQt5 pygame

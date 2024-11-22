@@ -100,7 +100,7 @@ project_root = PROJECT_ROOT
 #directorio_raiz = dropbox_path + "\\MUSICA\\MP3\\TANGO\\other_stuff\\"
 directorio_raiz = MUSIC_PATH
 dropbox_path=MUSIC_PATH
-m3u_start_path = os.path.join(dropbox_path, "TDJ", "playlists")
+m3u_start_path = os.path.join(dropbox_path, "TDJ", "playlists","trabajo")
 presentations_start_path = os.path.join(dropbox_path, "TDJ", "Presentacion")
 musicbee_start_folder = os.path.join(dropbox_path, "TDJ", "MUSICBEE DATABASES")
 
