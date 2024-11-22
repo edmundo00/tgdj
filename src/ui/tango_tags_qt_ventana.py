@@ -242,17 +242,17 @@ class tango_tags_qt_ventana(QMainWindow):
             else:
                 for _, coincidencia in coincidencias.iterrows():
                     rows.append({
-                        "Info":"",
+                        "Info": "",
                         "Título": archivo.tags.title if hasattr(archivo.tags, 'title') else "",
                         "Artista": archivo.tags.artist if hasattr(archivo.tags, 'artist') else "",
                         "Año": archivo.tags.year if hasattr(archivo.tags, 'year') else "",
                         "Género": archivo.tags.genre if hasattr(archivo.tags, 'genre') else "",
                         "Compositor": archivo.tags.composer if hasattr(archivo.tags, 'composer') else "",
                         "Audio": archivo.ruta_archivo,
-                        "Check":"",
+                        "Check": "",
                         "Audio30": link_to_music(coincidencia.get("audio30", "")),
                         "Audio10": link_to_music(coincidencia.get("audio10", "")),
-                        "Titulo DB": coincidencia.get("titulo", ""),
+                        "Título DB": coincidencia.get("titulo", ""),
                         "Artista DB": coincidencia.get("artista", ""),
                         "Cantor DB": coincidencia.get("cantor", ""),
                         "Fecha DB": coincidencia.get("fecha", ""),
@@ -272,7 +272,13 @@ class tango_tags_qt_ventana(QMainWindow):
         # Llenar la tabla con los datos
         for row_idx, row_data in enumerate(rows):
             for col_idx, (key, value) in enumerate(row_data.items()):
-                if key in ["Audio", "Audio30", "Audio10"] and value:
+                if key == "Info":
+                    # Crear botón en la columna Info
+                     self.crear_boton_info(table_widget, row_idx, col_idx, icon_paths.get("info"))
+                elif key == "Check":
+                    # Crear checkbox en la columna Check
+                    self.crear_checkbox(table_widget, row_idx, col_idx)
+                elif key in ["Audio", "Audio30", "Audio10"] and value:
                     # Crear botones de reproducción para las columnas de audio
                     self.crear_boton_reproduccion(table_widget, value, row_idx, col_idx, icon_paths.get("play"))
                 else:
@@ -291,6 +297,23 @@ class tango_tags_qt_ventana(QMainWindow):
 
         # Añadir la tabla al área principal
         self.main_content_area.layout().addWidget(table_widget)
+
+    def crear_boton_info(self, parent, row, column, info_icon_path):
+        """Crea un botón en la columna Info que abre una ventana emergente."""
+        boton_info = QPushButton(parent)
+        boton_info.setIcon(QIcon(info_icon_path))
+        boton_info.clicked.connect(lambda: self.abrir_ventana_info(row))
+        parent.setCellWidget(row, column, boton_info)
+
+    def crear_checkbox(self, parent, row, column):
+        """Crea un checkbox en la columna Check."""
+        checkbox = QCheckBox(parent)
+        checkbox.setToolTip("Marcar/Desmarcar")
+        parent.setCellWidget(row, column, checkbox)
+
+    def abrir_ventana_info(self, row):
+        """Abre una ventana emergente con información adicional."""
+        QMessageBox.information(self, "Información", f"Detalles de la fila {row}")
 
     def setup_progress_bar(self):
         self.progress_bar = QProgressBar(self)
