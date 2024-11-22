@@ -388,6 +388,12 @@ class tango_tags_qt_ventana(QMainWindow):
             if key in ["Info", "InfoDB", "Check", "Audio", "Audio30", "Audio10"]:
                 header.setSectionResizeMode(col_idx, QHeaderView.Fixed)  # Fijar la columna
                 table_widget.setColumnWidth(col_idx, 40)  # Ancho fijo de 40 píxeles
+            elif key in ["Año", "Fecha DB"]:
+                header.setSectionResizeMode(col_idx, QHeaderView.Fixed)  # Fijar la columna
+                table_widget.setColumnWidth(col_idx, 70)  # Ancho fijo de 40 píxeles
+            elif key in ["Género", "Estilo DB"]:
+                header.setSectionResizeMode(col_idx, QHeaderView.Fixed)  # Fijar la columna
+                table_widget.setColumnWidth(col_idx, 85)  # Ancho fijo de 40 píxeles
             else:
                 header.setSectionResizeMode(col_idx, QHeaderView.Stretch)  # El resto se estira
 
