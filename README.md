@@ -60,6 +60,22 @@ path_map = {
 ## Contributing
 
 Contributions are welcome! Please fork the repository and submit a pull request with your changes.
+git fetch -vp
+git pull
+
+git add <file_name>
+para un archivo
+
+PAra todos los cambios:
+git add .
+
+Luego 
+git commit -m "Commit message"
+
+Si quieres añadir todos los cambios y commit
+git commit -a -m "Commit message"
+
+git push
 
 ## License
 

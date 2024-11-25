@@ -1,0 +1,24 @@
+2024-10-16 16:54:06,028 - INFO - Starting file monitoring for tracklist changes...
+2024-10-16 16:54:33,594 - INFO - Script interrupted by user. Exiting.
+2024-10-16 16:54:37,506 - INFO - Starting file monitoring for tracklist changes...
+2024-10-16 16:55:06,405 - INFO - Last line from tracklist: Ricardo Tanturi / Alberto Castillo - Pocas palabras
+2024-10-16 16:56:41,486 - INFO - Script interrupted by user. Exiting.
+2024-10-16 16:56:50,884 - INFO - Starting file monitoring for tracklist changes...
+2024-10-16 16:57:14,399 - INFO - Last line from tracklist: Ricardo Tanturi / Alberto Castillo - Mi piba
+2024-10-16 16:57:44,998 - INFO - Script interrupted by user. Exiting.
+2024-10-16 16:57:47,920 - INFO - Starting file monitoring for tracklist changes...
+2024-10-16 16:58:02,324 - INFO - Script interrupted by user. Exiting.
+2024-10-16 16:58:06,924 - INFO - Starting file monitoring for tracklist changes...
+2024-10-16 16:58:39,403 - INFO - Last line from tracklist: Ricardo Tanturi / Alberto Castillo - Mi piba
+2024-10-16 16:58:39,403 - ERROR - Error accessing slides: Open.Slides
+2024-10-16 16:58:39,403 - INFO - Slide not found.
+2024-10-16 17:12:55,316 - INFO - Script interrupted by user. Exiting.
+2024-10-16 17:15:41,356 - INFO - Starting file monitoring for tracklist changes...
+2024-10-16 17:17:34,050 - INFO - Script interrupted by user. Exiting.
+2024-10-16 17:20:40,539 - ERROR - Error opening PowerPoint: Property '<unknown>.ShowOn' can not be set.
+2024-10-16 17:21:01,698 - ERROR - Error opening PowerPoint: Property '<unknown>.ShowOn' can not be set.
+2024-10-16 17:40:03,813 - INFO - Starting file monitoring for tracklist changes...
+2024-10-16 17:40:22,793 - INFO - Last line from tracklist: Ricardo Tanturi / Alberto Castillo - Mi piba
+2024-10-16 17:40:22,794 - ERROR - Error accessing slides: Open.Slides
+2024-10-16 17:40:22,794 - INFO - Slide not found.
+2024-10-16 17:40:38,391 - INFO - Script interrupted by user. Exiting.

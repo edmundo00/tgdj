@@ -1,8 +1,10 @@
 import tkinter as tk
 from presentation_app import PresentationApp
+from src.utils.calcular_ancho_fuentes import FontWidthCalculator
 
 
 def test_presentation_app():
+
     # Create the main Tkinter root window
     root = tk.Tk()
 
@@ -14,4 +16,5 @@ def test_presentation_app():
 
 
 if __name__ == "__main__":
+
     test_presentation_app()

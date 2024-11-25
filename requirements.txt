@@ -1,4 +1,3 @@
-
 pandas
 tinytag
 tk
@@ -8,4 +7,8 @@ unidecode
 num2words
 pygame
 mutagen
-python_version >= "3.8"
+ftfy
+matplotlib
+pywin32
+PyQt5
+matplotlib
