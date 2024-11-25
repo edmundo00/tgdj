@@ -80,6 +80,11 @@ class tango_tags_qt_ventana(QMainWindow):
         open_playlist_btn.triggered.connect(self.load_playlist)
         self.toolbar.addAction(open_playlist_btn)
 
+        # Nuevo botón para verificar checkboxes
+        verificar_btn = QAction(QIcon(icon_paths.get("transfer")), "Verificar Checkboxes", self)
+        verificar_btn.triggered.connect(self.verificar_checkboxes)
+        self.toolbar.addAction(verificar_btn)
+
     def create_checkboxes(self):
         # Crear un frame para contener los CheckBoxes
         checkbox_frame = QFrame()
@@ -255,6 +260,9 @@ class tango_tags_qt_ventana(QMainWindow):
             if widget_to_remove is not None:
                 widget_to_remove.deleteLater()
 
+        # Reiniciar el diccionario externo
+        self.row_to_file_map = {}
+
         # Mapeo de columnas en colores a columnas de coincidencias
         color_mapping = {
             "ORQUESTA": "Artista DB",
@@ -360,6 +368,8 @@ class tango_tags_qt_ventana(QMainWindow):
         # Llenar la tabla con los datos
         for row_idx, row_data in enumerate(rows):
             for col_idx, (key, value) in enumerate(row_data.items()):
+                # Mapear la fila al archivo correspondiente
+                self.row_to_file_map[row_idx] = archivo
                 if key in ["Info", "InfoDB"]:
                     self.crear_boton_info(table_widget, row_idx, col_idx, icon_paths.get("info"))
                 elif key == "Check":
@@ -400,6 +410,9 @@ class tango_tags_qt_ventana(QMainWindow):
         # Añadir la tabla al área principal
         self.main_content_area.layout().addWidget(table_widget)
 
+        # Guardar la tabla como atributo de clase
+        self.tabla_coincidencias = table_widget
+
     def crear_boton_info(self, parent, row, column, info_icon_path):
         """Crea un botón en la columna Info que abre una ventana emergente."""
         boton_info = QPushButton(parent)
@@ -422,9 +435,50 @@ class tango_tags_qt_ventana(QMainWindow):
         # Añadir el contenedor al QTableWidget
         parent.setCellWidget(row, column, container)
 
+    def obtener_filetofind(self, row):
+        """
+        Devuelve el archivo asociado a una fila específica.
+        """
+        return self.row_to_file_map.get(row)
+
     def abrir_ventana_info(self, row):
         """Abre una ventana emergente con información adicional."""
         QMessageBox.information(self, "Información", f"Detalles de la fila {row}")
+
+    def verificar_checkboxes(self):
+        """
+        Verifica los checkboxes en la tabla y obtiene información de las filas seleccionadas.
+        """
+        if not hasattr(self, "tabla_coincidencias"):
+            QMessageBox.warning(self, "Advertencia", "No hay una tabla creada.")
+            return
+
+        # Obtener el índice de la columna por su título
+        column_name = "Check"  # Cambiar por el nombre de la columna deseada
+        col_index = self.get_column_index_by_name(self.tabla_coincidencias, column_name)
+
+        if col_index == -1:
+            QMessageBox.warning(self, "Error", f"No se encontró la columna '{column_name}'.")
+            return
+
+
+        # Recorrer las filas de la tabla
+        filas_seleccionadas = []
+        for row in range(self.tabla_coincidencias.rowCount()):
+            checkbox_container = self.tabla_coincidencias.cellWidget(row,col_index)
+            if checkbox_container and checkbox_container.layout():
+                checkbox = checkbox_container.layout().itemAt(0).widget()
+                if checkbox and checkbox.isChecked():
+                    # Por ejemplo, obtener el valor de la columna "Título"
+                    archivo = self.obtener_filetofind(row).ruta_archivo
+                    filas_seleccionadas.append(archivo)
+
+        if filas_seleccionadas:
+            print("Filas seleccionadas:")
+            for titulo in filas_seleccionadas:
+                print(f" - {titulo}")
+        else:
+            print("No hay filas seleccionadas.")
 
     def setup_progress_bar(self):
         self.progress_bar = QProgressBar(self)
@@ -516,6 +570,21 @@ class tango_tags_qt_ventana(QMainWindow):
         for archivos in filetofind_list:
             archivos.destroy()
         filetofind_list.clear()
+
+    def get_column_index_by_name(self, table_widget, column_name):
+        """
+        Obtiene el índice de la columna basado en su nombre.
+        Args:
+            table_widget: El QTableWidget donde buscar.
+            column_name: El nombre de la columna.
+        Returns:
+            int: El índice de la columna si se encuentra, -1 si no.
+        """
+        for col in range(table_widget.columnCount()):
+            header_item = table_widget.horizontalHeaderItem(col)
+            if header_item and header_item.text() == column_name:
+                return col
+        return -1
 
     def closeEvent(self, event):
         """Gestiona el evento de cierre para limpieza si es necesario."""
