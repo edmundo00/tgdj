@@ -31,6 +31,23 @@ class CompareTagsTest(unittest.TestCase):
         self.assertTrue(perfecta)
         self.assertEqual(indice, 0)
 
+    def test_compositor_en_formato_antiguo_y_genero_en_mayusculas_es_perfecta(self):
+        t = tag(title="Humillación", artist="Juan D'Arienzo / Héctor Mauré", year="1941-07-14", genre="Tango",
+                composer="Musica: Rodolfo Biagi - Letra: Carlos Bahr")
+        self.assertTrue(compare_tags(3, 6, self.db, t)[1])
+        db = self.db.copy()
+        db.loc[0, "compositor_autor"] = "Musica: Rodolfo Biagi"
+        t = tag(title="Humillación", artist="Juan D'Arienzo / Héctor Mauré", year="1941-07-14", genre="tango",
+                composer="Musica: Rodolfo Biagi")
+        self.assertTrue(compare_tags(3, 6, db, t)[1])
+
+    def test_separador_distinto_o_compositor_vacio_no_es_perfecta(self):
+        base = dict(title="Humillación", year="1941-07-14", genre="tango",
+                    composer="Musica: Rodolfo Biagi - Letra: Carlos Bahr")
+        self.assertFalse(compare_tags(3, 6, self.db, tag(artist="Juan D'Arienzo; Héctor Mauré", **base))[1])
+        base["composer"] = ""
+        self.assertFalse(compare_tags(3, 6, self.db, tag(artist="Juan D'Arienzo / Héctor Mauré", **base))[1])
+
     def test_mayusculas_y_formato_de_fecha_no_cuentan_como_distinto(self):
         t = tag(title="Humillacion", artist="Juan D'Arienzo / Héctor Mauré", year="14/07/1941", genre="Tango")
         c, perfecta, _ = compare_tags(3, 5, self.db, t)

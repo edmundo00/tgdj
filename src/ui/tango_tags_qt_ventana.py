@@ -34,7 +34,7 @@ from src.ui.file_to_find_qt import FILETOFINDQT
 from src.utils.MusicBeeLibraryTools import MusicBeeLibraryTools
 from src.utils import historial
 from src.utils.formato_tags import (
-    tags_desde_coincidencia, formatear_cantores, formatear_fecha, formatear_estilo,
+    tags_desde_coincidencia, combinar_compositor, formatear_cantores, formatear_fecha, formatear_estilo,
     normalizar_compositor_autor, formatear_titulo,
 )
 
@@ -72,7 +72,7 @@ COLORES_SUAVES = {"lightgreen": "#c8e6c9", "yellow": "#fff59d", "orange": "#ffcc
 # ---- Categorías de cada archivo tras buscarlo en la base de datos ------------------------
 CATEGORIAS = {
     # clave: (texto en la columna Estado, texto del filtro, explicación)
-    "perfecta": ("✔ Perfecta", "Perfectas", "Las tags ya coinciden con la base de datos"),
+    "perfecta": ("✔ Perfecta", "Perfectas", "Las tags ya coinciden con la base de datos: no se tocan"),
     "preferida": ("★ Sugerida", "Con sugerencia", "Hay una coincidencia clara, ya marcada en 'Usar'"),
     "dudosa": ("? Elegir", "Hay que elegir", "Varias opciones posibles: marca tú la buena"),
     "sin_titulo": ("✖ Sin título", "Título no encontrado", "El artista está en la BD pero el título no"),
@@ -303,7 +303,7 @@ class tango_tags_qt_ventana(QMainWindow):
         self.filtros = {}
         for clave, (_, nombre, explicacion) in CATEGORIAS.items():
             cb = QCheckBox(nombre)
-            cb.setChecked(self.settings.value(f"mostrar_{clave}", True, type=bool))
+            cb.setChecked(self.settings.value(f"mostrar_{clave}", clave != "perfecta", type=bool))
             cb.setToolTip(explicacion)
             cb.stateChanged.connect(self.rellenar_tabla)
             self.filtros[clave] = cb
@@ -469,8 +469,8 @@ class tango_tags_qt_ventana(QMainWindow):
                 archivo.estado_guardado = None
                 coincidencias = getattr(archivo, "coincidencias", None)
                 hay = coincidencias is not None and not coincidencias.empty
-                archivo.seleccion = (archivo.coincidencia_preferida
-                                     if hay and archivo.categoria in ("perfecta", "preferida") else None)
+                # Solo se marca la sugerida; una perfecta ya está bien y nunca viene marcada para cambiar
+                archivo.seleccion = archivo.coincidencia_preferida if hay and archivo.categoria == "preferida" else None
                 self.archivos.append(archivo)
                 if self.opt_guardar_coinc.isChecked():
                     fav = archivo.get_coincidencia_favorita()
@@ -534,9 +534,13 @@ class tango_tags_qt_ventana(QMainWindow):
         visibles = [a for a in self.archivos if self.filtros[a.categoria].isChecked()]
         if not visibles:
             self.tabla.hide()
-            self.mensaje_inicial.setText(
-                f"<p style='font-size:15px; color:#555'>Las {len(self.archivos)} canciones cargadas están "
-                f"ocultas por los filtros de <b>Mostrar</b>.<br>Marca las casillas de arriba para verlas.</p>")
+            if all(a.categoria == "perfecta" for a in self.archivos):
+                texto_oculto = (f"Las {len(self.archivos)} canciones ya están <b>perfectas</b>: "
+                                "no hay nada que cambiar.<br>Marca <b>Perfectas</b> arriba si quieres verlas.")
+            else:
+                texto_oculto = (f"Las {len(self.archivos)} canciones cargadas están ocultas por los filtros de "
+                                "<b>Mostrar</b>.<br>Marca las casillas de arriba para verlas.")
+            self.mensaje_inicial.setText(f"<p style='font-size:15px; color:#555'>{texto_oculto}</p>")
             self.mensaje_inicial.show()
             return
         self.mensaje_inicial.hide()
@@ -687,7 +691,7 @@ class tango_tags_qt_ventana(QMainWindow):
 
     def marcar_sugeridas(self):
         for a in self.archivos:
-            if a.categoria in ("perfecta", "preferida") and not self.coincidencias(a).empty:
+            if a.categoria == "preferida" and not self.coincidencias(a).empty:
                 a.seleccion = a.coincidencia_preferida
         self.rellenar_tabla()
 
@@ -724,6 +728,8 @@ class tango_tags_qt_ventana(QMainWindow):
                 continue
             nuevas = tags_desde_coincidencia(self.coincidencias(archivo).iloc[archivo.seleccion])
             actuales = tags_actuales(archivo)
+            if actuales["composer"]:   # no perder lo que el archivo sabe y la base de datos no
+                nuevas["composer"] = combinar_compositor(actuales["composer"], nuevas["composer"])
             # Solo se escriben los campos con valor nuevo y distinto
             diferencias = {k: v for k, v in nuevas.items() if v and v != actuales[k]}
             if diferencias:

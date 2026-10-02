@@ -498,13 +498,20 @@ def compare_tags(artista_coincidencia, titulo_coincidencia, database, tag):
         c[parcial] = c[parcial] & ~(c[exacto] | c[normal])
         c[negativo] = c[negativo] & ~(c[exacto] | c[normal] | c[parcial])
 
-    # Perfecta = escribir las tags de esa fila no cambiaría nada en el archivo
-    actual = {"title": formatear_titulo(tag.title), "artist": formatear_artista(orquesta_tag, cantor_tag),
-              "year": fecha_f, "genre": estilo_f, "composer": str(tag.composer or "").strip()}
+    # Perfecta = el archivo ya tiene la misma información, en nuestro formato.
+    # No cuentan como cambio: el género en otras mayúsculas ('Tango') ni el compositor en el formato
+    # antiguo equivalente ('Musica: X' frente a 'Musica: X - Letra: ?').
+    # Sí cuentan: otra fecha o fecha en otro formato, el artista con otro separador, compositor vacío.
+    compositor_actual = str(tag.composer or "").strip()
+    actual = {"title": formatear_titulo(tag.title), "artist": str(tag.artist or "").strip(),
+              "year": str(tag.year or "").strip(), "genre": estilo_f,
+              "composer": normalizar_compositor_autor(compositor_actual) if compositor_actual else ""}
 
     def sin_cambios(fila):
-        from src.utils.formato_tags import tags_desde_coincidencia
+        from src.utils.formato_tags import tags_desde_coincidencia, combinar_compositor
         nuevas = tags_desde_coincidencia(fila)
+        if compositor_actual:
+            nuevas["composer"] = combinar_compositor(compositor_actual, nuevas["composer"])
         return all(not v or v == actual[k] for k, v in nuevas.items())
 
     c[TagLabels.TODO] = serie(sin_cambios(fila) for _, fila in database.iterrows())

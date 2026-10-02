@@ -116,6 +116,16 @@ def normalizar_compositor_autor(texto):
     return formatear_compositor(*separar_compositor_autor(texto))
 
 
+def combinar_compositor(del_archivo, de_la_bd):
+    """
+    Compositor final sin perder información: lo que la base de datos no sabe ('?') se toma del
+    archivo. 'Richard Russo' + 'Musica: ? - Letra: ?' -> 'Musica: Richard Russo - Letra: ?'.
+    """
+    musica_a, letra_a = separar_compositor_autor(del_archivo)
+    musica_b, letra_b = separar_compositor_autor(de_la_bd)
+    return formatear_compositor(musica_b or musica_a, letra_b or letra_a)
+
+
 def tags_desde_coincidencia(coincidencia):
     """
     Construye las tags finales a partir de una fila de la base de datos

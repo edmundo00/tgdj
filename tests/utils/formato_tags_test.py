@@ -2,7 +2,7 @@ import unittest
 
 from src.utils.formato_tags import (
     formatear_artista, formatear_fecha, formatear_estilo, formatear_compositor,
-    normalizar_compositor_autor, separar_compositor_autor, tags_desde_coincidencia,
+    normalizar_compositor_autor, separar_compositor_autor, tags_desde_coincidencia, combinar_compositor,
 )
 
 
@@ -55,6 +55,15 @@ class FormatoCompositorTest(unittest.TestCase):
                          "Musica: Horacio Pettorossi - Letra: Horacio Pettorossi")
         self.assertEqual(normalizar_compositor_autor("Letra: Homero Manzi"), "Musica: ? - Letra: Homero Manzi")
         self.assertEqual(normalizar_compositor_autor("Musica:  A  -  Letra:  B "), "Musica: A - Letra: B")
+
+    def test_combinar_no_pierde_lo_que_sabe_el_archivo(self):
+        self.assertEqual(combinar_compositor("Richard Russo", "Musica: ? - Letra: ?"),
+                         "Musica: Richard Russo - Letra: ?")
+        self.assertEqual(combinar_compositor("Musica: ? - Letra: Homero Manzi", "Musica: Sebastián Piana - Letra: ?"),
+                         "Musica: Sebastián Piana - Letra: Homero Manzi")
+        # si la BD lo sabe, manda la BD
+        self.assertEqual(combinar_compositor("Musica: X", "Musica: Rosita Melo - Letra: ?"),
+                         "Musica: Rosita Melo - Letra: ?")
 
     def test_separar(self):
         self.assertEqual(separar_compositor_autor("Musica: A - Letra: B"), ("A", "B"))
