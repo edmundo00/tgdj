@@ -10,28 +10,30 @@ Flujo de trabajo (de izquierda a derecha en la barra de herramientas):
 """
 import os
 import subprocess
-import sys
 
 import pandas as pd
 import pygame
-from PyQt5.QtCore import Qt, QSize, QSettings
+from PyQt5.QtCore import Qt, QSize, QSettings, QThread
 from PyQt5.QtGui import QIcon, QColor, QBrush, QFont
 from PyQt5.QtWidgets import (
     QMainWindow, QAction, QToolBar, QTableWidget, QTableWidgetItem, QVBoxLayout, QHBoxLayout,
     QWidget, QLabel, QHeaderView, QDialog, QPushButton, QFileDialog, QLineEdit, QCheckBox,
     QFrame, QMessageBox, QProgressBar, QApplication, QStyle, QToolButton, QDialogButtonBox,
-    QAbstractItemView, QGridLayout,
+    QAbstractItemView, QGridLayout, QInputDialog,
 )
 from unidecode import unidecode
 
+import re
+
 import src.utils.utils as utils
 from src.config.config import (
-    PROJECT_ROOT, icon_paths, m3u_start_path, musicbee_start_folder, dropbox_path, residuos,
+    icon_paths, m3u_start_path, musicbee_start_folder, dropbox_path, residuos,
     DEFAULT_DATE_CHECKED,
 )
 from src.config.database import Database
 from src.ui.file_to_find_qt import FILETOFINDQT
 from src.utils.MusicBeeLibraryTools import MusicBeeLibraryTools
+from src.utils import historial
 from src.utils.formato_tags import (
     tags_desde_coincidencia, formatear_cantores, formatear_fecha, formatear_estilo,
     normalizar_compositor_autor, formatear_titulo,
@@ -97,10 +99,16 @@ Las sugeridas ya vienen marcadas.</li>
 <li>Clic en ▶ para escuchar; <i>Parar</i> detiene el audio.</li>
 </ul></li>
 <li><b>Aplicar tags</b>: muestra el antes/después de cada archivo y pide confirmación.
+Antes de escribir se guarda una copia de las tags anteriores: <b>Deshacer</b> (Ctrl+Z) las
+vuelve a poner, y <i>Archivo → Historial de cambios</i> permite deshacer cambios más antiguos.
 Si cargaste desde MusicBee, después haz en MusicBee <i>Herramientas → Volver a leer tags</i>.</li>
-<li><b>Diapos</b>: <i>Crear diapos</i> genera la presentación de las tandas a partir de una playlist;
+<li><b>Diapos</b>: <i>Crear diapos</i> genera la presentación de las tandas a partir de una playlist
+(con vista previa de las tandas; las que mezclan orquestas salen en rojo);
 <i>Control diapos</i> va pasando las diapos durante la milonga.</li>
 </ol>
+<p>Al cargar se <b>saltan las canciones ya revisadas</b> (compositor con formato
+<i>Musica: … - Letra: …</i>). Se puede desactivar en <i>Opciones</i>.
+<i>Cancelar</i> (abajo a la derecha) para una carga o una escritura larga.</p>
 <h4>Formato de las tags</h4>
 <table cellpadding=3>
 <tr><td><b>Artista</b></td><td>Orquesta / Cantor &nbsp; (varios: A y B)</td></tr>
@@ -110,6 +118,17 @@ Si cargaste desde MusicBee, después haz en MusicBee <i>Herramientas → Volver 
 </table>
 <p>Si un dato no se conoce en la base de datos, esa tag del archivo no se toca. El compositor se escribe siempre: <i>Musica: ? - Letra: ?</i> indica que la canción ya pasó por la base de datos.</p>
 """
+
+
+MENSAJE_INICIAL = ("<p style='font-size:15px; color:#555'>Empieza cargando canciones con los botones de "
+                   "<b>① Cargar</b> (arriba a la izquierda).<br>Menú <b>Ayuda</b> para ver cómo funciona.</p>")
+
+REVISADA = re.compile(r"^Musica: .+ - Letra: .+$")
+
+
+def ya_revisada(compositor):
+    """Las canciones que ya pasaron por la BD tienen el compositor en el formato nuevo completo."""
+    return bool(REVISADA.match(texto(compositor).strip()))
 
 
 def categoria_de(archivo):
@@ -155,9 +174,7 @@ class tango_tags_qt_ventana(QMainWindow):
         layout.addWidget(self.crear_barra_filtros())
         self.tabla = self.crear_tabla()
         layout.addWidget(self.tabla, 1)
-        self.mensaje_inicial = QLabel(
-            "<p style='font-size:15px; color:#555'>Empieza cargando canciones con los botones de "
-            "<b>① Cargar</b> (arriba a la izquierda).<br>Menú <b>Ayuda</b> para ver cómo funciona.</p>")
+        self.mensaje_inicial = QLabel(MENSAJE_INICIAL)
         self.mensaje_inicial.setAlignment(Qt.AlignCenter)
         layout.addWidget(self.mensaje_inicial, 1)
         self.tabla.hide()
@@ -167,6 +184,12 @@ class tango_tags_qt_ventana(QMainWindow):
         self.progress_bar.setMaximumWidth(300)
         self.progress_bar.hide()
         self.statusBar().addPermanentWidget(self.progress_bar)
+        self.boton_cancelar = QPushButton("Cancelar")
+        self.boton_cancelar.setToolTip("Parar la operación en curso (lo hecho hasta ahora se mantiene)")
+        self.boton_cancelar.clicked.connect(self.cancelar)
+        self.boton_cancelar.hide()
+        self.statusBar().addPermanentWidget(self.boton_cancelar)
+        self._cancelado = False
         self.statusBar().showMessage("Listo")
 
     # ------------------------------------------------------------------ construcción UI
@@ -220,11 +243,13 @@ class tango_tags_qt_ventana(QMainWindow):
         tb.addSeparator()
 
         titulo_seccion("③ Aplicar")
-        aplicar = self.accion("Aplicar\ntags", self.icono("transfer"), self.aplicar_tags,
+        aplicar = self.accion("Aplicar\ntags", self.icono(estandar=QStyle.SP_DialogSaveButton), self.aplicar_tags,
                               "Escribir en los archivos las tags marcadas en 'Usar' "
                               "(antes se muestra un resumen para confirmar)", "Ctrl+S")
         tb.addAction(aplicar)
         tb.widgetForAction(aplicar).setStyleSheet("QToolButton{font-weight:bold; color:#1b5e20;}")
+        tb.addAction(self.accion("Deshacer", self.icono(estandar=QStyle.SP_ArrowBack), self.deshacer_ultimo,
+                                 "Volver a poner las tags que había antes del último 'Aplicar tags'", "Ctrl+Z"))
         tb.addSeparator()
 
         titulo_seccion("④ Diapos")
@@ -245,9 +270,19 @@ class tango_tags_qt_ventana(QMainWindow):
         m_archivo.addAction("Cargar playlist…", self.cargar_playlist)
         m_archivo.addAction("Cargar MusicBee…", self.cargar_musicbee)
         m_archivo.addSeparator()
+        m_archivo.addAction("Deshacer último cambio de tags", self.deshacer_ultimo)
+        m_archivo.addAction("Historial de cambios…", self.historial_cambios)
+        m_archivo.addAction("Abrir carpeta de copias de seguridad", self.abrir_carpeta_backups)
+        m_archivo.addSeparator()
+        m_archivo.addAction("Regenerar base de datos limpia (desde mergeddb.csv)…", self.regenerar_bd)
+        m_archivo.addSeparator()
         m_archivo.addAction("Salir", self.close)
 
         m_opciones = mb.addMenu("&Opciones")
+        self.opt_saltar = m_opciones.addAction("Saltar las canciones ya revisadas (compositor 'Musica: … - Letra: …')")
+        self.opt_saltar.setCheckable(True)
+        self.opt_saltar.setChecked(self.settings.value("opt_saltar", True, type=bool))
+        m_opciones.addSeparator()
         self.opt_fecha = m_opciones.addAction("Usar la fecha del archivo para elegir la sugerida")
         self.opt_fecha.setCheckable(True)
         self.opt_fecha.setChecked(self.settings.value("opt_fecha", DEFAULT_DATE_CHECKED, type=bool))
@@ -310,6 +345,22 @@ class tango_tags_qt_ventana(QMainWindow):
         t.cellDoubleClicked.connect(self.on_cell_double_clicked)
         return t
 
+    # ------------------------------------------------------------------ progreso
+    def empezar_progreso(self, total):
+        self._cancelado = False
+        self.progress_bar.setMaximum(max(total, 1))
+        self.progress_bar.setValue(0)
+        self.progress_bar.show()
+        self.boton_cancelar.show()
+
+    def terminar_progreso(self):
+        self.progress_bar.hide()
+        self.boton_cancelar.hide()
+
+    def cancelar(self):
+        self._cancelado = True
+        self.statusBar().showMessage("Cancelando…")
+
     # ------------------------------------------------------------------ carga
     def ultima_carpeta(self, clave, defecto):
         return self.settings.value(clave, defecto) or defecto
@@ -361,12 +412,18 @@ class tango_tags_qt_ventana(QMainWindow):
             return
         self.settings.setValue("dir_musicbee", os.path.dirname(ruta))
         self.statusBar().showMessage("Leyendo biblioteca de MusicBee…")
-        QApplication.processEvents()
-        try:
-            biblioteca = MusicBeeLibraryTools(None, ruta).library_df
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"No se pudo leer la biblioteca:\n{e}")
+        self.progress_bar.setMaximum(0)   # barra "ocupada" sin porcentaje
+        self.progress_bar.show()
+        hilo = EnSegundoPlano(lambda: MusicBeeLibraryTools(None, ruta).library_df)
+        hilo.start()
+        while hilo.isRunning():
+            QApplication.processEvents()
+            hilo.wait(50)
+        self.progress_bar.hide()
+        if hilo.error is not None:
+            QMessageBox.critical(self, "Error", f"No se pudo leer la biblioteca:\n{hilo.error}")
             return
+        biblioteca = hilo.resultado
         columnas = ['title', 'artist', 'year', 'genre', 'composer', 'file_path']
         rutas = [(fila[-1], fila) for fila in biblioteca[columnas].values.tolist()]
         self.procesar_archivos(rutas, origen=ruta)
@@ -378,17 +435,27 @@ class tango_tags_qt_ventana(QMainWindow):
         residuos.clear()
         no_encontrados = []
         favoritas = []
+        saltadas = 0
 
-        self.progress_bar.setMaximum(len(rutas_y_tags))
-        self.progress_bar.show()
-        QApplication.setOverrideCursor(Qt.WaitCursor)
+        self.empezar_progreso(len(rutas_y_tags))
         try:
             for i, (ruta, tags) in enumerate(rutas_y_tags, 1):
+                if self._cancelado:
+                    break
                 self.progress_bar.setValue(i)
                 self.statusBar().showMessage(f"Buscando en la base de datos… {i} de {len(rutas_y_tags)}")
                 QApplication.processEvents()
                 if not os.path.exists(ruta):
                     no_encontrados.append(ruta)
+                    continue
+                if tags is None:
+                    try:
+                        t = utils.leer_tags(ruta)
+                        tags = [t.title, t.artist, t.year, t.genre, t.composer, ruta]
+                    except Exception:
+                        tags = None
+                if self.opt_saltar.isChecked() and tags is not None and ya_revisada(tags[4]):
+                    saltadas += 1
                     continue
                 try:
                     archivo = FILETOFINDQT(ruta, [None] * 4, 0,
@@ -410,8 +477,7 @@ class tango_tags_qt_ventana(QMainWindow):
                     if fav is not None:
                         favoritas.append(fav)
         finally:
-            QApplication.restoreOverrideCursor()
-            self.progress_bar.hide()
+            self.terminar_progreso()
 
         if favoritas:
             utils.guardar_archivo_output(tipo='coincidencias', dataframe=pd.concat(favoritas, ignore_index=True))
@@ -424,7 +490,14 @@ class tango_tags_qt_ventana(QMainWindow):
         self.actualizar_contadores()
         self.rellenar_tabla()
         resumen = self.resumen()
+        if saltadas:
+            resumen += f" — {saltadas} saltadas por estar ya revisadas (Opciones para cambiarlo)"
         self.statusBar().showMessage(f"{os.path.basename(origen) or origen}: {resumen}")
+        if saltadas and not self.archivos:
+            self.mensaje_inicial.setText(
+                f"<p style='font-size:15px; color:#555'>Las {saltadas} canciones ya estaban revisadas "
+                f"(tienen el compositor con formato <i>Musica: … - Letra: …</i>).<br>"
+                f"Para verlas igualmente, desmarca <b>Opciones → Saltar las canciones ya revisadas</b>.</p>")
         if no_encontrados:
             QMessageBox.warning(
                 self, "Archivos no encontrados",
@@ -432,6 +505,8 @@ class tango_tags_qt_ventana(QMainWindow):
                 + "\n".join(no_encontrados[:15]) + ("\n…" if len(no_encontrados) > 15 else ""))
 
     def resumen(self):
+        if not self.archivos:
+            return "ninguna canción para revisar"
         cuenta = pd.Series([a.categoria for a in self.archivos]).value_counts()
         partes = [f"{cuenta.get(k, 0)} {CATEGORIAS[k][1].lower()}" for k in CATEGORIAS if cuenta.get(k, 0)]
         return f"{len(self.archivos)} canciones — " + ", ".join(partes)
@@ -446,6 +521,7 @@ class tango_tags_qt_ventana(QMainWindow):
         self.fila_a_archivo = {}
         self.tabla.setRowCount(0)
         self.tabla.hide()
+        self.mensaje_inicial.setText(MENSAJE_INICIAL)
         self.mensaje_inicial.show()
         self.actualizar_contadores()
 
@@ -665,10 +741,12 @@ class tango_tags_qt_ventana(QMainWindow):
         if DialogoConfirmar(self, cambios, sin_cambios).exec_() != QDialog.Accepted:
             return
 
-        errores = 0
-        self.progress_bar.setMaximum(len(cambios))
-        self.progress_bar.show()
+        backup = historial.guardar_backup([(a.ruta_archivo, act, dif) for a, act, _, dif in cambios])
+        errores = escritos = 0
+        self.empezar_progreso(len(cambios))
         for i, (archivo, _, _, diferencias) in enumerate(cambios, 1):
+            if self._cancelado:
+                break
             self.progress_bar.setValue(i)
             self.statusBar().showMessage(f"Escribiendo tags… {i} de {len(cambios)}")
             QApplication.processEvents()
@@ -676,6 +754,7 @@ class tango_tags_qt_ventana(QMainWindow):
                                    artist=diferencias.get("artist"), year=diferencias.get("year"),
                                    genre=diferencias.get("genre"), composer=diferencias.get("composer"))
             archivo.estado_guardado = ok
+            escritos += ok
             if ok:
                 try:
                     archivo.tags = utils.leer_tags(archivo.ruta_archivo)
@@ -683,14 +762,70 @@ class tango_tags_qt_ventana(QMainWindow):
                     pass
             else:
                 errores += 1
-        self.progress_bar.hide()
+        self.terminar_progreso()
         self.rellenar_tabla()
 
-        mensaje = f"Tags escritas en {len(cambios) - errores} archivo(s)."
+        mensaje = f"Tags escritas en {escritos} archivo(s)."
+        if escritos + errores < len(cambios):
+            mensaje += f"\nCancelado: {len(cambios) - escritos - errores} archivo(s) sin tocar."
+        mensaje += ("\n\nSe guardó una copia de las tags anteriores: 'Deshacer' las vuelve a poner."
+                    f"\n({os.path.basename(backup)})")
         if errores:
             mensaje += f"\n{errores} archivo(s) dieron error (marcados en rojo en la columna Estado)."
         self.statusBar().showMessage(mensaje.replace("\n", " "))
         (QMessageBox.warning if errores else QMessageBox.information)(self, "Tags aplicadas", mensaje)
+
+    # ------------------------------------------------------------------ deshacer
+    def deshacer_ultimo(self):
+        backups = historial.listar_backups()
+        if not backups:
+            QMessageBox.information(self, "Nada que deshacer", "No hay cambios de tags guardados para deshacer.")
+            return
+        self.deshacer_backup(backups[0])
+
+    def historial_cambios(self):
+        backups = historial.listar_backups(incluir_deshechos=True)
+        if not backups:
+            QMessageBox.information(self, "Historial vacío", "Todavía no se han aplicado tags con esta versión.")
+            return
+        textos = [historial.resumen_backup(b) for b in backups]
+        elegido, ok = QInputDialog.getItem(self, "Historial de cambios",
+                                           "Elige el cambio a deshacer (el más reciente arriba):", textos, 0, False)
+        if ok:
+            self.deshacer_backup(backups[textos.index(elegido)])
+
+    def abrir_carpeta_backups(self):
+        os.makedirs(historial.CARPETA_BACKUPS, exist_ok=True)
+        os.startfile(historial.CARPETA_BACKUPS)
+
+    def deshacer_backup(self, ruta_csv):
+        if historial.esta_deshecho(ruta_csv):
+            QMessageBox.information(self, "Ya deshecho", "Ese cambio ya se deshizo.")
+            return
+        df = historial.leer_backup(ruta_csv)
+        n = df["archivo"].nunique()
+        ejemplos = "\n".join(f"  • {os.path.basename(a)}" for a in df["archivo"].unique()[:10])
+        if n > 10:
+            ejemplos += "\n  …"
+        if QMessageBox.question(
+                self, "Deshacer cambios",
+                f"Se van a restaurar las tags anteriores de {n} archivo(s) "
+                f"({historial.resumen_backup(ruta_csv)}):\n\n{ejemplos}\n\n¿Continuar?") != QMessageBox.Yes:
+            return
+        restaurados, errores = historial.deshacer(ruta_csv, utils.escribir_tags)
+        afectados = set(df["archivo"])
+        for a in self.archivos:
+            if a.ruta_archivo in afectados:
+                try:
+                    a.tags = utils.leer_tags(a.ruta_archivo)
+                    a.estado_guardado = None
+                except Exception:
+                    pass
+        self.rellenar_tabla()
+        mensaje = f"Restauradas las tags de {restaurados} archivo(s)."
+        if errores:
+            mensaje += f"\n{len(errores)} no se pudieron restaurar:\n" + "\n".join(errores[:10])
+        (QMessageBox.warning if errores else QMessageBox.information)(self, "Deshacer", mensaje)
 
     # ------------------------------------------------------------------ búsqueda en BD
     def buscar_en_bd(self, archivo=None):
@@ -723,18 +858,53 @@ class tango_tags_qt_ventana(QMainWindow):
         except Exception as e:
             self.statusBar().showMessage(f"Error deteniendo la música: {e}")
 
-    def lanzar_script(self, script):
-        python = sys.executable.replace("python.exe", "pythonw.exe")
-        if not os.path.exists(python):
-            python = sys.executable
-        subprocess.Popen([python, os.path.join(PROJECT_ROOT, script)], cwd=PROJECT_ROOT)
-        self.statusBar().showMessage(f"Abriendo {script}…")
-
     def abrir_crear_diapos(self):
-        self.lanzar_script("crear_diapos.py")
+        from src.ui.ventana_diapos import VentanaDiapos
+        if getattr(self, "ventana_diapos", None) is None:
+            self.ventana_diapos = VentanaDiapos(self)
+        self.ventana_diapos.show()
+        self.ventana_diapos.raise_()
+        self.ventana_diapos.activateWindow()
 
     def abrir_control_diapos(self):
-        self.lanzar_script("control_slides.py")
+        try:
+            from control_slides import SlideControllerApp
+        except Exception as e:
+            QMessageBox.critical(self, "Control diapos", f"No se pudo abrir el control de diapos:\n{e}")
+            return
+        if getattr(self, "control_diapos", None) is None or not self.control_diapos.isVisible():
+            self.control_diapos = SlideControllerApp(embebido=True)
+        self.control_diapos.show()
+        self.control_diapos.raise_()
+        self.control_diapos.activateWindow()
+
+    def regenerar_bd(self):
+        from src.config.config import DB_ORIGINAL_CSV_PATH, DATA_FOLDER
+        from src.utils import mejorar_bd
+        if QMessageBox.question(
+                self, "Regenerar base de datos",
+                f"Se va a crear data/tangodb.csv a partir de {os.path.basename(DB_ORIGINAL_CSV_PATH)}: "
+                "unificar nombres, rellenar compositores y fechas seguros.\n\n¿Continuar?") != QMessageBox.Yes:
+            return
+        destino = os.path.join(DATA_FOLDER, "tangodb.csv")
+        self.statusBar().showMessage("Regenerando la base de datos…")
+        self.progress_bar.setMaximum(0)
+        self.progress_bar.show()
+        hilo = EnSegundoPlano(lambda: mejorar_bd.main(DB_ORIGINAL_CSV_PATH, destino))
+        hilo.start()
+        while hilo.isRunning():
+            QApplication.processEvents()
+            hilo.wait(50)
+        self.progress_bar.hide()
+        if hilo.error is not None:
+            QMessageBox.critical(self, "Error", f"No se pudo regenerar la base de datos:\n{hilo.error}")
+            return
+        self.data_store.load_data(destino)
+        resumen = "\n".join(f"  • {k}: {v}" for k, v in hilo.resultado.items())
+        QMessageBox.information(self, "Base de datos regenerada",
+                                f"Hecho. La app ya usa la base de datos nueva.\n\n{resumen}\n\n"
+                                "Las fechas que no se pudieron arreglar están en output/informe_fechas_dudosas.csv")
+        self.statusBar().showMessage("Base de datos regenerada")
 
     def mostrar_ayuda(self):
         caja = QMessageBox(self)
@@ -744,9 +914,25 @@ class tango_tags_qt_ventana(QMainWindow):
         caja.exec_()
 
     def closeEvent(self, event):
-        for clave in ("opt_fecha", "opt_guardar_coinc", "opt_guardar_resid"):
+        for clave in ("opt_fecha", "opt_guardar_coinc", "opt_guardar_resid", "opt_saltar"):
             self.settings.setValue(clave, getattr(self, clave).isChecked())
         event.accept()
+
+
+class EnSegundoPlano(QThread):
+    """Ejecuta una función lenta sin bloquear la ventana."""
+
+    def __init__(self, funcion):
+        super().__init__()
+        self.funcion = funcion
+        self.resultado = None
+        self.error = None
+
+    def run(self):
+        try:
+            self.resultado = self.funcion()
+        except Exception as e:
+            self.error = e
 
 
 class DialogoConfirmar(QDialog):

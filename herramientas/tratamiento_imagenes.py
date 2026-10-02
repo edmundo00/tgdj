@@ -68,9 +68,13 @@ def apply_to_all_images_in_folder(background_image_path, source_folder, destinat
         apply_gradient_overlay(background_image_path, source_file_path, destination_folder)
 
 
-# Example Usage
-background_image_path = "E:\\Dropbox\\MUSICA\\MP3\\TANGO\\other_stuff\\PYTHON\\tgdj\\images\\backgounds\\background_tango.png"
-source_folder = "E:\\Dropbox\\MUSICA\\MP3\\TANGO\\other_stuff\\PYTHON\\tgdj\\images\\orquestas"
-destination_folder = "E:\\Dropbox\\MUSICA\\MP3\\TANGO\\other_stuff\\PYTHON\\tgdj\\images\\orquestas_con_fondo"
+if __name__ == "__main__":
+    # Añade el fondo con degradado a todas las fotos de orquestas
+    import os
+    import sys
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from src.config.config import IMAGE_FOLDER
 
-apply_to_all_images_in_folder(background_image_path, source_folder, destination_folder)
+    apply_to_all_images_in_folder(os.path.join(IMAGE_FOLDER, "backgounds", "background_tango.png"),
+                                  os.path.join(IMAGE_FOLDER, "orquestas"),
+                                  os.path.join(IMAGE_FOLDER, "orquestas_con_fondo"))

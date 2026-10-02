@@ -1,6 +1,5 @@
 import os
 import configparser
-import tkinter as tk
 from PIL import ImageFont
 import pandas as pd
 from datetime import datetime
@@ -44,7 +43,22 @@ def load_resources_paths():
 
     return icons, images
 
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+def _raiz_proyecto():
+    """Carpeta con config.ini, data/ y resources/. En el .exe se busca hacia arriba desde el ejecutable."""
+    import sys
+    if getattr(sys, "frozen", False):
+        carpeta = os.path.dirname(sys.executable)
+        while True:
+            if os.path.exists(os.path.join(carpeta, "config.ini")):
+                return carpeta
+            superior = os.path.dirname(carpeta)
+            if superior == carpeta:
+                return os.path.dirname(sys.executable)
+            carpeta = superior
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+
+PROJECT_ROOT = _raiz_proyecto()
 
 # Path to the configuration file
 CONFIG_FILE = os.path.join(PROJECT_ROOT, 'config.ini')
@@ -81,21 +95,18 @@ IMAGE_FOLDER = os.path.join(RESOURCES_PATH, 'images')
 FONTS_FOLDER = os.path.join(RESOURCES_PATH, 'fonts')
 
 DATA_FOLDER = os.path.join(PROJECT_ROOT, 'data')
-DATABASE_FOLDER = os.path.join(PROJECT_ROOT, 'databases')
-TEST_FILES_FOLDER = os.path.join(PROJECT_ROOT, 'tests', 'music_files')
 
 OUTPUT_FOLDER = os.path.join(PROJECT_ROOT, 'output')
 
-# Add other common variables or constants here
-#DB_CSV_PATH = os.path.join(DATA_FOLDER, 'db.csv')
-DB_CSV_PATH = os.path.join(DATA_FOLDER, 'mergeddb.csv')
-#DB_CSV_PATH = os.path.join(DATA_FOLDER, 'repes.csv')
+DB_ORIGINAL_CSV_PATH = os.path.join(DATA_FOLDER, 'mergeddb.csv')
+# tangodb.csv es mergeddb.csv limpia (python -m src.utils.mejorar_bd o menú Archivo de la app)
+DB_CSV_PATH = os.path.join(DATA_FOLDER, 'tangodb.csv')
+if not os.path.exists(DB_CSV_PATH):
+    DB_CSV_PATH = DB_ORIGINAL_CSV_PATH
 
 DEFAULT_FONT_PATH = os.path.join(FONTS_FOLDER,"coopbl.ttf")
 DEFAULT_FONT_NAME = "Cooper Black"  # Cambia "Arial" por la fuente deseada
 DEFAULT_CHAR_WIDTH = get_average_char_width(DEFAULT_FONT_PATH, 100)
-
-# Especificar la ruta completa al archivo de la fuente
 
 project_root = PROJECT_ROOT
 
@@ -107,7 +118,6 @@ presentations_start_path = os.path.join(dropbox_path, "TDJ", "Presentacion")
 musicbee_start_folder = os.path.join(dropbox_path, "TDJ", "MUSICBEE DATABASES")
 
 data_folder = DATA_FOLDER
-csv_grabaciones = os.path.join(data_folder, 'todo.csv')
 mp3_dir = os.path.join(dropbox_path, "TDJ", "tangolinkdatabase", "MP3")
 output_folder = os.path.join(project_root, "output")
 
@@ -115,61 +125,17 @@ image_folder = IMAGE_FOLDER
 icon_paths, image_paths = load_resources_paths()
 background_image_path = image_paths['background']
 
-data_folder = os.path.join(project_root, "data")
-dbpath = os.path.join(data_folder, 'db.csv')
-
-font_folder = os.path.join(project_root, "Fonts")
-orchestra_folder = os.path.join(IMAGE_FOLDER, "orquestas")
 
 background_image_folder = os.path.join(IMAGE_FOLDER,"backgounds")
 background_image_path = os.path.join(IMAGE_FOLDER,"backgounds" ,"background_tango.png")
 background_tango_degradado = os.path.join(background_image_folder, "background_tango_degradado.png")
 
-merged_images_folder = os.path.join(IMAGE_FOLDER,"orquestas_con_fondo")
 
-archivotest = os.path.join(output_folder, "pythontest.csv")
-
-# Lista de nombres de las carpetas
-music_folders = ["Angel", "Camilo Gatica", "Carlos Gardel", "Dan", "Edmundo", "Eduardo",
-           "Eva", "HistoTango", "Leandro", "Osvaldo LA YUMBA"]
-
-# Crear las rutas completas de cada carpeta
-music_folder_paths = [os.path.join(dropbox_path,  "TDJ", "MUSICA", folder) for folder in music_folders]
-
-filetofind_list = []
-numero_canciones = 0
 articulos_preposiciones_comunes = [
     "a", "de", "del", "que", "en", "para", "por", "y", "no", "te", "se",
     "el", "la", "los", "las", "un", "una", "unos", "unas", "mi", "me"
 ]
-palabras_comunes_artista = [
-    'd', 'orquesta', 'tipica', 'de', 'quinteto', 'cuarteto', 'sexteto', 'los'
-]
 
-# Definición de la configuración de columnas para los subframes
-columnas_config = {
-    'archivo': [
-        {'col': 1, 'weight': 0, 'minsize': 25, 'description': 'Info', 'tipo': 'button'},
-        {'col': 2, 'weight': 4, 'minsize': 240, 'description': 'Titulo', 'tipo': 'label'},
-        {'col': 3, 'weight': 3, 'minsize': 150, 'description': 'Orquesta', 'tipo': 'label'},
-        {'col': 4, 'weight': 3, 'minsize': 150, 'description': 'Cantor', 'tipo': 'label'},
-        {'col': 5, 'weight': 0, 'minsize': 100, 'description': 'Fecha', 'tipo': 'label'},
-        {'col': 6, 'weight': 0, 'minsize': 25, 'description': 'Play', 'tipo': 'play_button'},
-        {'col': 7, 'weight': 0, 'minsize': 25, 'description': 'Pausa', 'tipo': 'stop_button'},
-    ],
-    'resultado': [
-        {'col': 1, 'weight': 0, 'minsize': 20, 'description': 'Checkbox', 'tipo': 'checkbox'},
-        {'col': 2, 'weight': 4, 'minsize': 240, 'description': 'Titulo', 'tipo': 'label'},
-        {'col': 3, 'weight': 3, 'minsize': 150, 'description': 'Orquesta', 'tipo': 'label'},
-        {'col': 4, 'weight': 3, 'minsize': 150, 'description': 'Cantor', 'tipo': 'label'},
-        {'col': 5, 'weight': 0, 'minsize': 100, 'description': 'Fecha', 'tipo': 'label'},
-        {'col': 6, 'weight': 0, 'minsize': 130, 'description': 'Estilo', 'tipo': 'label'},
-        {'col': 7, 'weight': 0, 'minsize': 25, 'description': 'Info', 'tipo': 'button'},
-        {'col': 8, 'weight': 0, 'minsize': 25, 'description': 'Play_30', 'tipo': 'play_button'},
-        {'col': 9, 'weight': 0, 'minsize': 25, 'description': 'Play_10', 'tipo': 'play_button'},
-        {'col': 10, 'weight': 0, 'minsize': 25, 'description': 'Pausa', 'tipo': 'stop_button'},
-    ]
-}
 
 default_milonga_data = {
     'nombre': "El Taller",
@@ -179,28 +145,9 @@ default_milonga_data = {
 }
 
 
-path_map = {
-    "WINDOW-COMPUTER": "D:\\Dropbox",
-    "CAD065": "D:\\Dropbox",
-    "LAPTOP-ABRSCER9": "C:\\Dropbox"
-}
-
-playlist_path_map = {
-    "WINDOW-COMPUTER": os.path.join(m3u_start_path, 'casa'),
-    "CAD065": os.path.join(m3u_start_path, 'trabajo'),
-    "LAPTOP-ABRSCER9": os.path.join(m3u_start_path, 'portatil')
-}
-
 # Default settings for checkbuttons
 DEFAULT_DATE_CHECKED = True
-DEFAULT_PERFECT_MATCHES = False
-DEFAULT_ARTIST_NOT_FOUND = True
-DEFAULT_TITLE_NOT_FOUND = True
-DEFAULT_REMAINING = True
-DEFAULT_DIRECT_COMPARISON = True
-DEFAULT_DIRECT_TAGGING = False
 guardar_residuos = False
-guardar_coincidencias = True
 
 
 musicbee_tags = {
@@ -213,34 +160,8 @@ musicbee_tags = {
 }
 
 
-
 residuos = []
 
-
-df_reporte = pd.DataFrame(columns=[
-    "Artista encontrado",
-    "Titulo encontrado",
-    "Numero de coincidencias",
-    "Hay coincidencia preferida",
-    "No hay coincidencia preferida",
-    "Coincidencia perfecta"
-])
-
-df_reporte_coincidencia_favorita = pd.DataFrame(columns=[
-    'archivo',
-    'old_title',
-    'new_title',
-    'old_artist',
-    'new_artist',
-    'old_cantor',
-    'new_cantor',
-    'old_year',
-    'new_year',
-    'old_genre',
-    'new_genre',
-    'old_composer',
-    'new_composer'
-])
 
 # Fechas de fallecimiento de los principales directores de orquesta de tango (en formato datetime)
 fallecimiento = {
@@ -315,17 +236,10 @@ fallecimiento = {
 }
 
 
-
 # # Ejemplo de comparación
 # if fallecimiento['Osvaldo Pugliese'] > fallecimiento['Aníbal Troilo']:
 #     print("Osvaldo Pugliese falleció después que Aníbal Troilo")
 # else:
 #     print("Osvaldo Pugliese falleció antes que Aníbal Troilo")
 
-tagear = True
 
-full_screen = False
-
-maximized = True
-
-showpopupinfo = False

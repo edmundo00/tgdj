@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import QFileDialog
 from unidecode import unidecode
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from PyQt5.QtCore import QTimer
+from PyQt5.QtCore import QTimer, pyqtSignal
 import win32gui
 from Levenshtein import distance as levenshtein_distance
 import pythoncom  # Necesario para liberar el objeto COM correctamente
@@ -34,8 +34,8 @@ class TracklistEventHandler(FileSystemEventHandler):
         # Solo actúa si el archivo modificado es el tracklist especificado
         if event.src_path == self.slide_controller.tracklist_path:
             print(f"{event.src_path} ha sido modificado.")
-            # Usa QTimer.singleShot para llamar a process_tracklist_change en el hilo principal
-            QTimer.singleShot(0, self.slide_controller.process_tracklist_change)
+            # watchdog avisa desde otro hilo: una señal Qt lo pasa al hilo principal de forma segura
+            self.slide_controller.tracklist_cambiado.emit()
 
 
 
@@ -43,8 +43,14 @@ class TracklistEventHandler(FileSystemEventHandler):
 # Clase Principal de la Aplicación de Control de Diapositivas
 # ---------------------
 class SlideControllerApp(QtWidgets.QWidget):
-    def __init__(self):
+    tracklist_cambiado = pyqtSignal()
+
+    def __init__(self, embebido=False):
+        """embebido=True cuando se abre desde TangoTags (no se libera COM al cerrar)."""
         super().__init__()
+        self.embebido = embebido
+        self.presentation = None
+        self.tracklist_cambiado.connect(self.process_tracklist_change)
         self.current_screen_index = DEFAULT_SCREEN
         self.screens = QtWidgets.QApplication.screens()  # Obtener la lista inicial de pantallas
         self.tracklist_path = os.path.expandvars(r'%LocalAppData%\VirtualDJ\History\tracklist.txt')
@@ -55,8 +61,12 @@ class SlideControllerApp(QtWidgets.QWidget):
         # Configura el observador para monitorear cambios en el archivo de tracklist
         self.event_handler = TracklistEventHandler(self)
         self.observer = Observer()
-        self.observer.schedule(self.event_handler, os.path.dirname(self.tracklist_path), recursive=False)
-        self.observer.start()
+        carpeta_tracklist = os.path.dirname(self.tracklist_path)
+        if os.path.isdir(carpeta_tracklist):
+            self.observer.schedule(self.event_handler, carpeta_tracklist, recursive=False)
+            self.observer.start()
+        else:
+            print(f"No existe {carpeta_tracklist}: sin seguimiento automático de VirtualDJ")
 
     # Configuración de la interfaz de usuario
     def initUI(self):
@@ -322,7 +332,10 @@ class SlideControllerApp(QtWidgets.QWidget):
     # Abre la presentación seleccionada
     def open_presentation(self):
         try:
-            default_dir = r'D:\Dropbox\TDJ\Presentacion'
+            try:
+                from src.config.config import presentations_start_path as default_dir
+            except Exception:
+                default_dir = os.path.expanduser("~")
             file_path, _ = QFileDialog.getOpenFileName(self, "Select Presentation", default_dir,
                                                        "PowerPoint Files (*.pptx *.ppt)")
             if file_path and os.path.exists(file_path):
@@ -504,8 +517,12 @@ class SlideControllerApp(QtWidgets.QWidget):
                 self.powerpoint.Quit()  # Cierra PowerPoint
                 self.powerpoint = None  # Liberar la referencia a la aplicación
 
-            # Liberar los objetos COM manualmente
-            pythoncom.CoUninitialize()
+            if self.observer.is_alive():
+                self.observer.stop()
+
+            # Liberar los objetos COM manualmente (no si vive dentro de TangoTags, que sigue abierta)
+            if not self.embebido:
+                pythoncom.CoUninitialize()
             gc.collect()  # Llama al recolector de basura para asegurar la liberación
 
             print("Presentación y aplicación de PowerPoint cerradas.")

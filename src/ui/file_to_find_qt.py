@@ -1,9 +1,9 @@
-from tkinter import ttk
 from src.utils.utils import *
 from src.config.database import Database
 from datetime import datetime
 from mutagen.id3 import ID3, ID3NoHeaderError
 from types import SimpleNamespace
+from src.utils.buscar_artista import indice_para
 
 
 class FILETOFINDQT:
@@ -36,7 +36,6 @@ class FILETOFINDQT:
 
 
         self.nextframe = self.frame_number
-
 
 
     def listoid3(self,tags):
@@ -144,8 +143,8 @@ class FILETOFINDQT:
 
         else:
             # Si no hay perfect match, proceder con la búsqueda de coincidencia preferida
-            self.hay_coincidencia_preferida, self.coincidencia_preferida = buscar_preferencias(
-                self.bool_coincidencias, self.show_date_checked
+            self.hay_coincidencia_preferida, self.coincidencia_preferida = elegir_preferida(
+                self.bool_coincidencias, database_titulo, self.show_date_checked
             )
             if not self.hay_coincidencia_preferida:
                 self.no_hay_coincidencia_preferida = True
@@ -156,31 +155,10 @@ class FILETOFINDQT:
         self.colores_labels = coincidencias_a_colores(self.bool_coincidencias,self.perfect_match)
 
 
-
     def buscar_artista(self, artista_original):
-        artista_buscar_min = unidecode(artista_original).lower()
-
-        # Búsqueda exacta
-        artista_key = next((key for key in self.dic_art if key == artista_original), None)
-        if artista_key:
-            return artista_key, 3
-
-        # Búsqueda aproximada
-        artista_key = next((key for key in self.dic_art if key == artista_buscar_min), None)
-        if artista_key:
-            return artista_key, 2
-
-        # Búsqueda parcial
-        artista_key = next((key for key in self.dic_art if artista_buscar_min in key), None)
-        if artista_key:
-            return artista_key, 1
-
-        # Búsqueda por palabras
-        artista_key = contain_most_words_in_dic(self.dic_art, artista_buscar_min)
-        if artista_key is not None:
-            return artista_key, 1
-
-        return None, 0
+        """Devuelve (claves de la BD, nivel 3=exacta 2=normalizada 1=parcial 0=no encontrado)."""
+        claves, nivel = indice_para(self.dic_art).buscar(artista_original)
+        return claves, nivel
 
     def obtener_canciones_artista(self, artista_key):
         if isinstance(artista_key, str):
@@ -194,46 +172,50 @@ class FILETOFINDQT:
             raise ValueError("artista_key must be a string or a list of strings")
 
 
-    def leer_entredas_y_tagear(self, popup):
-
-        values = [entry.get() for entry in self.entry_dato_lista]
-
-        artista_nuevo = unir_artistas(self.entry_dato_lista[2].get(),self.entry_dato_lista[3].get(), " / ")
-
-        etiquetas_actualizadas = [self.tags._filename,
-                                  self.entry_dato_lista[1].get(),
-                                  artista_nuevo,
-                                  self.entry_dato_lista[4].get(),
-                                  self.entry_dato_lista[5].get(),
-                                  self.entry_dato_lista[6].get()
-                                  ]
-        update_tags(*etiquetas_actualizadas)
-        popup.destroy()
-
-        leer_tags(self.ruta_archivo)
-
-        self.buscar()
-
-        for archivos in filetofind_list:
-            archivos.destroy()
-
-
-    def destroy(self):
-        # Verificar si self.frames_archivo está definido y destruir los frames en 'archivo'
-        if hasattr(self, 'frames_archivo'):
-            for column in columnas_config['archivo']:
-                description = str(column['description'])
-                if description in self.frames_archivo:
-                    self.frames_archivo[description].destroy()
-
-        # Verificar si self.frames_resultado está definido y destruir los frames en 'resultado'
-        if hasattr(self, 'frames_resultado'):
-            for column in columnas_config['resultado']:
-                description = str(column['description'])
-                if description in self.frames_resultado:
-                    self.frames_resultado[description].destroy()
-
-
-
             
 
+
+# Puntos por campo según el tipo de coincidencia (verde 3, amarillo 2, naranja 1, rojo 0)
+_GRUPOS_PUNTOS = {
+    "orquesta": (TagLabels.ORQUESTA_EXACTA, TagLabels.ORQUESTA, TagLabels.ORQUESTA_PARCIAL),
+    "titulo": (TagLabels.TITULO_EXACTO, TagLabels.TITULO, TagLabels.TITULO_PARCIAL),
+    "cantor": (TagLabels.CANTOR_EXACTO, TagLabels.CANTOR, TagLabels.CANTOR_PARCIAL),
+    "fecha": (TagLabels.FECHA_EXACTA, TagLabels.FECHA, TagLabels.FECHA_PARCIAL),
+    "estilo": (TagLabels.ESTILO_EXACTO, TagLabels.ESTILO, TagLabels.ESTILO_PARCIAL),
+    "compositor": (TagLabels.COMPOSITOR_AUTOR_EXACTO, TagLabels.COMPOSITOR_AUTOR, TagLabels.COMPOSITOR_AUTOR_PARCIAL),
+}
+
+
+def elegir_preferida(booleanos, candidatas, usar_fecha=True):
+    """
+    Elige la coincidencia a sugerir. Solo valen las filas con título y orquesta que coinciden,
+    cantor no contradictorio y (si usar_fecha) año no contradictorio. Entre ellas gana la de más
+    puntos; si varias empatan pero escribirían las mismas tags (duplicados de la BD), vale la primera.
+    Devuelve (hay_preferida, posición).
+    """
+    from src.utils.formato_tags import tags_desde_coincidencia
+    get = lambda etiqueta, i: bool(booleanos[etiqueta].iloc[i])
+    validas = []
+    for i in range(len(candidatas)):
+        titulo_ok = get(TagLabels.TITULO_EXACTO, i) or get(TagLabels.TITULO, i)
+        # Título parecido solo en parte: vale si cantor y año confirman que es esa grabación
+        confirmada = ((get(TagLabels.CANTOR_EXACTO, i) or get(TagLabels.CANTOR, i))
+                      and (get(TagLabels.FECHA_EXACTA, i) or get(TagLabels.FECHA, i)))
+        if not (titulo_ok or (get(TagLabels.TITULO_PARCIAL, i) and confirmada)):
+            continue
+        if not (get(TagLabels.ORQUESTA_EXACTA, i) or get(TagLabels.ORQUESTA, i)):
+            continue
+        if get(TagLabels.CANTOR_NEGATIVO, i):
+            continue
+        if usar_fecha and get(TagLabels.FECHA_NEGATIVA, i):
+            continue
+        puntos = sum(3 * get(e, i) + 2 * get(n, i) + get(p, i) for e, n, p in _GRUPOS_PUNTOS.values())
+        validas.append((puntos, i))
+    if not validas:
+        return False, 0
+    maximo = max(p for p, _ in validas)
+    mejores = [i for p, i in validas if p == maximo]
+    tags = {tuple(sorted(tags_desde_coincidencia(candidatas.iloc[i]).items())) for i in mejores}
+    if len(mejores) == 1 or len(tags) == 1:
+        return True, mejores[0]
+    return False, 0

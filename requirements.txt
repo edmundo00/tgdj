@@ -1,6 +1,5 @@
 pandas
 tinytag
-tk
 Pillow
 python-pptx
 unidecode
@@ -11,6 +10,9 @@ ftfy
 matplotlib
 pywin32
 PyQt5
-matplotlib
 watchdog
 Levenshtein
+python-dateutil
+
+# solo para crear el .exe (crear_exe.bat)
+pyinstaller

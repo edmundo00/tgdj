@@ -1,9 +1,13 @@
-"""Abre el creador de diapos de las tandas (se lanza desde TangoTags → Crear diapos)."""
-import tkinter as tk
+"""Abre solo la ventana de crear diapos (también está en TangoTags → Crear diapos)."""
+import sys
 
-from presentation_app import PresentationApp
+from PyQt5.QtWidgets import QApplication
+
+from src.ui.ventana_diapos import VentanaDiapos
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    PresentationApp(root)
-    root.mainloop()
+    app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+    ventana = VentanaDiapos()
+    ventana.show()
+    sys.exit(app.exec_())

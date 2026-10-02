@@ -1,123 +1,60 @@
 import unittest
+from types import SimpleNamespace
+
 import pandas as pd
-from src.utils.utils import compare_tags, TagLabels
 
-class Tag:
-    def __init__(self, artist, title, year, genre, composer, _file_name):
-        self.artist = artist
-        self.title = title
-        self.year = year
-        self.genre = genre
-        self.composer = composer
-        self._file_name = _file_name
+from src.constants.enums import TagLabels
+from src.utils.utils import compare_tags
 
-    def __repr__(self):
-        return (f"Tag(artist={self.artist}, title={self.title}, year={self.year}, "
-                f"genre={self.genre}, composer={self.composer}, _file_name={self._file_name})")
 
+def tag(**kw):
+    datos = dict(title="", artist="", year="", genre="", composer="", _filename="x.flac")
+    datos.update(kw)
+    return SimpleNamespace(**datos)
 
 
 class CompareTagsTest(unittest.TestCase):
-    
     def setUp(self):
-        # Set up a simple DataFrame for testing
-        self.database = pd.DataFrame({
-            'titulo': ['Pasional', 'La Cumparsita', 'El Choclo'],
-            'titulo_min': ['pasional', 'la cumparsita', 'el choclo'],
-            'artista': ["Osvaldo Pugliese", "Carlos Gardel", "Astor Piazzolla"],
-            'artista_min': ["osvaldo pugliese", "carlos gardel", "astor piazzolla"],
-            'cantor': ["Alberto Morán", None, None],
-            'cantor_min': ["alberto moran", None, None],
-            'fecha': ["1951", "1928", "1962"],
-            'fecha_ano': ["1951", "1928", "1962"],
-            'estilo': ["Tango", "Tango", "Nuevo Tango"],
-            'compositor_autor': ["Manuel Romero", "Gerardo Matos Rodríguez", "Ángel Villoldo"]
+        self.db = pd.DataFrame({
+            'titulo': ['Humillación', 'Humillación'],
+            'artista': ["Juan D'Arienzo", "Juan D'Arienzo"],
+            'cantor': ["Héctor Mauré", "-"],
+            'fecha': ["1941-07-14", "1950"],
+            'estilo': ["tango", "tango"],
+            'compositor_autor': ["Musica: Rodolfo Biagi - Letra: Carlos Bahr", ""],
         })
 
-    def test_compare_tags_exact_match(self):
-        # import pdb; pdb.set_trace()  # Debugger will start here
+    def test_perfecta_si_no_cambiaria_nada(self):
+        t = tag(title="Humillación", artist="Juan D'Arienzo / Héctor Mauré", year="1941-07-14", genre="tango",
+                composer="Musica: Rodolfo Biagi - Letra: Carlos Bahr")
+        c, perfecta, indice = compare_tags(3, 6, self.db, t)
+        self.assertTrue(perfecta)
+        self.assertEqual(indice, 0)
 
-        # Create a tag object with attributes matching the first row in the DataFrame
-        tag = Tag(
-            artist="Osvaldo Pugliese feat. Alberto Morán",
-            title="Pasional",
-            year="1951",
-            genre="Tango",
-            composer="Manuel Romero",
-            _file_name="dummy.flac"
-        )
+    def test_mayusculas_y_formato_de_fecha_no_cuentan_como_distinto(self):
+        t = tag(title="Humillacion", artist="Juan D'Arienzo / Héctor Mauré", year="14/07/1941", genre="Tango")
+        c, perfecta, _ = compare_tags(3, 5, self.db, t)
+        self.assertFalse(perfecta)                           # falta el compositor
+        self.assertTrue(c[TagLabels.FECHA_EXACTA].iloc[0])
+        self.assertTrue(c[TagLabels.ESTILO_EXACTO].iloc[0])
+        self.assertTrue(c[TagLabels.CANTOR_EXACTO].iloc[0])
+        self.assertTrue(c[TagLabels.CANTOR_NEGATIVO].iloc[1])  # la otra grabación es instrumental
 
-        # Call compare_tags and check the results
-        results = compare_tags(self.database, tag)
-        
-        # Assert that the title matches
-        self.assertTrue(results[TagLabels.TITULO].any())
-        self.assertTrue(results[TagLabels.TITULO_EXACTO].any())
+    def test_solo_el_ano_es_parecido(self):
+        t = tag(title="Humillación", artist="Juan D'Arienzo", year="1941")
+        c, _, _ = compare_tags(3, 6, self.db, t)
+        self.assertTrue(c[TagLabels.FECHA].iloc[0])           # amarillo: mismo año
+        self.assertTrue(c[TagLabels.FECHA_NEGATIVA].iloc[1])  # rojo: 1950
 
-        # Assert that the artist matches
-        self.assertTrue(results[TagLabels.ARTISTA].any())
-        # self.assertTrue(results[TagLabels.ARTISTA_EXACTO].any())
+    def test_un_solo_grupo_activo_por_campo(self):
+        t = tag(title="Humillación", artist="Juan D'Arienzo / Héctor Mauré", year="1941")
+        c, _, _ = compare_tags(3, 6, self.db, t)
+        grupos = [(TagLabels.FECHA_EXACTA, TagLabels.FECHA, TagLabels.FECHA_PARCIAL, TagLabels.FECHA_NEGATIVA),
+                  (TagLabels.CANTOR_EXACTO, TagLabels.CANTOR, TagLabels.CANTOR_PARCIAL, TagLabels.CANTOR_NEGATIVO)]
+        for grupo in grupos:
+            for i in range(len(self.db)):
+                self.assertEqual(sum(bool(c[e].iloc[i]) for e in grupo), 1)
 
-        # Assert that the cantor matches
-        self.assertTrue(results[TagLabels.CANTOR].any())
-        self.assertTrue(results[TagLabels.CANTOR_EXACTO].any())
-
-        # Assert that the year matches
-        self.assertTrue(results[TagLabels.FECHA].any())
-        self.assertTrue(results[TagLabels.ANO].any())
-
-        # Assert that the genre matches
-        self.assertTrue(results[TagLabels.GENERO].any())
-
-        # Assert that the composer matches
-        self.assertTrue(results[TagLabels.COMPOSITOR_AUTOR].any())
-
-        # Assert that everything matches
-        self.assertTrue(results[TagLabels.TODO].any())
-
-    def test_compare_tags_no_match(self):        
-        tag = Tag(
-            artist="Unknown Artist",
-            title="Unknown Title",
-            year="1900",
-            genre="Unknown Genre",
-            composer="Unknown Composer",
-            _file_name="dummy.flac"
-        )
-
-        # Call compare_tags and check the results
-        results = compare_tags(self.database, tag)
-        
-        # Assert that there are no matches
-        for key, value in results.items():
-            if isinstance(value, pd.Series) or isinstance(value, list):
-                self.assertFalse(any(value))
-            else:
-                self.assertFalse(value)
-
-    def test_compare_tags_partial_match(self):
-        tag = Tag(
-            artist="Carlos Gardel",
-            title="La Cumparsita",
-            year=None,  # No year provided
-            genre="Tango",
-            composer=None,
-            _file_name="dummy.flac"
-        )
-
-        # Call compare_tags and check the results
-        results = compare_tags(self.database, tag)
-
-        # Assert partial matches
-        self.assertTrue(results[TagLabels.TITULO].any())
-        self.assertTrue(results[TagLabels.ARTISTA].any())
-        self.assertTrue(results[TagLabels.GENERO].any())
-
-        # Assert missing fields do not match
-        self.assertFalse(results[TagLabels.CANTOR])
-        self.assertFalse(results[TagLabels.COMPOSITOR_AUTOR].any())
-
-    # Add more test cases as needed
 
 if __name__ == '__main__':
     unittest.main()

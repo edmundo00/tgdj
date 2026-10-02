@@ -24,31 +24,6 @@ from tinytag import TinyTag
 from dateutil import parser
 
 
-def convertir_fecha_a_yymmdd(fecha):
-    # Paso 1: Diccionario de traducción de meses de español a inglés
-    meses_espanol_a_ingles = {
-        "enero": "January", "febrero": "February", "marzo": "March", "abril": "April",
-        "mayo": "May", "junio": "June", "julio": "July", "agosto": "August",
-        "septiembre": "September", "octubre": "October", "noviembre": "November", "diciembre": "December"
-    }
-
-    # Paso 2: Convertimos el texto de entrada a minúsculas para facilitar la búsqueda y reemplazo
-    fecha = fecha.lower()
-
-    # Paso 3: Reemplazamos cada mes en español por su equivalente en inglés
-    for mes_es, mes_en in meses_espanol_a_ingles.items():
-        fecha = re.sub(rf'\b{mes_es}\b', mes_en, fecha)
-
-    # Paso 4: Eliminamos palabras como "de" que pueden interferir
-    fecha = re.sub(r'\bde\b', '', fecha)
-
-    try:
-        # Paso 5: Parseamos la fecha y la formateamos en YYMMDD
-        fecha_datetime = parser.parse(fecha)
-        return fecha_datetime.strftime("%y%m%d")
-    except (ValueError, TypeError):
-        return "Formato de fecha no válido"
-
 def convertir_segundos(segundos, formato='x\'x\'\''):
     """
     Convierte segundos con decimales a un formato de tiempo especificado.
@@ -105,25 +80,11 @@ def convertir_segundos(segundos, formato='x\'x\'\''):
 
 
 def separar_artistas(artistas):
-    # Verificar si la entrada es una cadena
+    """'Orquesta / Cantor' -> ('Orquesta', 'Cantor'). Entiende también ; feat. canta: con."""
+    from src.utils.buscar_artista import separar_orquesta_cantor
     if not isinstance(artistas, str):
-        return "", ""  # Return empty strings if the input is not a string
-
-    # Define regex pattern to capture the first match of " / ", " feat. ", or " canta: "
-    pattern = re.compile(r" / | feat\. | canta: ")
-
-    # Split the input string using the defined pattern, with maxsplit=1 to split only at the first occurrence
-    artists = re.split(pattern, artistas, maxsplit=1)
-
-    # If the second element exists but is empty, treat as if there's no split needed
-    if len(artists) > 1 and artists[1].strip() == "":
-        return artistas, ""
-
-    # Assign artists based on the length of the split result
-    artists1 = artists[0]  # Main artist
-    artists2 = artists[1] if len(artists) > 1 else ""  # Second artist, if any
-
-    return artists1, artists2
+        return "", ""
+    return separar_orquesta_cantor(artistas)
 
 
 def unir_artistas(orquesta, cantor, caracter_separacion):
@@ -134,18 +95,6 @@ def unir_artistas(orquesta, cantor, caracter_separacion):
         artista = orquesta
 
     return artista
-
-def palabras_mas_comunes(db, columna):
-    dataframe = db.copy()
-    # Paso 2: Eliminar puntuaciones y dividir en palabras
-    dataframe[columna] = dataframe[columna].apply(lambda x: re.findall(r'\b\w+\b', x))
-    # Paso 3: Contar la frecuencia de las palabras
-    word_count = Counter()
-    dataframe[columna].apply(lambda x: word_count.update(x))
-    # Obtener las palabras más comunes
-    most_common_words = word_count.most_common()
-
-
 
 
 def coincidencias_a_colores(bool_coincidencias, perfect_match):
@@ -206,8 +155,17 @@ def update_tags(file_path, title=None, artist=None, year=None, genre=None, compo
     Escribe las tags en el archivo. Los valores vacíos o None no se tocan.
     Soporta mp3, flac, m4a, wma, wav y aif/aiff. Devuelve True si se guardó bien.
     """
-    valores = {k: v for k, v in dict(title=title, artist=artist, date=year, genre=genre,
-                                     composer=composer).items() if v}
+    return escribir_tags(file_path, dict(title=title, artist=artist, year=year, genre=genre, composer=composer))
+
+
+def escribir_tags(file_path, valores, borrar_vacios=False):
+    """
+    valores: {'title'|'artist'|'year'|'genre'|'composer': texto}.
+    Con borrar_vacios=True un valor "" borra esa tag (se usa para deshacer cambios).
+    """
+    valores = {('date' if k == 'year' else k): (str(v) if v else "") for k, v in valores.items() if v is not None}
+    if not borrar_vacios:
+        valores = {k: v for k, v in valores.items() if v}
     ext = os.path.splitext(file_path)[1].lower()
     try:
         if ext == '.mp3':
@@ -227,7 +185,11 @@ def update_tags(file_path, title=None, artist=None, year=None, genre=None, compo
                 audio.add_tags()
             frames = {'title': TIT2, 'artist': TPE1, 'date': TDRC, 'genre': TCON, 'composer': TCOM}
             for clave, valor in valores.items():
-                audio.tags.setall(frames[clave].__name__, [frames[clave](encoding=3, text=str(valor))])
+                nombre = frames[clave].__name__
+                if valor:
+                    audio.tags.setall(nombre, [frames[clave](encoding=3, text=valor)])
+                else:
+                    audio.tags.delall(nombre)
             audio.save()
             return True
         elif ext == '.wma':
@@ -240,92 +202,16 @@ def update_tags(file_path, title=None, artist=None, year=None, genre=None, compo
             return False
 
         for clave, valor in valores.items():
-            audio[clave] = str(valor)
+            if valor:
+                audio[clave] = valor
+            elif clave in audio:
+                del audio[clave]
         audio.save()
         return True
 
     except Exception as e:
         print(f"Error escribiendo tags en '{file_path}': {e}")
         return False
-
-
-def capitalize_uppercase_words(text):
-    words = text.split()
-    transformed_words = []
-    for word in words:
-
-        if word == "DE" or word == "De":
-            word = "de"
-        if word == "DEL" or word == "Del":
-            word = "del"
-        if word == "DI" or word == "Di":
-            word = "di"
-        if word.isupper():
-            word = word.capitalize()
-            chars = list(word)
-            for i in range(len(chars) - 1):
-                # Check if the current character is a quote or hyphen
-                if chars[i] in ["'", "-"]:
-                    # Capitalize the next character
-                    chars[i + 1] = chars[i + 1].upper()
-            word = ''.join(chars)
-            transformed_words.append(word)
-        else:
-            transformed_words.append(word)
-
-    return ' '.join(transformed_words)
-
-
-def aplicartag_archivo(ruta_archivo, coincidencias, coincidencia_preferida,coincidencia_titulo , tags):
-    # Separar artistas originales en dos partes
-    artists1, artists2 = separar_artistas(tags.artist)
-
-    # Combinar artista y cantor preferidos
-    artist = unir_artistas(
-        coincidencias.artista.iloc[coincidencia_preferida],
-        coincidencias.cantor.iloc[coincidencia_preferida],
-        " / "
-    )
-
-    # Actualizar tags usando un solo llamado a la función update_tags
-
-    tageado = update_tags(
-        ruta_archivo,
-        title=coincidencias.titulo.iloc[coincidencia_preferida],
-        artist=artist,
-        year=coincidencias.fecha.iloc[coincidencia_preferida],
-        genre=coincidencias.estilo.iloc[coincidencia_preferida],
-        composer=coincidencias.compositor_autor.iloc[coincidencia_preferida]
-    )
-
-    reporte_data = {
-        'title': coincidencias.titulo.iloc[coincidencia_preferida],
-        'artist': artist,
-        'year': coincidencias.fecha.iloc[coincidencia_preferida],
-        'genre': coincidencias.estilo.iloc[coincidencia_preferida],
-        'composer': coincidencias.compositor_autor.iloc[coincidencia_preferida],
-        'file_path': ruta_archivo,
-        "Artista encontrado": False,
-        "Titulo encontrado": False,
-        "Numero de coincidencias": 1,
-        "Hay coincidencia preferida": False,
-        "No hay coincidencia preferida": False,
-        "Coincidencia perfecta": True
-    }
-
-    # Crear el diccionario de reemplazo de tags
-    reemplazo_tags_linea = crear_reemplazo_tags_linea(
-        ruta_archivo=ruta_archivo,
-        tags=tags,
-        coincidencias=coincidencias,
-        coincidencia_preferida=coincidencia_preferida,
-        artists1=artists1,
-        artists2=artists2,
-        coincidencia_titulo=coincidencia_titulo
-    )
-
-    return reemplazo_tags_linea, reporte_data, tageado
-
 
 
 def crear_reemplazo_tags_linea(
@@ -370,66 +256,6 @@ def link_to_music(link):
     return local_path
 
 
-def buscar_preferencias(booleanos, buscar_fecha):
-    get = lambda label, idx=0: booleanos[label].iloc[idx]
-
-    mapping = {
-        'ORQUESTA': [TagLabels.ORQUESTA_EXACTA, TagLabels.ORQUESTA, TagLabels.ORQUESTA_PARCIAL,
-                     TagLabels.ORQUESTA_NEGATIVO],
-        'TITULO': [TagLabels.TITULO_EXACTO, TagLabels.TITULO, TagLabels.TITULO_PARCIAL, TagLabels.TITULO_NEGATIVO],
-        'CANTOR': [TagLabels.CANTOR_EXACTO, TagLabels.CANTOR, TagLabels.CANTOR_PARCIAL, TagLabels.CANTOR_NEGATIVO],
-        'FECHA': [TagLabels.FECHA_EXACTA, TagLabels.FECHA, TagLabels.FECHA_PARCIAL, TagLabels.FECHA_NEGATIVA],
-        'ESTILO': [TagLabels.ESTILO_EXACTO, TagLabels.ESTILO, TagLabels.ESTILO_PARCIAL, TagLabels.ESTILO_NEGATIVO],
-        'COMPOSITOR': [TagLabels.COMPOSITOR_AUTOR_EXACTO, TagLabels.COMPOSITOR_AUTOR,
-                       TagLabels.COMPOSITOR_AUTOR_PARCIAL, TagLabels.COMPOSITOR_AUTOR_NEGATIVO]
-    }
-    # Procesar cada grupo de coincidencias
-    for categoria, etiquetas in mapping.items():
-        exacta, normal, parcial, negativo = etiquetas
-
-    longitudes = [len(series) for series in booleanos.values()]
-         # Verifica si todas las longitudes son iguales
-    longitudes_iguales = len(set(longitudes)) == 1
-         # Retorna la longitud común si son iguales, o None si no lo son
-    if longitudes_iguales:
-        numero_de_resultados = longitudes[0]  # Todas las longitudes son iguales, devuelve una de ellas
-    else:
-        print('ERROR, las lista de booleanos no son iguales')
-        return False, 0
-
-    # Corrección y simplificación del if
-    if (numero_de_resultados == 1 and
-            (get(TagLabels.TITULO_EXACTO, 0) or get(TagLabels.TITULO, 0)) and
-            (get(TagLabels.ORQUESTA_EXACTA, 0) or get(TagLabels.ORQUESTA, 0)) and
-            not get(TagLabels.FECHA_NEGATIVA, 0) and not not get(TagLabels.CANTOR_NEGATIVO, 0)):
-        return True, 0
-
-
-
-        # Comprobar las condiciones para múltiples resultados
-    preferidos = []
-    for idx in range(numero_de_resultados):
-        titulo_condicion = get(TagLabels.TITULO_EXACTO, idx) or get(TagLabels.TITULO, idx)
-        orquesta_condicion = get(TagLabels.ORQUESTA_EXACTA, idx) or get(TagLabels.ORQUESTA, idx)
-        fecha_condicion = not get(TagLabels.FECHA_NEGATIVA, idx) if buscar_fecha else True
-        cantor_condicion = not get(TagLabels.CANTOR_NEGATIVO, idx)
-
-        if titulo_condicion and orquesta_condicion and fecha_condicion and cantor_condicion:
-            preferidos.append(idx)
-
-    # Si hay exactamente un preferido, devolverlo
-    if len(preferidos) == 1:
-        return True, preferidos[0]
-
-
-    return False, 0
-
-
-def es_par(numero):
-    """Devuelve True si el número es par, de lo contrario False."""
-    return numero % 2 == 0
-
-
 def convert_numbers_to_words(text):
     # Find all numbers in the text
     numbers = re.findall(r'\d+', text)
@@ -438,46 +264,6 @@ def convert_numbers_to_words(text):
         text = text.replace(number, nw.num2words(number, lang='es'))
 
     return text
-
-
-def contain_most_words_in_dic(dictionary, text):
-    # Limpia y prepara el texto
-    text = unidecode(convert_numbers_to_words(text)).lower().strip()
-    text = re.sub(r"[()]", "", text)  # Elimina paréntesis
-    text_words = set(text.split())
-
-    lista_numero_palabras_comun = []
-
-    for key in dictionary:
-        words = key
-        words = re.sub(r"[()]", "", words)  # Limpia la clave
-        words_words = set(words.lower().split())
-
-        # Encuentra las palabras comunes entre el texto y la clave del diccionario
-        common_words = text_words.intersection(words_words)
-        numero_de_palabras_en_comun = len(common_words)
-
-        # Agrega la clave y el número de palabras comunes
-        lista_numero_palabras_comun.append((key, numero_de_palabras_en_comun))
-
-    # Encuentra el máximo número de palabras en común
-    maximo_palabras = max(lista_numero_palabras_comun, key=lambda x: x[1])[1]
-
-    # Encuentra las claves que tienen ese máximo número de palabras en común
-    if maximo_palabras > 1:
-        keys_mas_palabras = [key for key, value in lista_numero_palabras_comun if value == maximo_palabras]
-        return keys_mas_palabras
-    else:
-        return None
-
-    # Encuentra los índices que tienen ese máximo número de palabras en común
-    indices_mas_palabras = [index for index, value in lista_numero_palabras_comun if value == maximo_palabras]
-
-    # Si hay exactamente una coincidencia, devuelve la cadena correspondiente
-    if len(indices_mas_palabras) == 1 and maximo_palabras > 0:
-        return list(dictionary.keys())[indices_mas_palabras[0]]
-    else:
-        return None  # Si hay más de una coincidencia o ninguna, no devuelve nada
 
 
 def contain_most_words(database, text, columna):
@@ -491,7 +277,7 @@ def contain_most_words(database, text, columna):
 
     for index, row in database.iterrows():
         # Normalize and preprocess the row text
-        words = row[columna]
+        words = unidecode(str(row[columna]))
         words = words.replace("(", "").replace(")", "")
         words_words = set(words.lower().split())
 
@@ -614,186 +400,121 @@ def buscar_titulo(database, tag):
 
 
 def compare_tags(artista_coincidencia, titulo_coincidencia, database, tag):
-    coincidencias = {}
-    artista_original, cantor_original = separar_artistas(tag.artist)
-    artista_buscar = unidecode(artista_original).lower().strip()
-    cantor_buscar = unidecode(cantor_original).lower()
+    """
+    Compara las tags del archivo con cada fila candidata de la base de datos.
+    Todo se compara ya formateado (formato_tags), así 'Tango' == 'tango' y
+    '12/03/1941' == '1941-03-12'. Para cada campo solo una etiqueta queda en True:
+    EXACTO (verde), normal (amarillo, parecido), PARCIAL (naranja) o NEGATIVO (rojo).
+    """
+    from src.utils.formato_tags import (formatear_artista, formatear_cantores, formatear_fecha,
+                                        formatear_estilo, normalizar_compositor_autor,
+                                        separar_compositor_autor, formatear_titulo)
+    from src.utils.buscar_artista import separar_orquesta_cantor, normalizar_nombre
 
-    database_length = len(database)
+    idx = database.index
+    serie = lambda valores: pd.Series(list(valores), index=idx, dtype=bool)
+    constante = lambda valor: pd.Series([valor] * len(idx), index=idx, dtype=bool)
+    columna = lambda nombre: database[nombre].astype(str) if nombre in database else pd.Series([""] * len(idx), index=idx)
+    simple = lambda t: unidecode(str(t or "")).lower().strip()
 
-    # Coincidencias para orquesta
-    coincidencias[TagLabels.ORQUESTA_EXACTA] = (database["artista"] == artista_original)
-    coincidencias[TagLabels.ORQUESTA] = pd.Series([artista_coincidencia == 2] * database_length, index=database.index)
-    coincidencias[TagLabels.ORQUESTA_PARCIAL] = pd.Series([artista_coincidencia == 1] * database_length, index=database.index)
-    coincidencias[TagLabels.ORQUESTA_NEGATIVO] = pd.Series([artista_coincidencia == 0] * database_length, index=database.index)
+    for campo in ("year", "genre", "composer", "title"):
+        setattr(tag, campo, getattr(tag, campo, None) or "")
+    orquesta_tag, cantor_tag = separar_orquesta_cantor(tag.artist)
+    c = {}
 
-    # Coincidencias para título
-    coincidencias[TagLabels.TITULO_EXACTO] = pd.Series([titulo_coincidencia == 6] * database_length, index=database.index)
-    coincidencias[TagLabels.TITULO] = pd.Series([titulo_coincidencia in [2,3,4,5]] * database_length, index=database.index)
-    coincidencias[TagLabels.TITULO_PARCIAL] = pd.Series([titulo_coincidencia in [1]] * database_length,
-                                                        index=database.index)  # Coincidencia parcial
-    coincidencias[TagLabels.TITULO_NEGATIVO] = pd.Series([titulo_coincidencia == 0] * database_length, index=database.index)
+    # Orquesta: el nivel lo da la búsqueda del artista
+    c[TagLabels.ORQUESTA_EXACTA] = serie(normalizar_nombre(o) == normalizar_nombre(orquesta_tag)
+                                         and artista_coincidencia >= 2 for o in columna("artista"))
+    c[TagLabels.ORQUESTA] = constante(artista_coincidencia >= 2)
+    c[TagLabels.ORQUESTA_PARCIAL] = constante(artista_coincidencia == 1)
+    c[TagLabels.ORQUESTA_NEGATIVO] = constante(True)
 
-    # Coincidencias para cantor
-    coincidencias[TagLabels.CANTOR_EXACTO] = (database["cantor"] == cantor_original)
-    coincidencias[TagLabels.CANTOR] = database["cantor_min"].str.contains(cantor_buscar, case=False, na=False, regex=False)
-    coincidencias[TagLabels.CANTOR_PARCIAL] = pd.Series([cantor_buscar == ""] * database_length, index=database.index)
-    coincidencias[TagLabels.CANTOR_NEGATIVO] = pd.Series([True] * database_length, index=database.index)
+    # Título: el nivel lo da buscar_titulo
+    c[TagLabels.TITULO_EXACTO] = serie(titulo_coincidencia == 6 or formatear_titulo(t) == formatear_titulo(tag.title)
+                                       for t in columna("titulo"))
+    c[TagLabels.TITULO] = constante(titulo_coincidencia in [2, 3, 4, 5])
+    c[TagLabels.TITULO_PARCIAL] = constante(titulo_coincidencia == 1)
+    c[TagLabels.TITULO_NEGATIVO] = constante(True)
 
-    # Coincidencias para fecha
-    tag.year = tag.year or ""
-    tag.genre = tag.genre or ""
-    tag.composer = tag.composer or ""
+    # Cantor
+    cantor_f = formatear_cantores(cantor_tag)
+    cantores_bd = [formatear_cantores(x) for x in columna("cantor")]
+    c[TagLabels.CANTOR_EXACTO] = serie(x == cantor_f for x in cantores_bd)
+    c[TagLabels.CANTOR] = serie(bool(x and cantor_f) and (simple(cantor_f) in simple(x) or simple(x) in simple(cantor_f))
+                                for x in cantores_bd)
+    c[TagLabels.CANTOR_PARCIAL] = constante(not cantor_f)   # el archivo no dice cantor
+    c[TagLabels.CANTOR_NEGATIVO] = constante(True)
 
-    # Extraer el año
-    if extraer_cuatro_numeros(tag.year):
-        ano = int(extraer_cuatro_numeros(tag.year))
-    else:
-        ano = ""
-
-    # Comprobación de coincidencias exactas
-    coincidencias[TagLabels.FECHA_EXACTA] = database["fecha"] == tag.year
-
-    coincidencias[TagLabels.FECHA] = database["fecha_ano"] == ano
-
-    # Intentar obtener la fecha de fallecimiento del director
+    # Fecha
+    fecha_f = formatear_fecha(tag.year)
+    ano_tag = fecha_f[:4]
     try:
-        fallecimiento_director = fallecimiento[artista_buscar]
+        muerte = fallecimiento[simple(orquesta_tag)]
     except KeyError:
-        # Si el artista no está en la lista, asignamos la fecha actual como indicación de "futuro"
-        fallecimiento_director = datetime.now().date()
-        # print(f"Fallecimiento de {artista_buscar} NO encontrado: {fallecimiento_director}")
+        muerte = None
+    fecha_imposible = bool(muerte and parse_year(fecha_f) and muerte < parse_year(fecha_f))
+    fechas_bd = [formatear_fecha(x) for x in columna("fecha")]
+    c[TagLabels.FECHA_EXACTA] = serie(bool(f) and f == fecha_f for f in fechas_bd)
+    c[TagLabels.FECHA] = serie(bool(f and ano_tag) and f[:4] == ano_tag for f in fechas_bd)
+    c[TagLabels.FECHA_PARCIAL] = serie(not ano_tag or not f or fecha_imposible for f in fechas_bd)
+    c[TagLabels.FECHA_NEGATIVA] = constante(True)
 
+    # Estilo: 'tango vals' y 'vals' son parecidos
+    estilo_f = formatear_estilo(tag.genre)
+    familia = lambda e: "vals" if "vals" in e else "milonga" if "milonga" in e else e
+    estilos_bd = [formatear_estilo(x) for x in columna("estilo")]
+    c[TagLabels.ESTILO_EXACTO] = serie(bool(e) and e == estilo_f for e in estilos_bd)
+    c[TagLabels.ESTILO] = serie(bool(e and estilo_f) and familia(e) == familia(estilo_f) for e in estilos_bd)
+    c[TagLabels.ESTILO_PARCIAL] = serie(not e or not estilo_f for e in estilos_bd)
+    c[TagLabels.ESTILO_NEGATIVO] = constante(True)
 
-    # Intentamos convertir tag.year a una fecha
-    tag_year_date = parse_year(tag.year)
+    # Compositor: parecido si coincide la música o la letra; parcial si alguno no se sabe
+    comp_f = normalizar_compositor_autor(tag.composer)
+    musica_tag, letra_tag = separar_compositor_autor(comp_f)
+    comps_bd = [normalizar_compositor_autor(x) for x in columna("compositor_autor")]
+    desconocido = "Musica: ? - Letra: ?"
 
-    # Si la fecha no es None, realizamos la comparación; si es None, asumimos que no falleció
-    if tag_year_date is not None:
-        Fallecio = fallecimiento_director < tag_year_date
-    else:
-        Fallecio = False  # Si no se puede obtener la fecha, no se considera que falleció
+    def parecido(x):
+        m, l = separar_compositor_autor(x)
+        return bool((m and simple(m) == simple(musica_tag)) or (l and simple(l) == simple(letra_tag)))
 
-    if not tag.year or tag.year == "" or Fallecio:
-        coincidencias[TagLabels.FECHA_PARCIAL] = pd.Series([True] * database_length, index=database.index)
-    else:
-        coincidencias[TagLabels.FECHA_PARCIAL] = pd.Series([False] * database_length, index=database.index)
-    coincidencias[TagLabels.FECHA_NEGATIVA] = database["fecha_ano"] != extraer_cuatro_numeros(tag.year)
+    c[TagLabels.COMPOSITOR_AUTOR_EXACTO] = serie(x == comp_f and x != desconocido for x in comps_bd)
+    c[TagLabels.COMPOSITOR_AUTOR] = serie(parecido(x) for x in comps_bd)
+    c[TagLabels.COMPOSITOR_AUTOR_PARCIAL] = serie(x == desconocido or comp_f == desconocido for x in comps_bd)
+    c[TagLabels.COMPOSITOR_AUTOR_NEGATIVO] = constante(True)
 
-    # Coincidencias para estilo
-    coincidencias[TagLabels.ESTILO_EXACTO] = database["estilo"] == tag.genre
-    coincidencias[TagLabels.ESTILO] = pd.Series([False] * database_length, index=database.index)
-    coincidencias[TagLabels.ESTILO_PARCIAL] = pd.Series([False] * database_length, index=database.index)
-    coincidencias[TagLabels.ESTILO_NEGATIVO] = pd.Series([True] * database_length, index=database.index)
+    # Solo una etiqueta en True por grupo (la mejor)
+    grupos = [
+        [TagLabels.ORQUESTA_EXACTA, TagLabels.ORQUESTA, TagLabels.ORQUESTA_PARCIAL, TagLabels.ORQUESTA_NEGATIVO],
+        [TagLabels.TITULO_EXACTO, TagLabels.TITULO, TagLabels.TITULO_PARCIAL, TagLabels.TITULO_NEGATIVO],
+        [TagLabels.CANTOR_EXACTO, TagLabels.CANTOR, TagLabels.CANTOR_PARCIAL, TagLabels.CANTOR_NEGATIVO],
+        [TagLabels.FECHA_EXACTA, TagLabels.FECHA, TagLabels.FECHA_PARCIAL, TagLabels.FECHA_NEGATIVA],
+        [TagLabels.ESTILO_EXACTO, TagLabels.ESTILO, TagLabels.ESTILO_PARCIAL, TagLabels.ESTILO_NEGATIVO],
+        [TagLabels.COMPOSITOR_AUTOR_EXACTO, TagLabels.COMPOSITOR_AUTOR, TagLabels.COMPOSITOR_AUTOR_PARCIAL,
+         TagLabels.COMPOSITOR_AUTOR_NEGATIVO],
+    ]
+    for exacto, normal, parcial, negativo in grupos:
+        c[normal] = c[normal] & ~c[exacto]
+        c[parcial] = c[parcial] & ~(c[exacto] | c[normal])
+        c[negativo] = c[negativo] & ~(c[exacto] | c[normal] | c[parcial])
 
-    # Coincidencias para compositor_autor
-    coincidencias[TagLabels.COMPOSITOR_AUTOR_EXACTO] = database["compositor_autor"] == tag.composer
-    coincidencias[TagLabels.COMPOSITOR_AUTOR] = pd.Series([False] * database_length, index=database.index)
-    coincidencias[TagLabels.COMPOSITOR_AUTOR_PARCIAL] = pd.Series([False] * database_length, index=database.index)
-    coincidencias[TagLabels.COMPOSITOR_AUTOR_NEGATIVO] = pd.Series([True] * database_length, index=database.index)
+    # Perfecta = escribir las tags de esa fila no cambiaría nada en el archivo
+    actual = {"title": formatear_titulo(tag.title), "artist": formatear_artista(orquesta_tag, cantor_tag),
+              "year": fecha_f, "genre": estilo_f, "composer": str(tag.composer or "").strip()}
 
-    #Ajustes para asegurar que solo uno sea True por cada grupo
-    def ajustar_grupo(grupo):
-        exacto, completo, parcial, negativo = grupo
-        coincidencias[completo] = coincidencias[completo] & ~coincidencias[exacto]
-        coincidencias[parcial] = coincidencias[parcial] & ~(coincidencias[exacto] | coincidencias[completo])
-        coincidencias[negativo] = coincidencias[negativo] & ~(
-                    coincidencias[exacto] | coincidencias[completo] | coincidencias[parcial])
+    def sin_cambios(fila):
+        from src.utils.formato_tags import tags_desde_coincidencia
+        nuevas = tags_desde_coincidencia(fila)
+        return all(not v or v == actual[k] for k, v in nuevas.items())
 
-    # Ajustar todos los grupos
-    ajustar_grupo(
-        [TagLabels.ORQUESTA_EXACTA, TagLabels.ORQUESTA, TagLabels.ORQUESTA_PARCIAL, TagLabels.ORQUESTA_NEGATIVO])
-    ajustar_grupo([TagLabels.TITULO_EXACTO, TagLabels.TITULO, TagLabels.TITULO_PARCIAL, TagLabels.TITULO_NEGATIVO])
-    ajustar_grupo([TagLabels.CANTOR_EXACTO, TagLabels.CANTOR, TagLabels.CANTOR_PARCIAL, TagLabels.CANTOR_NEGATIVO])
-    ajustar_grupo([TagLabels.FECHA_EXACTA, TagLabels.FECHA, TagLabels.FECHA_PARCIAL, TagLabels.FECHA_NEGATIVA])
-    ajustar_grupo([TagLabels.ESTILO_EXACTO, TagLabels.ESTILO, TagLabels.ESTILO_PARCIAL, TagLabels.ESTILO_NEGATIVO])
-    ajustar_grupo([TagLabels.COMPOSITOR_AUTOR_EXACTO, TagLabels.COMPOSITOR_AUTOR, TagLabels.COMPOSITOR_AUTOR_PARCIAL,
-                   TagLabels.COMPOSITOR_AUTOR_NEGATIVO])
-
-    # Check all fields (todo)
-    coincidencias[TagLabels.TODO] = (
-            coincidencias[TagLabels.TITULO_EXACTO] &
-            coincidencias[TagLabels.ORQUESTA_EXACTA] &
-            coincidencias[TagLabels.CANTOR_EXACTO] &
-            coincidencias[TagLabels.FECHA_EXACTA] &
-            coincidencias[TagLabels.ESTILO_EXACTO] &
-            coincidencias[TagLabels.COMPOSITOR_AUTOR_EXACTO]
-    )
-
-    # Determinar si hay un perfect match y encontrar el índice de la coincidencia
-    perfect_match = coincidencias[TagLabels.TODO].any()
-    perfect_match_index = coincidencias[TagLabels.TODO].idxmax() if perfect_match else None
-
-    return coincidencias, perfect_match, perfect_match_index
-
+    c[TagLabels.TODO] = serie(sin_cambios(fila) for _, fila in database.iterrows())
+    perfect_match = bool(c[TagLabels.TODO].any())
+    perfect_match_index = c[TagLabels.TODO].idxmax() if perfect_match else None
+    return c, perfect_match, perfect_match_index
 
 
 def stop_music():
     pygame.mixer.music.stop()
-
-
-def concaternar_autores(compositor, autor):
-    # if not isinstance(compositor, str):
-    #     compositor = "?"
-    # if not isinstance(autor, str):
-    #     autor = "?"
-    if compositor != "" and autor != "":
-        concatenacion = "Musica: " + compositor + " - Letra: " + autor
-    elif compositor != "":
-        concatenacion = "Musica: " + compositor
-    elif autor != "":
-        concatenacion = "Letra: " + autor
-    else:
-        concatenacion = "Desconocido"
-
-    return concatenacion
-
-
-def adjust_text_size(text_frame, max_width_cm, max_font_size=100, min_font_size=10):
-    # Convertir las medidas de cm a puntos (pt)
-    max_width_pt = max_width_cm / 11500
-
-    font_size = max_font_size
-    text = ''.join(run.text for paragraph in text_frame.paragraphs for run in paragraph.runs)
-    text_length = len(text)
-
-    while font_size >= min_font_size:
-        # Aplicar el tamaño de la fuente
-        for paragraph in text_frame.paragraphs:
-            for run in paragraph.runs:
-                run.font.size = Pt(font_size)
-                run.font.name = DEFAULT_FONT_NAME
-
-        # Cálculo del ancho estimado del texto basado en el tamaño de la fuente y la longitud del texto
-        char_width = (DEFAULT_CHAR_WIDTH / 100) * font_size
-        estimated_text_width = char_width * text_length
-
-        # Si el ancho estimado del texto es menor o igual al ancho máximo permitido, se rompe el bucle
-        if estimated_text_width <= max_width_pt:
-            break
-
-        font_size -= 1
-
-    # Aplicar el tamaño de fuente final
-    for paragraph in text_frame.paragraphs:
-        for run in paragraph.runs:
-            run.font.size = Pt(font_size)
-            run.font.name = DEFAULT_FONT_NAME
-
-
-def obtener_intervalo_anos(lista):
-    # Filtramos sublistas vacías y convertimos los años a enteros, ignorando strings vacíos
-    años_int = [int(sublista[0]) for sublista in lista if sublista and sublista[0].isdigit()]
-    # Si la lista resultante está vacía, retornamos un mensaje de error o un valor predeterminado
-    if not años_int:
-        return "No hay años válidos en la lista"
-
-    # Encontramos el año mínimo y máximo
-    año_min = min(años_int)
-    año_max = max(años_int)
-    # Retornamos el string en el formato deseado
-    return f"({año_min} - {año_max})"
-
 
 
 def obtener_autores(lista):
@@ -876,32 +597,6 @@ def leer_tags(ruta_archivo):
     tags = TinyTag.get(ruta_archivo)
     return tags
 
-def find_similar_lines(merged_lines, similarity_threshold=0.97):
-    """
-    Find and print lines in merged_lines that are very similar to each other.
-    Lines are considered similar if their similarity ratio is above the given threshold.
-    """
-    similar_pairs = []
-
-    # Compare each line with every other line
-    for i, line1 in enumerate(merged_lines):
-        for j, line2 in enumerate(merged_lines):
-            if i != j:  # Avoid comparing the same line with itself
-                # Calculate similarity ratio
-                similarity = difflib.SequenceMatcher(None, line1, line2).ratio()
-                if similarity >= similarity_threshold:
-                    # Add the pair if they are similar enough
-                    similar_pairs.append((i, line1, j, line2, similarity))
-
-    if similar_pairs:
-        print("Similar lines found:")
-        for pair in similar_pairs:
-            print(f"Line {pair[0]}: {pair[1]}")
-            print(f"Line {pair[2]}: {pair[3]}")
-            print(f"Similarity: {pair[4]:.2f}\n")
-    else:
-        print("No similar lines found.")
-
 
 from datetime import datetime
 
@@ -930,23 +625,6 @@ def parse_year(tag_year):
     return None
 
 
-
-def extraer_cuatro_numeros(cadena):
-    # Verificar si la entrada es una cadena
-    if not isinstance(cadena, str):
-        return None  # O también puedes lanzar una excepción: raise ValueError("Input must be a string")
-
-    # Usamos la expresión regular \d{4} para encontrar cuatro dígitos consecutivos
-    resultado = re.search(r'\d{4}', cadena)
-    if resultado:
-        return resultado.group()
-    else:
-        return None
-
-def generar_timestamp():
-    return datetime.now().strftime("%Y%m%d%H%M%S")
-
-
 def extract_year(date_str):
     # Define a regular expression pattern to match the year
     pattern = r'\b(\d{4})\b'
@@ -960,45 +638,6 @@ def extract_year(date_str):
     else:
         return ""
 
-
-def convert_date_format(date_str):
-    """
-    Convert a date from DD/MM/YYYY format to YYYY-MM-DD format.
-    Args:
-        date_str (str): Date string in DD/MM/YYYY format.
-    Returns:
-        str: Date string in YYYY-MM-DD format.
-    """
-    pattern_yyyymmdd = r'^[0-9]{4}-(0[0-9]|1[0-2])-(0[0-9]|[12][0-9]|3[01])$'
-
-    if re.match(pattern_yyyymmdd, date_str):
-        if date_str.endswith('-00-00'):
-            # Remove the last three characters
-            return date_str[:-6]
-        if date_str.endswith('-00'):
-            # Remove the last three characters
-            return date_str[:-3]
-        new_date_str = date_str
-    else:
-        # Parse the input date string
-        date_object = datetime.strptime(date_str, "%d/%m/%Y")
-
-        # Convert to the desired format
-        new_date_str = date_object.strftime("%Y-%m-%d")
-
-    return new_date_str
-
-def is_valid_filename(filename):
-    """
-    Check if the filename contains any invalid characters.
-    """
-    # Define invalid characters for Windows
-    invalid_chars = '<>:"/\\|?*'
-
-    if any(char in filename for char in invalid_chars):
-        return False
-
-    return True
 
 def load_m3u_file_helper(m3u_file_path):
     """Helper function to load M3U file with proper encoding handling."""

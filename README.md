@@ -1,15 +1,12 @@
 # TangoTags
 
-Pone bien las tags de las canciones de tango según la base de datos (`data/mergeddb.csv`),
-siempre con el mismo formato, y crea las diapos de las tandas.
+Pone bien las tags de las canciones de tango según la base de datos, siempre con el mismo
+formato, y crea las diapos de las tandas.
 
 ## Arrancar
 
-Doble clic en **`TangoTags.bat`**, o:
-
-```
-.venv\Scripts\python tangotags.py
-```
+- Doble clic en **`TangoTags.bat`** (necesita el `.venv` de este proyecto), o
+- **`dist\TangoTags\TangoTags.exe`** (no necesita Python; se genera con `crear_exe.bat`).
 
 ## Cómo se usa
 
@@ -17,19 +14,25 @@ La barra de arriba sigue el orden de trabajo:
 
 | Paso | Botones | Qué hace |
 |---|---|---|
-| ① Cargar | Archivos · Carpeta · Playlist · MusicBee | Carga canciones y las busca en la base de datos |
-| ② Revisar | Marcar sugeridas · Desmarcar todo · Buscar en BD · Parar música | A la izquierda las tags del archivo, a la derecha las coincidencias **ya con el formato final**. Marca **Usar** en la buena (las sugeridas vienen marcadas). Puedes editar las celdas de la BD; doble clic en una canción sin coincidencias para buscarla a mano. ▶ para escuchar |
-| ③ Aplicar | Aplicar tags | Muestra antes/después y, si confirmas, escribe las tags |
-| ④ Diapos | Crear diapos · Control diapos | Crear la presentación de las tandas desde una playlist / pasar diapos durante la milonga |
+| ① Cargar | Archivos · Carpeta · Playlist · MusicBee | Carga canciones y las busca en la base de datos. Las ya revisadas se saltan (*Opciones*) |
+| ② Revisar | Marcar sugeridas · Desmarcar todo · Buscar en BD · Parar música | A la izquierda las tags del archivo, a la derecha las coincidencias **ya con el formato final**. Marca **Usar** en la buena (las sugeridas vienen marcadas). Se pueden editar las celdas de la BD; doble clic en una canción sin coincidencias para buscarla a mano. ▶ para escuchar |
+| ③ Aplicar | Aplicar tags · Deshacer | Muestra antes/después y, si confirmas, escribe. Siempre guarda antes una copia para poder **deshacer** |
+| ④ Diapos | Crear diapos · Control diapos | Presentación de las tandas desde una playlist (con vista previa) / pasar diapos durante la milonga |
 
-Los filtros de **Mostrar** ocultan grupos (por ejemplo las *Perfectas*, que ya están bien).
+**Colores** de la comparación: verde = igual, amarillo = parecido (p. ej. mismo año), naranja =
+parcial (falta el dato), rojo = distinto.
+
 Menú **Ayuda → Cómo se usa** (F1) tiene la misma explicación dentro de la app.
-
 Si cargas desde MusicBee, después de aplicar haz en MusicBee *Herramientas → Volver a leer tags*.
+
+### Deshacer
+
+Cada *Aplicar tags* guarda `output/backups/tags_FECHA.csv` con el valor anterior de cada campo.
+**Deshacer** (Ctrl+Z) restaura el último; *Archivo → Historial de cambios* cualquiera anterior.
 
 ## Formato de las tags
 
-Definido en un solo sitio: [`src/utils/formato_tags.py`](src/utils/formato_tags.py) (con tests en `tests/utils/formato_tags_test.py`).
+Definido en un solo sitio: [`src/utils/formato_tags.py`](src/utils/formato_tags.py).
 
 | Tag | Formato | Ejemplo |
 |---|---|---|
@@ -38,26 +41,39 @@ Definido en un solo sitio: [`src/utils/formato_tags.py`](src/utils/formato_tags.
 | Género | minúsculas | `tango`, `tango vals`, `tango milonga` |
 | Compositor | `Musica: X - Letra: Y`, siempre (`?` si no se sabe) | `Musica: Horacio Pettorossi - Letra: Horacio Pettorossi` |
 
-Si un dato no se conoce en la base de datos (vacío, `?`, `-`…) esa tag no se toca. El compositor se escribe siempre:
+Si un dato no se conoce en la base de datos esa tag no se toca. El compositor se escribe siempre:
 `Musica: ? - Letra: ?` es la marca de que la canción ya pasó por la base de datos.
 Formatos de audio: mp3, flac, m4a, wav, aiff, wma.
+
+La búsqueda del artista entiende `Orquesta / Cantor`, `Orquesta; Cantor`, `feat.`,
+`Apellido, Nombre` y "Orquesta Típica de …", sin importar mayúsculas ni acentos
+([`src/utils/buscar_artista.py`](src/utils/buscar_artista.py)).
+
+## Base de datos
+
+- `data/mergeddb.csv` – la base original (El Recodo + tango.info).
+- `data/tangodb.csv` – la que usa la app: `mergeddb.csv` limpia por
+  [`src/utils/mejorar_bd.py`](src/utils/mejorar_bd.py) (una sola grafía por orquesta/cantor,
+  compositores y fechas completados solo cuando no hay duda).
+  Se regenera con *Archivo → Regenerar base de datos limpia* o `python -m src.utils.mejorar_bd`.
+- `output/informe_fechas_dudosas.csv` – grabaciones cuya fecha no se pudo arreglar.
 
 ## Configuración
 
 - `config.ini` → ruta de Dropbox (`music_path`).
-- `src/config/config.py` → base de datos (`DB_CSV_PATH`), datos por defecto de la milonga para las diapos, etc.
+- `src/config/config.py` → datos por defecto de la milonga para las diapos, carpetas, etc.
 
-## Tests
+## Estructura
 
 ```
-run_all_test.bat
+tangotags.py               arranque de la app
+src/ui/                    ventanas (principal, crear diapos)
+src/diapos/generador.py    creación del PowerPoint
+src/utils/                 formato de tags, búsqueda, historial, base de datos
+control_slides.py          control de diapos (también abre suelto / control_slides.exe)
+herramientas/              scripts sueltos: descargar tango.info, preparar fotos de orquestas
+tests/                     run_all_test.bat
 ```
-
-## Otros scripts
-
-- `crear_diapos.py` – creador de diapos (lo abre el botón *Crear diapos*).
-- `control_slides.py` / `control_slides.exe` – control de diapos en la milonga.
-- `tangotags_tk_antiguo.py` – la versión vieja en Tkinter (ya no hace falta, se puede borrar).
 
 ## Git
 

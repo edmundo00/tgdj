@@ -1,6 +1,7 @@
-# src/constants.py or src/enums.py
-from enum import Enum
+from enum import Enum, unique
 
+
+@unique  # dos etiquetas con el mismo valor serían la misma (pasó con CANTOR_NEGATIVO)
 class TagLabels(Enum):
     TITULO_EXACTO = 'titulo_exacto'
     TITULO = 'titulo'
@@ -13,7 +14,7 @@ class TagLabels(Enum):
     CANTOR_EXACTO = 'cantor_exacto'
     CANTOR = 'cantor'
     CANTOR_PARCIAL = 'cantor_parcial'
-    CANTOR_NEGATIVO = 'cantor_parcial'
+    CANTOR_NEGATIVO = 'cantor_negativo'
     FECHA_EXACTA = 'fecha_exacta'
     FECHA = 'fecha'
     FECHA_PARCIAL = 'fecha_parcial'
