@@ -290,6 +290,9 @@ class tango_tags_qt_ventana(QMainWindow):
         m_archivo.addAction("Canciones marcadas «No tocar»…", self.ver_no_tocar)
         m_archivo.addAction("Grafías de nombres (di Sarli / Di Sarli…)…", self.editar_grafias)
         m_archivo.addSeparator()
+        m_archivo.addAction("Estado de la colección…", self.abrir_estado)
+        m_archivo.addAction("Duplicados…", lambda: self.abrir_duplicados([]))
+        m_archivo.addSeparator()
         m_archivo.addAction("Salir", self.close)
 
         m_opciones = mb.addMenu("&Opciones")
@@ -891,6 +894,29 @@ class tango_tags_qt_ventana(QMainWindow):
                 QApplication.restoreOverrideCursor()
             QMessageBox.information(self, "Grafías guardadas",
                                     "Guardadas. Vuelve a cargar las canciones para ver las sugerencias con las grafías nuevas.")
+
+    def abrir_estado(self):
+        from src.ui.ventana_estado import VentanaEstado
+        if getattr(self, "ventana_estado", None) is None:
+            self.ventana_estado = VentanaEstado(self, revisar_carpeta=self.revisar_carpeta,
+                                                abrir_duplicados=self.abrir_duplicados)
+        self.ventana_estado.show()
+        self.ventana_estado.raise_()
+        self.ventana_estado.activateWindow()
+
+    def abrir_duplicados(self, colecciones):
+        from src.ui.ventana_duplicados import VentanaDuplicados
+        self.ventana_duplicados = VentanaDuplicados(self, self.reproductor, colecciones)
+        self.ventana_duplicados.show()
+        self.ventana_duplicados.raise_()
+
+    def revisar_carpeta(self, carpeta):
+        rutas = []
+        for raiz, _, ficheros in os.walk(carpeta):
+            rutas += [os.path.join(raiz, f) for f in sorted(ficheros) if f.lower().endswith(EXTENSIONES_AUDIO)]
+        self.raise_()
+        self.activateWindow()
+        self.procesar_archivos([(r, None) for r in rutas], origen=carpeta)
 
     def ver_no_tocar(self):
         DialogoNoTocar(self).exec_()

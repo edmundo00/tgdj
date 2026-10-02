@@ -93,3 +93,6 @@ venv.bak/
 
 # Resultados generados por la app (CSV de coincidencias, backups de tags, presentaciones)
 output/
+
+# Caché del estado de la colección (una por ordenador, se regenera sola)
+data/cache_coleccion_*.csv
