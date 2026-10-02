@@ -13,7 +13,7 @@ import subprocess
 
 import pandas as pd
 import pygame
-from PyQt5.QtCore import Qt, QSize, QSettings, QThread
+from PyQt5.QtCore import Qt, QSize, QSettings, QThread, QEvent
 from PyQt5.QtGui import QIcon, QColor, QBrush, QFont
 from PyQt5.QtWidgets import (
     QMainWindow, QAction, QToolBar, QTableWidget, QTableWidgetItem, QVBoxLayout, QHBoxLayout,
@@ -33,6 +33,7 @@ from src.config.database import Database
 from src.ui.file_to_find_qt import FILETOFINDQT
 from src.utils.MusicBeeLibraryTools import MusicBeeLibraryTools
 from src.utils import historial
+from src.ui.reproductor import Reproductor, BarraSonando
 from src.utils.formato_tags import (
     tags_desde_coincidencia, combinar_compositor, formatear_cantores, formatear_fecha, formatear_estilo,
     normalizar_compositor_autor, formatear_titulo,
@@ -95,7 +96,7 @@ Las sugeridas ya vienen marcadas.</li>
 <li>Puedes <b>editar</b> cualquier celda de la parte BD antes de aplicar.</li>
 <li>Si no hay coincidencias, haz <b>doble clic</b> en la parte BD para buscar a mano. El buscador (Ctrl+F) usa una sola caja: palabras en cualquier orden, años como 1944, 1940-1945 o 1940s; puede quedarse abierto y sigue a la canción seleccionada. Si ves un error en la base de datos, <i>Corregir datos…</i> en su ficha.</li>
 <li>Doble clic en la parte del archivo muestra la ruta y permite abrir la carpeta.</li>
-<li>Clic en ▶ para escuchar; <i>Parar</i> detiene el audio.</li>
+<li>Clic en ▶ para escuchar (no cambia la fila seleccionada). Lo que suena se ve en verde con ■; clic otra vez para parar, o <b>■ Parar</b> abajo a la derecha, o Esc.</li>
 </ul></li>
 <li><b>Aplicar tags</b>: muestra el antes/después de cada archivo y pide confirmación.
 Antes de escribir se guarda una copia de las tags anteriores: <b>Deshacer</b> (Ctrl+Z) las
@@ -179,6 +180,12 @@ class tango_tags_qt_ventana(QMainWindow):
         self.tabla.hide()
         self.setCentralWidget(central)
 
+        self.reproductor = Reproductor(self)
+        self.reproductor.cambiado.connect(self.pintar_sonando)
+        self.reproductor.error.connect(lambda m: self.statusBar().showMessage(m, 8000))
+        self.statusBar().addPermanentWidget(BarraSonando(self.reproductor))
+        self.celdas_audio = {}      # (fila, col) -> (clave, ruta, descripción, fondo)
+
         self.progress_bar = QProgressBar()
         self.progress_bar.setMaximumWidth(300)
         self.progress_bar.hide()
@@ -240,7 +247,7 @@ class tango_tags_qt_ventana(QMainWindow):
         tb.addAction(self.accion("Buscar\nen BD", self.icono("searchdb"), self.buscar_en_bd,
                                  "Buscar en la base de datos. Si hay una canción seleccionada, "
                                  "puedes asignarle el resultado", "Ctrl+F"))
-        tb.addAction(self.accion("Parar\nmúsica", self.icono("stop"), self.stop_music,
+        tb.addAction(self.accion("Parar\nmúsica", self.icono(estandar=QStyle.SP_MediaStop), self.stop_music,
                                  "Detener la reproducción", "Esc"))
         tb.addSeparator()
 
@@ -342,9 +349,9 @@ class tango_tags_qt_ventana(QMainWindow):
         for col in range(COL_USAR, len(CABECERAS)):
             t.horizontalHeaderItem(col).setBackground(cabecera_bd)
             t.horizontalHeaderItem(col).setToolTip("Datos de la base de datos (con el formato final)")
+        t.viewport().installEventFilter(self)
         t.itemChanged.connect(self.on_item_changed)
         t.itemSelectionChanged.connect(self.seleccion_cambiada)
-        t.cellClicked.connect(self.on_cell_clicked)
         t.cellDoubleClicked.connect(self.on_cell_double_clicked)
         return t
 
@@ -572,6 +579,7 @@ class tango_tags_qt_ventana(QMainWindow):
             cb.setText(f"{CATEGORIAS[clave][1]} ({cuenta.get(clave, 0)})")
 
     def borrar_todo(self):
+        self.celdas_audio = {}
         self.archivos = []
         self.fila_a_archivo = {}
         self.tabla.setRowCount(0)
@@ -605,6 +613,7 @@ class tango_tags_qt_ventana(QMainWindow):
         self._rellenando = True
         self.tabla.setUpdatesEnabled(False)
         self.tabla.clearSpans()
+        self.celdas_audio = {}
         self.tabla.setRowCount(0)
         self.tabla.setRowCount(filas)
         self.fila_a_archivo = {}
@@ -675,9 +684,9 @@ class tango_tags_qt_ventana(QMainWindow):
                 celda.setText(f"{actuales[clave][:4]} (CD)")
                 celda.setToolTip(f"{motivo}.\nNo se usa para elegir la grabación.")
             self.tabla.setItem(fila, col, celda)
-        play = self.item("▶", fondo, tooltip="Escuchar el archivo")
-        play.setTextAlignment(Qt.AlignCenter)
-        self.tabla.setItem(fila, COL_PLAY, play)
+        titulo = actuales["title"] or os.path.basename(ruta)
+        self.celda_audio(fila, COL_PLAY, ("archivo", ruta), ruta, f"Tu archivo: {titulo} — {actuales['artist']}",
+                         fondo, "Escuchar tu archivo")
 
     def pintar_sin_coincidencias(self, fila, fondo):
         for col in range(COL_USAR, len(CABECERAS)):
@@ -717,12 +726,15 @@ class tango_tags_qt_ventana(QMainWindow):
                 celda.setToolTip(f"{tip}\n💿 Encaja con el resto del disco ({disco['texto']})")
             self.tabla.setItem(fila, col, celda)
 
-        for col, campo in ((COL_BD_PLAY30, "audio30"), (COL_BD_PLAY10, "audio10")):
-            hay_audio = bool(texto(coincidencia.get(campo, "")).strip())
-            it = self.item("▶" if hay_audio else "", fondo,
-                           tooltip="Escuchar el fragmento de la base de datos" if hay_audio else "")
-            it.setTextAlignment(Qt.AlignCenter)
-            self.tabla.setItem(fila, col, it)
+        for col, campo, duracion in ((COL_BD_PLAY30, "audio30", "30 s"), (COL_BD_PLAY10, "audio10", "10 s")):
+            enlace = texto(coincidencia.get(campo, "")).strip()
+            if enlace:
+                descripcion = (f"BD {duracion}: {texto(coincidencia.get('titulo'))} — "
+                               f"{texto(coincidencia.get('artista'))} ({texto(coincidencia.get('fecha')) or 'sin fecha'})")
+                self.celda_audio(fila, col, ("bd", enlace), utils.link_to_music(enlace), descripcion, fondo,
+                                 f"Escuchar el fragmento de {duracion} de la base de datos")
+            else:
+                self.tabla.setItem(fila, col, self.item("", fondo, tooltip="Sin fragmento en la base de datos"))
 
     def on_item_changed(self, item):
         if self._rellenando or item.row() not in self.fila_a_archivo:
@@ -747,17 +759,45 @@ class tango_tags_qt_ventana(QMainWindow):
             archivo.coincidencias.iat[pos, columna] = item.text()
             item.setToolTip(item.text())
 
-    def on_cell_clicked(self, fila, col):
-        if fila not in self.fila_a_archivo:
+    def eventFilter(self, objeto, evento):
+        """Clic en ▶/■: reproduce o para sin seleccionar la fila."""
+        if objeto is self.tabla.viewport() and evento.type() in (QEvent.MouseButtonPress, QEvent.MouseButtonDblClick) \
+                and evento.button() == Qt.LeftButton:
+            indice = self.tabla.indexAt(evento.pos())
+            celda = self.celdas_audio.get((indice.row(), indice.column()))
+            if celda:
+                if evento.type() == QEvent.MouseButtonPress:
+                    clave, ruta, descripcion, _ = celda
+                    self.reproductor.alternar(clave, ruta, descripcion)
+                return True
+        return super().eventFilter(objeto, evento)
+
+    def celda_audio(self, fila, col, clave, ruta, descripcion, fondo, ayuda):
+        """Pinta una celda ▶ (o ■ si es lo que está sonando) y la registra para el clic."""
+        self.celdas_audio[(fila, col)] = (clave, ruta, descripcion, fondo)
+        it = self.item("", fondo, tooltip=ayuda)
+        it.setTextAlignment(Qt.AlignCenter)
+        self.tabla.setItem(fila, col, it)
+        self.pintar_celda_audio(fila, col)
+
+    def pintar_celda_audio(self, fila, col):
+        clave, _, descripcion, fondo = self.celdas_audio[(fila, col)]
+        it = self.tabla.item(fila, col)
+        if it is None:
             return
-        archivo, pos = self.fila_a_archivo[fila]
-        if col == COL_PLAY:
-            self.reproducir_audio(archivo.ruta_archivo)
-        elif col in (COL_BD_PLAY30, COL_BD_PLAY10) and pos is not None:
-            enlace = texto(self.coincidencias(archivo).iloc[pos].get(
-                "audio30" if col == COL_BD_PLAY30 else "audio10", "")).strip()
-            if enlace:
-                self.reproducir_audio(utils.link_to_music(enlace))
+        suena = self.reproductor.sonando(clave)
+        it.setText("■" if suena else "▶")
+        it.setBackground(QColor("#66bb6a") if suena else fondo)
+        it.setForeground(QBrush(QColor("white" if suena else "#333")))
+        it.setFont(QFont("", -1, QFont.Bold if suena else QFont.Normal))
+        it.setToolTip(f"Sonando: {descripcion}\nClic para parar" if suena else f"Escuchar: {descripcion}")
+
+    def pintar_sonando(self, clave):
+        previo = self._rellenando
+        self._rellenando = True
+        for fila, col in self.celdas_audio:
+            self.pintar_celda_audio(fila, col)
+        self._rellenando = previo
 
     def on_cell_double_clicked(self, fila, col):
         if fila not in self.fila_a_archivo:
@@ -923,8 +963,7 @@ class tango_tags_qt_ventana(QMainWindow):
             self.buscador = VentanaBuscador(
                 self, obtener_indice=self.data_store.get_indice_busqueda, obtener_bd=self.data_store.get_db,
                 usar=self.asignar_desde_bd,
-                reproducir=lambda enlace: self.reproducir_audio(utils.link_to_music(enlace)),
-                parar=self.stop_music, recargar_bd=self.recargar_bd)
+                reproductor=self.reproductor, recargar_bd=self.recargar_bd)
         self.buscador.set_destino(archivo, buscar_por_defecto=para_cancion)
         self.buscador.show()
         self.buscador.raise_()
@@ -961,20 +1000,8 @@ class tango_tags_qt_ventana(QMainWindow):
         self.statusBar().showMessage(f"Asignada «{fila['titulo']}» ({fila['artista']}). Pulsa Aplicar tags para escribirla.")
 
     # ------------------------------------------------------------------ audio y diapos
-    def reproducir_audio(self, ruta):
-        try:
-            pygame.mixer.music.load(ruta)
-            pygame.mixer.music.play()
-            self.statusBar().showMessage(f"Reproduciendo: {os.path.basename(ruta)}  (Esc para parar)")
-        except Exception as e:
-            self.statusBar().showMessage(f"No se puede reproducir {os.path.basename(ruta)}: {e}")
-
     def stop_music(self):
-        try:
-            pygame.mixer.music.stop()
-            self.statusBar().showMessage("Música detenida")
-        except Exception as e:
-            self.statusBar().showMessage(f"Error deteniendo la música: {e}")
+        self.reproductor.parar()
 
     def abrir_crear_diapos(self):
         from src.ui.ventana_diapos import VentanaDiapos

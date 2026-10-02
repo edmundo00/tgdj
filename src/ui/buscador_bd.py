@@ -60,8 +60,9 @@ def resaltar(texto, palabras):
 
 
 class ModeloResultados(QAbstractTableModel):
-    def __init__(self):
+    def __init__(self, reproductor):
         super().__init__()
+        self.reproductor = reproductor
         self.df = pd.DataFrame()
         self.palabras = []
 
@@ -89,7 +90,10 @@ class ModeloResultados(QAbstractTableModel):
         if campo == "fuentes":
             return " · ".join(NOMBRES_FUENTE.get(f, f) for f in fila["fuentes"])
         if campo == "audio":
-            return "▶" if fila["audio30"] or fila["audio10"] else ""
+            if not (fila["audio30"] or fila["audio10"]):
+                return ""
+            suena = any(self.reproductor.sonando(("bd", fila[c])) for c in ("audio30", "audio10") if fila[c])
+            return "■" if suena else "▶"
         return str(fila[campo] or "")
 
     def data(self, indice, rol=Qt.DisplayRole):
@@ -110,6 +114,8 @@ class ModeloResultados(QAbstractTableModel):
             if not valor:
                 vacio = {"cantor": "instrumental", "fecha": "sin fecha", "musica": "?", "letra": "?"}.get(campo, "")
                 return f"<i style='color:{GRIS}'>{vacio}</i>"
+            if campo == "audio" and valor == "■":
+                return "<b style='color:white; background:#43a047'>&nbsp;■&nbsp;</b>"
             if campo == "fuentes":
                 return f"<span style='color:{GRIS}'>{html.escape(valor)}</span>"
             if campo in RESALTABLES:
@@ -117,7 +123,7 @@ class ModeloResultados(QAbstractTableModel):
             return html.escape(valor)
         if rol == Qt.ToolTipRole:
             if campo == "audio":
-                return "Clic para escuchar el fragmento" if valor else None
+                return {"▶": "Clic para escuchar el fragmento", "■": "Sonando: clic para parar"}.get(valor)
             return valor or None
         if rol == Qt.TextAlignmentRole and campo == "audio":
             return Qt.AlignCenter
@@ -177,12 +183,13 @@ class VentanaBuscador(QWidget):
     reproducir(enlace) / parar(): audio de los fragmentos de la base de datos.
     """
 
-    def __init__(self, parent, obtener_indice, obtener_bd, usar, reproducir, parar, recargar_bd):
+    def __init__(self, parent, obtener_indice, obtener_bd, usar, reproductor, recargar_bd):
         super().__init__(parent, Qt.Window)
         self.recargar_bd = recargar_bd
+        self.reproductor = reproductor
         self.setWindowTitle("Buscar en la base de datos")
         self.obtener_indice, self.obtener_bd = obtener_indice, obtener_bd
-        self.usar_callback, self.reproducir, self.parar = usar, reproducir, parar
+        self.usar_callback = usar
         self.indice = None
         self.destino = None
         self.settings = QSettings("TangoTags", "TangoTags")
@@ -252,7 +259,7 @@ class VentanaBuscador(QWidget):
         lay.addWidget(self.info)
 
         # --- Resultados
-        self.modelo = ModeloResultados()
+        self.modelo = ModeloResultados(reproductor)
         self.tabla = QTableView()
         self.tabla.setModel(self.modelo)
         self.tabla.setItemDelegate(DelegadoResaltado(self.tabla))
@@ -276,7 +283,8 @@ class VentanaBuscador(QWidget):
             else:
                 h.setSectionResizeMode(col, QHeaderView.ResizeToContents)
         self.tabla.selectionModel().selectionChanged.connect(self.mostrar_detalle)
-        self.tabla.doubleClicked.connect(lambda _: self.enter_tabla())
+        self.tabla.doubleClicked.connect(
+            lambda i: None if COLUMNAS[i.column()][0] == "audio" else self.enter_tabla())
         self.tabla.clicked.connect(self.clic_tabla)
 
         # --- Ficha de la grabación seleccionada
@@ -303,7 +311,8 @@ class VentanaBuscador(QWidget):
         self.boton_corregir.clicked.connect(self.corregir)
         self.boton_30.clicked.connect(lambda: self.escuchar("audio30"))
         self.boton_10.clicked.connect(lambda: self.escuchar("audio10"))
-        self.boton_parar.clicked.connect(lambda: self.parar())
+        self.boton_parar.clicked.connect(self.reproductor.parar)
+        self.reproductor.cambiado.connect(self.sonando_cambiado)
         self.boton_copiar.clicked.connect(self.copiar)
         for b in (self.boton_usar, self.boton_30, self.boton_10, self.boton_parar, self.boton_copiar,
                   self.boton_corregir):
@@ -441,6 +450,7 @@ class VentanaBuscador(QWidget):
         self.boton_10.setEnabled(hay and bool(g["audio10"]))
         self.boton_copiar.setEnabled(hay)
         self.boton_corregir.setEnabled(hay)
+        self.sonando_cambiado(self.reproductor.clave)
         if not hay:
             self.texto_ficha.setText(f"<span style='color:{GRIS}'>Selecciona una grabación para ver su ficha.</span>")
             return
@@ -503,7 +513,21 @@ class VentanaBuscador(QWidget):
     def escuchar(self, campo):
         g = self.grabacion_actual()
         if g is not None and g[campo]:
-            self.reproducir(g[campo])
+            from src.utils.utils import link_to_music
+            duracion = "30 s" if campo == "audio30" else "10 s"
+            self.reproductor.alternar(("bd", g[campo]), link_to_music(g[campo]),
+                                      f"BD {duracion}: {g['titulo']} — {g['orquesta']} ({g['fecha'] or 'sin fecha'})")
+
+    def sonando_cambiado(self, clave):
+        """Refresca ■/▶ en la columna Audio y en los botones de la ficha."""
+        col = [c for c, _ in COLUMNAS].index("audio")
+        if self.modelo.rowCount():
+            self.modelo.dataChanged.emit(self.modelo.index(0, col), self.modelo.index(self.modelo.rowCount() - 1, col))
+        g = self.grabacion_actual()
+        for boton, campo, duracion in ((self.boton_30, "audio30", "30 s"), (self.boton_10, "audio10", "10 s")):
+            suena = g is not None and bool(g[campo]) and self.reproductor.sonando(("bd", g[campo]))
+            boton.setText(f"■  Parar ({duracion})" if suena else f"▶  Escuchar {duracion}")
+            boton.setStyleSheet("background:#43a047; color:white; font-weight:bold;" if suena else "")
 
     def corregir(self):
         g = self.grabacion_actual()
