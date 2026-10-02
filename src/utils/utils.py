@@ -717,15 +717,25 @@ def extract_year(date_str):
         return ""
 
 
+def leer_lineas_m3u(m3u_file_path):
+    """
+    Todas las líneas de la playlist (sin saltos de línea) y la codificación usada.
+    'utf-8-sig' quita la marca BOM que pone VirtualDJ: sin eso la primera línea '#EXTVDJ:…'
+    no empieza por '#' y se tomaba como si fuera una canción.
+    """
+    for codificacion in ("utf-8-sig", "cp1252"):
+        try:
+            with open(m3u_file_path, "r", encoding=codificacion) as file:
+                return file.read().splitlines(), codificacion
+        except UnicodeDecodeError:
+            continue
+    with open(m3u_file_path, "r", encoding="cp1252", errors="ignore") as file:
+        return file.read().splitlines(), "cp1252"
+
+
 def load_m3u_file_helper(m3u_file_path):
-    """Helper function to load M3U file with proper encoding handling."""
-    try:
-        # Try to load the file with UTF-8 encoding
-        with open(m3u_file_path, 'r', encoding='utf-8') as file:
-            return [line.strip() for line in file if line.strip() and not line.startswith("#")]
-    except UnicodeDecodeError:
-        # Fallback to the system's default encoding if UTF-8 fails
-        with open(m3u_file_path, 'r', encoding='cp1252', errors='ignore') as file:
-            return [line.strip() for line in file if line.strip() and not line.startswith("#")]
+    """Rutas de las canciones de una playlist .m3u/.m3u8 (sin comentarios ni líneas vacías)."""
+    lineas, _ = leer_lineas_m3u(m3u_file_path)
+    return [l.strip() for l in lineas if l.strip() and not l.strip().startswith("#")]
 
 

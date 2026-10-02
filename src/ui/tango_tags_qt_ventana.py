@@ -294,6 +294,7 @@ class tango_tags_qt_ventana(QMainWindow):
         m_archivo.addSeparator()
         m_archivo.addAction("Estado de la colección…", self.abrir_estado)
         m_archivo.addAction("Duplicados…", lambda: self.abrir_duplicados([]))
+        m_archivo.addAction("Reparar playlists…", self.abrir_reparar_playlists)
         m_archivo.addSeparator()
         m_archivo.addAction("Salir", self.close)
 
@@ -905,6 +906,39 @@ class tango_tags_qt_ventana(QMainWindow):
         self.ventana_estado.show()
         self.ventana_estado.raise_()
         self.ventana_estado.activateWindow()
+
+    def abrir_reparar_playlists(self):
+        from src.ui.ventana_playlists import VentanaPlaylists
+        if getattr(self, "ventana_playlists", None) is None:
+            self.ventana_playlists = VentanaPlaylists(self, self.reproductor, self.indice_coleccion)
+        self.ventana_playlists.show()
+        self.ventana_playlists.raise_()
+        self.ventana_playlists.analizar()
+
+    def indice_coleccion(self):
+        """Índice de tu colección para buscar canciones movidas (usa la caché del Estado de la colección)."""
+        from src.utils import coleccion, playlists
+        from src.ui.ventana_estado import raiz_musica
+        if getattr(self, "_indice_coleccion", None) is not None:
+            return self._indice_coleccion        # ya preparado en esta sesión
+        if not os.path.exists(coleccion.CACHE):
+            if QMessageBox.question(
+                    self, "Índice de la colección",
+                    "Para buscar las canciones hay que mirar toda tu música una vez (unos minutos la primera vez; "
+                    "luego se recuerda). ¿Hacerlo ahora?") != QMessageBox.Yes:
+                return None
+            self.empezar_progreso(1)
+            try:
+                coleccion.escanear(raiz_musica(), progreso=lambda h, t, l: (
+                    self.progress_bar.setMaximum(t), self.progress_bar.setValue(h), QApplication.processEvents()),
+                    cancelado=lambda: self._cancelado)
+            finally:
+                self.terminar_progreso()
+        else:
+            coleccion.escanear(raiz_musica())      # al día con lo último (rápido con la caché)
+        df = pd.read_csv(coleccion.CACHE, sep=";", na_filter=False, dtype=str, encoding="utf-8")
+        self._indice_coleccion = playlists.IndiceColeccion(df)
+        return self._indice_coleccion
 
     def abrir_duplicados(self, colecciones):
         from src.ui.ventana_duplicados import VentanaDuplicados
