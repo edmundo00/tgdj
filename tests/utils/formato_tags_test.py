@@ -13,6 +13,10 @@ class FormatoFechaTest(unittest.TestCase):
         self.assertEqual(formatear_fecha("12-03-1941"), "1941-03-12")
         self.assertEqual(formatear_fecha("19410312"), "1941-03-12")
 
+    def test_fechas_con_espacios_o_puntos(self):
+        self.assertEqual(formatear_fecha("2005 07 11"), "2005-07-11")
+        self.assertEqual(formatear_fecha("11.07.2005"), "2005-07-11")
+
     def test_fechas_parciales(self):
         self.assertEqual(formatear_fecha("1941"), "1941")
         self.assertEqual(formatear_fecha("1953-10"), "1953-10")
@@ -67,6 +71,16 @@ class FormatoCompositorTest(unittest.TestCase):
 
     def test_separar(self):
         self.assertEqual(separar_compositor_autor("Musica: A - Letra: B"), ("A", "B"))
+        self.assertEqual(separar_compositor_autor("música: A - letra: B"), ("A", "B"))
+        self.assertEqual(separar_compositor_autor("Música y letra: Enrique Santos Discépolo"),
+                         ("Enrique Santos Discépolo", "Enrique Santos Discépolo"))
+        self.assertEqual(separar_compositor_autor(
+            "Aut: Enrique Pedro Maroni, Pascual Contursi, Com: Gerardo Matos Rodríguez"),
+            ("Gerardo Matos Rodríguez", "Enrique Pedro Maroni, Pascual Contursi"))
+        self.assertEqual(separar_compositor_autor("Com: Juan Maglio"), ("Juan Maglio", ""))
+        self.assertEqual(separar_compositor_autor("Angel Villoldo - Enrique Santos Discépolo"),
+                         ("Angel Villoldo y Enrique Santos Discépolo", ""))
+        self.assertEqual(separar_compositor_autor("A. Gobbi/J. Pérez"), ("A. Gobbi y J. Pérez", ""))
         self.assertEqual(separar_compositor_autor("Ángel Villoldo"), ("Ángel Villoldo", ""))
 
 

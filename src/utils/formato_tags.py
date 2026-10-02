@@ -72,7 +72,7 @@ def formatear_fecha(fecha):
     # Quitar partes a cero: 1941-00-00 -> 1941, 1941-03-00 -> 1941-03
     texto = re.sub(r"(-00)+$", "", texto)
 
-    for formato in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y%m%d", "%Y/%m/%d"):
+    for formato in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y%m%d", "%Y/%m/%d", "%Y %m %d", "%Y.%m.%d", "%d.%m.%Y"):
         try:
             return datetime.strptime(texto, formato).strftime("%Y-%m-%d")
         except ValueError:
@@ -102,14 +102,26 @@ def formatear_compositor(compositor="", letrista=""):
 
 
 def separar_compositor_autor(texto):
-    """'Musica: X - Letra: Y' -> ('X', 'Y'). Texto sin ese formato se toma como compositor."""
+    """
+    Devuelve (música, letra). Entiende:
+      'Musica: X - Letra: Y' (también 'música:'/'Música:')   'Música y letra: X'
+      'Aut: Y, Com: X' / 'Com: X'  (Com = música, Aut = letra)
+    Varios nombres sin decir quién hizo qué ('A - B', 'A/B', 'A & B') se toman como música 'A y B'.
+    """
     texto = _limpio(texto)
     if not texto:
         return "", ""
-    m = re.fullmatch(r"(?:Musica:\s*(.*?))?\s*(?:-?\s*Letra:\s*(.*))?", texto, flags=re.IGNORECASE)
+    m = re.fullmatch(r"(?:(?:letra y m[uú]sica|m[uú]sica y letra):\s*)(.+)", texto, flags=re.IGNORECASE)
+    if m:
+        return _limpio(m.group(1)), _limpio(m.group(1))
+    m = re.fullmatch(r"(?:M[uú]sica:\s*(.*?))?\s*(?:-?\s*Letra:\s*(.*))?", texto, flags=re.IGNORECASE)
     if m and (m.group(1) is not None or m.group(2) is not None):
         return _limpio(m.group(1)), _limpio(m.group(2))
-    return texto, ""
+    if re.search(r"\b(?:Com|Aut)\s*:", texto, flags=re.IGNORECASE):
+        partes = dict(re.findall(r"\b(Com|Aut)\s*:\s*(.*?)(?=,?\s*\b(?:Com|Aut)\s*:|$)", texto, flags=re.IGNORECASE))
+        partes = {k.lower(): v for k, v in partes.items()}
+        return _limpio(partes.get("com", "")), _limpio(partes.get("aut", ""))
+    return _limpio(re.sub(r"\s+-\s+|\s*/\s*|\s*&\s*", " y ", texto)), ""
 
 
 def normalizar_compositor_autor(texto):

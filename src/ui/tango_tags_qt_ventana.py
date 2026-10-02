@@ -32,7 +32,7 @@ from src.config.config import (
 from src.config.database import Database
 from src.ui.file_to_find_qt import FILETOFINDQT
 from src.utils.MusicBeeLibraryTools import MusicBeeLibraryTools
-from src.utils import historial
+from src.utils import historial, no_tocar
 from src.ui.reproductor import Reproductor, BarraSonando
 from src.utils.formato_tags import (
     tags_desde_coincidencia, combinar_compositor, formatear_cantores, formatear_fecha, formatear_estilo,
@@ -244,6 +244,9 @@ class tango_tags_qt_ventana(QMainWindow):
                                  "las demás canciones del mismo disco (solo si encaja una)"))
         tb.addAction(self.accion("Desmarcar\ntodo", self.icono(estandar=QStyle.SP_DialogResetButton),
                                  self.desmarcar_todo, "Quitar todas las marcas de 'Usar'"))
+        tb.addAction(self.accion("No\ntocar", self.icono(estandar=QStyle.SP_DialogNoButton), self.marcar_no_tocar,
+                                 "Dejar la canción seleccionada como está y no volver a enseñarla al cargar "
+                                 "(Archivo → Canciones «No tocar» para deshacerlo). Tecla X"))
         tb.addAction(self.accion("Buscar\nen BD", self.icono("searchdb"), self.buscar_en_bd,
                                  "Buscar en la base de datos. Si hay una canción seleccionada, "
                                  "puedes asignarle el resultado", "Ctrl+F"))
@@ -284,6 +287,7 @@ class tango_tags_qt_ventana(QMainWindow):
         m_archivo.addAction("Abrir carpeta de copias de seguridad", self.abrir_carpeta_backups)
         m_archivo.addSeparator()
         m_archivo.addAction("Regenerar base de datos limpia (desde mergeddb.csv)…", self.regenerar_bd)
+        m_archivo.addAction("Canciones marcadas «No tocar»…", self.ver_no_tocar)
         m_archivo.addSeparator()
         m_archivo.addAction("Salir", self.close)
 
@@ -291,6 +295,9 @@ class tango_tags_qt_ventana(QMainWindow):
         self.opt_saltar = m_opciones.addAction("Saltar las canciones ya revisadas (compositor 'Musica: … - Letra: …')")
         self.opt_saltar.setCheckable(True)
         self.opt_saltar.setChecked(self.settings.value("opt_saltar", True, type=bool))
+        self.opt_no_tocar = m_opciones.addAction("Ocultar las canciones marcadas «No tocar»")
+        self.opt_no_tocar.setCheckable(True)
+        self.opt_no_tocar.setChecked(self.settings.value("opt_no_tocar", True, type=bool))
         m_opciones.addSeparator()
         self.opt_fecha = m_opciones.addAction("Usar la fecha del archivo para elegir la sugerida")
         self.opt_fecha.setCheckable(True)
@@ -319,6 +326,11 @@ class tango_tags_qt_ventana(QMainWindow):
             self.filtros[clave] = cb
             lay.addWidget(cb)
         lay.addStretch(1)
+        teclas = QLabel("Teclado: <b>1–9</b> elegir · <b>0</b> ninguna · <b>Espacio</b> escuchar · "
+                        "<b>S</b> siguiente por decidir · <b>X</b> no tocar")
+        teclas.setStyleSheet("color:#666;")
+        lay.addWidget(teclas)
+        lay.addSpacing(20)
         lay.addWidget(QLabel("Colores:"))
         for nombre, color in (("igual", "lightgreen"), ("parecido", "yellow"),
                               ("parcial", "orange"), ("distinto", "red")):
@@ -350,6 +362,7 @@ class tango_tags_qt_ventana(QMainWindow):
             t.horizontalHeaderItem(col).setBackground(cabecera_bd)
             t.horizontalHeaderItem(col).setToolTip("Datos de la base de datos (con el formato final)")
         t.viewport().installEventFilter(self)
+        t.installEventFilter(self)          # teclado: 1-9, 0, Espacio, S, X
         t.itemChanged.connect(self.on_item_changed)
         t.itemSelectionChanged.connect(self.seleccion_cambiada)
         t.cellDoubleClicked.connect(self.on_cell_double_clicked)
@@ -446,6 +459,8 @@ class tango_tags_qt_ventana(QMainWindow):
         no_encontrados = []
         favoritas = []
         saltadas = 0
+        ocultas_no_tocar = 0
+        marcadas_no_tocar = no_tocar.claves() if self.opt_no_tocar.isChecked() else set()
 
         self.empezar_progreso(len(rutas_y_tags))
         try:
@@ -457,6 +472,9 @@ class tango_tags_qt_ventana(QMainWindow):
                 QApplication.processEvents()
                 if not os.path.exists(ruta):
                     no_encontrados.append(ruta)
+                    continue
+                if marcadas_no_tocar and no_tocar.esta(ruta, marcadas_no_tocar):
+                    ocultas_no_tocar += 1
                     continue
                 if tags is None:
                     try:
@@ -503,6 +521,8 @@ class tango_tags_qt_ventana(QMainWindow):
         resumen = self.resumen()
         if saltadas:
             resumen += f" — {saltadas} saltadas por estar ya revisadas (Opciones para cambiarlo)"
+        if ocultas_no_tocar:
+            resumen += f" — {ocultas_no_tocar} marcadas «No tocar»"
         self.statusBar().showMessage(f"{os.path.basename(origen) or origen}: {resumen}")
         if saltadas and not self.archivos:
             self.mensaje_inicial.setText(
@@ -760,7 +780,10 @@ class tango_tags_qt_ventana(QMainWindow):
             item.setToolTip(item.text())
 
     def eventFilter(self, objeto, evento):
-        """Clic en ▶/■: reproduce o para sin seleccionar la fila."""
+        """Clic en ▶/■: reproduce o para sin seleccionar la fila. Teclas de revisión en la tabla."""
+        if objeto is self.tabla and evento.type() == QEvent.KeyPress and not self.tabla.state() == QAbstractItemView.EditingState:
+            if self.tecla_revision(evento):
+                return True
         if objeto is self.tabla.viewport() and evento.type() in (QEvent.MouseButtonPress, QEvent.MouseButtonDblClick) \
                 and evento.button() == Qt.LeftButton:
             indice = self.tabla.indexAt(evento.pos())
@@ -771,6 +794,83 @@ class tango_tags_qt_ventana(QMainWindow):
                     self.reproductor.alternar(clave, ruta, descripcion)
                 return True
         return super().eventFilter(objeto, evento)
+
+    def tecla_revision(self, evento):
+        """1-9 elige la opción, 0 ninguna, Espacio escucha el archivo, S siguiente por decidir, X no tocar."""
+        fila = self.tabla.currentRow()
+        if fila not in self.fila_a_archivo:
+            return False
+        archivo, _ = self.fila_a_archivo[fila]
+        tecla, texto_tecla = evento.key(), evento.text().lower()
+        if Qt.Key_1 <= tecla <= Qt.Key_9:
+            n = tecla - Qt.Key_1
+            if n < len(self.coincidencias(archivo)):
+                archivo.seleccion = n
+                self.refrescar_usar(archivo)
+                self.ir_a(archivo, n)
+            return True
+        if tecla in (Qt.Key_0, Qt.Key_Backspace):
+            archivo.seleccion = None
+            self.refrescar_usar(archivo)
+            return True
+        if tecla == Qt.Key_Space:
+            t = tags_actuales(archivo)
+            self.reproductor.alternar(("archivo", archivo.ruta_archivo), archivo.ruta_archivo,
+                                      f"Tu archivo: {t['title'] or os.path.basename(archivo.ruta_archivo)} — {t['artist']}")
+            return True
+        if texto_tecla == "s":
+            self.siguiente_por_decidir()
+            return True
+        if texto_tecla == "x":
+            self.marcar_no_tocar()
+            return True
+        return False
+
+    def refrescar_usar(self, archivo):
+        """Actualiza las casillas 'Usar' de una canción sin repintar toda la tabla."""
+        self._rellenando = True
+        for fila, (a, pos) in self.fila_a_archivo.items():
+            if a is archivo and pos is not None and self.tabla.item(fila, COL_USAR) is not None:
+                self.tabla.item(fila, COL_USAR).setCheckState(Qt.Checked if archivo.seleccion == pos else Qt.Unchecked)
+        self._rellenando = False
+
+    def ir_a(self, archivo, pos=None):
+        for fila, (a, p) in self.fila_a_archivo.items():
+            if a is archivo and (pos is None or p == pos):
+                self.tabla.setCurrentCell(fila, max(self.tabla.currentColumn(), 0))
+                self.tabla.selectRow(fila)
+                self.tabla.scrollToItem(self.tabla.item(fila, COL_USAR) or self.tabla.item(fila, COL_ESTADO))
+                return
+
+    def siguiente_por_decidir(self):
+        """Va a la siguiente canción que no es perfecta y no tiene nada marcado."""
+        visibles = list(dict.fromkeys(a for a, _ in (self.fila_a_archivo[f] for f in sorted(self.fila_a_archivo))))
+        actual = self.archivo_seleccionado()
+        inicio = visibles.index(actual) + 1 if actual in visibles else 0
+        for a in visibles[inicio:] + visibles[:inicio]:
+            if a.categoria != "perfecta" and a.seleccion is None and a.estado_guardado is None:
+                self.ir_a(a)
+                return
+        self.statusBar().showMessage("No quedan canciones por decidir en la lista visible", 5000)
+
+    def marcar_no_tocar(self):
+        archivo = self.archivo_seleccionado()
+        if archivo is None:
+            QMessageBox.information(self, "No tocar", "Selecciona primero una canción en la tabla.")
+            return
+        visibles = list(dict.fromkeys(a for a, _ in (self.fila_a_archivo[f] for f in sorted(self.fila_a_archivo))))
+        siguiente = visibles[visibles.index(archivo) + 1] if archivo in visibles and visibles.index(archivo) + 1 < len(visibles) else None
+        t = tags_actuales(archivo)
+        no_tocar.marcar([(archivo.ruta_archivo, t["title"])])
+        self.archivos.remove(archivo)
+        self.actualizar_contadores()
+        self.rellenar_tabla()
+        if siguiente is not None:
+            self.ir_a(siguiente)
+        self.statusBar().showMessage(f"«{t['title']}» marcada como No tocar (Archivo → Canciones «No tocar» para deshacerlo)", 8000)
+
+    def ver_no_tocar(self):
+        DialogoNoTocar(self).exec_()
 
     def celda_audio(self, fila, col, clave, ruta, descripcion, fondo, ayuda):
         """Pinta una celda ▶ (o ■ si es lo que está sonando) y la registra para el clic."""
@@ -1059,7 +1159,7 @@ class tango_tags_qt_ventana(QMainWindow):
         caja.exec_()
 
     def closeEvent(self, event):
-        for clave in ("opt_fecha", "opt_guardar_coinc", "opt_guardar_resid", "opt_saltar"):
+        for clave in ("opt_fecha", "opt_guardar_coinc", "opt_guardar_resid", "opt_saltar", "opt_no_tocar"):
             self.settings.setValue(clave, getattr(self, clave).isChecked())
         event.accept()
 
@@ -1134,3 +1234,42 @@ class DialogoConfirmar(QDialog):
         botones.accepted.connect(self.accept)
         botones.rejected.connect(self.reject)
         lay.addWidget(botones)
+
+
+class DialogoNoTocar(QDialog):
+    """Lista de canciones marcadas «No tocar», con opción de quitar la marca."""
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setWindowTitle("Canciones marcadas «No tocar»")
+        self.resize(1000, 550)
+        lay = QVBoxLayout(self)
+        lay.addWidget(QLabel("Estas canciones no aparecen al cargar (Opciones → Ocultar las canciones «No tocar»). "
+                             "Selecciona y pulsa <b>Quitar marca</b> para que vuelvan a aparecer."))
+        self.tabla = QTableWidget(0, 3)
+        self.tabla.setHorizontalHeaderLabels(["Título", "Archivo", "Marcada el"])
+        self.tabla.verticalHeader().hide()
+        self.tabla.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.tabla.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.tabla.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        lay.addWidget(self.tabla)
+        botones = QDialogButtonBox()
+        quitar = botones.addButton("Quitar marca", QDialogButtonBox.ActionRole)
+        quitar.clicked.connect(self.quitar)
+        botones.addButton("Cerrar", QDialogButtonBox.RejectRole).clicked.connect(self.reject)
+        lay.addWidget(botones)
+        self.rellenar()
+
+    def rellenar(self):
+        self.df = no_tocar.leer()
+        self.tabla.setRowCount(len(self.df))
+        for i, (_, f) in enumerate(self.df.iterrows()):
+            for c, v in enumerate([f["titulo"], f["ruta"], f["marcado_el"]]):
+                self.tabla.setItem(i, c, QTableWidgetItem(v))
+        self.tabla.resizeColumnToContents(0)
+
+    def quitar(self):
+        filas = sorted({i.row() for i in self.tabla.selectionModel().selectedRows()})
+        if filas:
+            no_tocar.desmarcar([self.df.iloc[f]["ruta"] for f in filas])
+            self.rellenar()
