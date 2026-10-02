@@ -100,7 +100,11 @@ class FILETOFINDQT:
 
         # Buscar al artista
         artista_original, cantor_original = separar_artistas(self.tags.artist)
-        artista_key, self.artista_coincidencia = self.buscar_artista(artista_original)
+        # Sin artista en la tag no se puede buscar ("" in key coincidiría con cualquier artista)
+        if artista_original.strip():
+            artista_key, self.artista_coincidencia = self.buscar_artista(artista_original)
+        else:
+            artista_key, self.artista_coincidencia = None, 0
 
         if not artista_key:
             self.resultado = 'Artista no encontrado'

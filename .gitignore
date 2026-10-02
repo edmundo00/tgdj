@@ -90,3 +90,6 @@ venv.bak/
 *.m4a
 *.wav
 *.mp3
+
+# Resultados generados por la app (CSV de coincidencias, backups de tags, presentaciones)
+output/

@@ -87,7 +87,9 @@ TEST_FILES_FOLDER = os.path.join(PROJECT_ROOT, 'tests', 'music_files')
 OUTPUT_FOLDER = os.path.join(PROJECT_ROOT, 'output')
 
 # Add other common variables or constants here
-DB_CSV_PATH = os.path.join(DATA_FOLDER, 'db.csv')
+#DB_CSV_PATH = os.path.join(DATA_FOLDER, 'db.csv')
+DB_CSV_PATH = os.path.join(DATA_FOLDER, 'mergeddb.csv')
+#DB_CSV_PATH = os.path.join(DATA_FOLDER, 'repes.csv')
 
 DEFAULT_FONT_PATH = os.path.join(FONTS_FOLDER,"coopbl.ttf")
 DEFAULT_FONT_NAME = "Cooper Black"  # Cambia "Arial" por la fuente deseada
@@ -170,10 +172,10 @@ columnas_config = {
 }
 
 default_milonga_data = {
-    'nombre': "La Yumba",
-    'fecha': "8 de Noviembre de 2024",
-    'hora_inicio': '22:00',
-    'hora_final': '01:00'
+    'nombre': "El Taller",
+    'fecha': "30 de Marzo de 2025",
+    'hora_inicio': '18:00',
+    'hora_final': '21:30'
 }
 
 

@@ -1,86 +1,68 @@
+# TangoTags
 
-# TangoTags - Audio Tag Management and Presentation Creator
+Pone bien las tags de las canciones de tango según la base de datos (`data/mergeddb.csv`),
+siempre con el mismo formato, y crea las diapos de las tandas.
 
-TangoTags is a Python-based tool designed to manage and edit audio tags for tango music collections. The tool includes features for generating presentations based on playlists and organizing your music library according to specific tag information.
+## Arrancar
 
-## Features
+Doble clic en **`TangoTags.bat`**, o:
 
-### 1. **Audio Tag Management**
-   - **Read and Edit Audio Tags:** Supports MP3, FLAC, and M4A files, allowing users to update metadata such as title, artist, year, genre, and composer.
-   - **Tag Update UI:** Provides a user interface to view and edit tags, with options to save the updated tags back to the files.
-
-### 2. **Playlist Management**
-   - **M3U Playlist Converter:** Convert M3U playlists, adjusting file paths based on the computer the files were created on. The tool generates three different versions of the playlist, one for each defined path in the `path_map`.
-   - **Playlist Preview:** Display the contents of an M3U playlist in a table, with special highlighting for paths containing "Dropbox".
-   
-### 3. **Presentation Generation**
-   - **Create PowerPoint Presentations:** Automatically generate PowerPoint presentations based on a playlist. The tool allows you to set the background, add titles, and apply a gradient overlay for visual enhancement.
-   - **Customizable Tanda Slides:** Create slides with structured information for each tanda (set of songs), including titles, years, and composers.
-
-### 4. **Database Search and Integration**
-   - **Search Database:** Filter and search your music database by title, artist, cantor, and date range. The results are displayed in an interactive table.
-   - **Cross-Reference Matching:** Automatically match your audio files against a database of known songs, highlighting the best matches based on title, artist, and other tags.
-
-### 5. **User Interface**
-   - **Tkinter-based GUI:** A user-friendly graphical interface built with Tkinter, providing easy access to all features.
-   - **Dynamic Layout:** The layout dynamically adjusts based on user actions, with support for scrolling and resizing.
-
-## Setup and Installation
-
-1. **Clone the Repository**
-   ```
-   git clone https://github.com/yourusername/tangotags.git
-   cd tangotags
-   ```
-
-2. **Install Required Packages**
-   ```
-   pip install -r requirements.txt
-   ```
-
-3. **Run the Application**
-   ```
-   python tangotags.py
-   ```
-
-If you don't have `pip` installed, you can follow the instructions [here](https://pip.pypa.io/en/stable/installation/) to install it.
-
-## Configuration
-
-- **Path Mapping:** The `path_map` dictionary is used to define the file paths for different computers. Update this dictionary according to your environment.
-
-```python
-path_map = {
-    "WINDOW-COMPUTER": "E:\Dropbox",
-    "CAD065": "D:\Dropbox",
-    "LAPTOP-ABRSCER9": "C:\Users\diana\Dropbox"
-}
+```
+.venv\Scripts\python tangotags.py
 ```
 
-## Contributing
+## Cómo se usa
 
-Contributions are welcome! Please fork the repository and submit a pull request with your changes.
-git fetch -vp
-git pull
+La barra de arriba sigue el orden de trabajo:
 
-git add <file_name>
-para un archivo
+| Paso | Botones | Qué hace |
+|---|---|---|
+| ① Cargar | Archivos · Carpeta · Playlist · MusicBee | Carga canciones y las busca en la base de datos |
+| ② Revisar | Marcar sugeridas · Desmarcar todo · Buscar en BD · Parar música | A la izquierda las tags del archivo, a la derecha las coincidencias **ya con el formato final**. Marca **Usar** en la buena (las sugeridas vienen marcadas). Puedes editar las celdas de la BD; doble clic en una canción sin coincidencias para buscarla a mano. ▶ para escuchar |
+| ③ Aplicar | Aplicar tags | Muestra antes/después y, si confirmas, escribe las tags |
+| ④ Diapos | Crear diapos · Control diapos | Crear la presentación de las tandas desde una playlist / pasar diapos durante la milonga |
 
-PAra todos los cambios:
+Los filtros de **Mostrar** ocultan grupos (por ejemplo las *Perfectas*, que ya están bien).
+Menú **Ayuda → Cómo se usa** (F1) tiene la misma explicación dentro de la app.
+
+Si cargas desde MusicBee, después de aplicar haz en MusicBee *Herramientas → Volver a leer tags*.
+
+## Formato de las tags
+
+Definido en un solo sitio: [`src/utils/formato_tags.py`](src/utils/formato_tags.py) (con tests en `tests/utils/formato_tags_test.py`).
+
+| Tag | Formato | Ejemplo |
+|---|---|---|
+| Artista | `Orquesta / Cantor` (varios: `A y B`) | `Juan D'Arienzo / Héctor Mauré` |
+| Fecha | `AAAA-MM-DD` (o `AAAA-MM` / `AAAA` si no se sabe más) | `1941-07-14` |
+| Género | minúsculas | `tango`, `tango vals`, `tango milonga` |
+| Compositor | `Musica: X - Letra: Y`, siempre (`?` si no se sabe) | `Musica: Horacio Pettorossi - Letra: Horacio Pettorossi` |
+
+Si un dato no se conoce en la base de datos (vacío, `?`, `-`…) esa tag no se toca. El compositor se escribe siempre:
+`Musica: ? - Letra: ?` es la marca de que la canción ya pasó por la base de datos.
+Formatos de audio: mp3, flac, m4a, wav, aiff, wma.
+
+## Configuración
+
+- `config.ini` → ruta de Dropbox (`music_path`).
+- `src/config/config.py` → base de datos (`DB_CSV_PATH`), datos por defecto de la milonga para las diapos, etc.
+
+## Tests
+
+```
+run_all_test.bat
+```
+
+## Otros scripts
+
+- `crear_diapos.py` – creador de diapos (lo abre el botón *Crear diapos*).
+- `control_slides.py` / `control_slides.exe` – control de diapos en la milonga.
+- `tangotags_tk_antiguo.py` – la versión vieja en Tkinter (ya no hace falta, se puede borrar).
+
+## Git
+
+```
 git add .
-
-Luego 
-git commit -m "Commit message"
-
-Si quieres añadir todos los cambios y commit
-git commit -a -m "Commit message"
-
+git commit -m "mensaje"
 git push
-
-## License
-
-This project is licensed under the MIT License.
-
-## Contact
-
-For questions or suggestions, feel free to open an issue or contact me at [your-email@example.com].
+```

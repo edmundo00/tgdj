@@ -12,3 +12,5 @@ matplotlib
 pywin32
 PyQt5
 matplotlib
+watchdog
+Levenshtein
