@@ -16,7 +16,7 @@ from unidecode import unidecode
 # Separa la orquesta del cantor (la orquesta es siempre lo primero)
 SEPARADORES = re.compile(r"\s+/\s+|\s*;\s*|\s+feat\.?\s+|\s+ft\.?\s+|\s+canta:?\s+|\s+con\s+", re.IGNORECASE)
 
-PALABRAS_RELLENO = {"orquesta", "orq", "tipica", "su", "la", "el", "los", "las", "de", "del", "y", "and"}
+PALABRAS_RELLENO = {"orquesta", "orq", "tipica", "tipico", "su", "la", "el", "los", "las", "de", "del", "y", "and"}
 
 # Nivel de coincidencia (lo usa compare_tags para los colores)
 EXACTA, NORMALIZADA, PARCIAL, NINGUNA = 3, 2, 1, 0
@@ -62,6 +62,21 @@ class IndiceArtistas:
 
     def buscar(self, artista):
         """Devuelve (lista de claves de la BD, nivel) o (None, NINGUNA)."""
+        orquesta, _ = separar_orquesta_cantor(artista)
+        if "," in orquesta:
+            # "Roberto Firpo, Cuarteto Roberto Firpo": dos formaciones -> se buscan las dos y se juntan.
+            # (Si no, es "Apellido, Nombre" y lo resuelve variantes_orquesta.)
+            partes = [p.strip() for p in orquesta.split(",") if p.strip()]
+            palabras = [set(w for w in normalizar_nombre(p).split() if len(w) >= 4) for p in partes]
+            mismo_director = len(partes) == 2 and bool(palabras[0] & palabras[1])
+            encontradas = [self._buscar(p) for p in partes] if mismo_director else []
+            if mismo_director and all(c for c, _ in encontradas):
+                claves = list(dict.fromkeys(k for c, _ in encontradas for k in c))
+                if len(claves) > 1:
+                    return claves, min(n for _, n in encontradas)
+        return self._buscar(artista)
+
+    def _buscar(self, artista):
         variantes = variantes_orquesta(artista)
 
         # Exacta solo si la tag está escrita tal cual (no al darle la vuelta, por ejemplo)

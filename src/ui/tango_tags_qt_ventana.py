@@ -232,6 +232,9 @@ class tango_tags_qt_ventana(QMainWindow):
         titulo_seccion("② Revisar")
         tb.addAction(self.accion("Marcar\nsugeridas", self.icono(estandar=QStyle.SP_DialogApplyButton),
                                  self.marcar_sugeridas, "Marcar 'Usar' en todas las coincidencias sugeridas"))
+        tb.addAction(self.accion("Marcar\npor disco", self.icono(estandar=QStyle.SP_DriveCDIcon), self.marcar_por_disco,
+                                 "En las canciones en las que hay que elegir, marcar la opción cuya fecha encaja con "
+                                 "las demás canciones del mismo disco (solo si encaja una)"))
         tb.addAction(self.accion("Desmarcar\ntodo", self.icono(estandar=QStyle.SP_DialogResetButton),
                                  self.desmarcar_todo, "Quitar todas las marcas de 'Usar'"))
         tb.addAction(self.accion("Buscar\nen BD", self.icono("searchdb"), self.buscar_en_bd,
@@ -327,8 +330,8 @@ class tango_tags_qt_ventana(QMainWindow):
         t.setWordWrap(False)
         h = t.horizontalHeader()
         h.setSectionResizeMode(QHeaderView.Interactive)
-        for col, ancho in ((COL_ESTADO, 105), (COL_ANO, 85), (COL_GENERO, 90), (COL_PLAY, 32),
-                           (COL_USAR, 42), (COL_BD_FECHA, 90), (COL_BD_ESTILO, 95),
+        for col, ancho in ((COL_ESTADO, 165), (COL_ANO, 85), (COL_GENERO, 90), (COL_PLAY, 32),
+                           (COL_USAR, 56), (COL_BD_FECHA, 90), (COL_BD_ESTILO, 95),
                            (COL_BD_PLAY30, 42), (COL_BD_PLAY10, 42)):
             h.setSectionResizeMode(col, QHeaderView.Fixed)
             t.setColumnWidth(col, ancho)
@@ -451,7 +454,7 @@ class tango_tags_qt_ventana(QMainWindow):
                 if tags is None:
                     try:
                         t = utils.leer_tags(ruta)
-                        tags = [t.title, t.artist, t.year, t.genre, t.composer, ruta]
+                        tags = [t.title, t.artist, t.year, t.genre, t.composer, ruta, t.album]
                     except Exception:
                         tags = None
                 if self.opt_saltar.isChecked() and tags is not None and ya_revisada(tags[4]):
@@ -487,6 +490,7 @@ class tango_tags_qt_ventana(QMainWindow):
                 dataframe=pd.DataFrame(residuos, columns=['Titulo Archivo', 'Titulo base de datos',
                                                           'Residuo', 'Ruta completa']))
 
+        self.calcular_contexto_disco()
         self.actualizar_contadores()
         self.rellenar_tabla()
         resumen = self.resumen()
@@ -503,6 +507,57 @@ class tango_tags_qt_ventana(QMainWindow):
                 self, "Archivos no encontrados",
                 f"{len(no_encontrados)} archivo(s) no existen o no se pudieron leer:\n\n"
                 + "\n".join(no_encontrados[:15]) + ("\n…" if len(no_encontrados) > 15 else ""))
+
+    def calcular_contexto_disco(self):
+        """
+        Para las canciones en las que hay que elegir: las demás canciones del mismo disco (álbum, o
+        carpeta si no hay álbum) ya identificadas dicen de qué años es el disco. Se marcan las opciones
+        que caen en ese rango (± 1 año). No se elige nada solo: 'Marcar por disco' lo hace a petición.
+        """
+        def disco_de(a):
+            album = texto(getattr(a.tags, "album", "")).strip()
+            return ("album", album.lower()) if album else ("carpeta", os.path.dirname(a.ruta_archivo))
+
+        anos_por_disco = {}
+        for a in self.archivos:
+            ano = None
+            if a.categoria == "perfecta":
+                ano = formatear_fecha(getattr(a.tags, "year", ""))[:4]
+            elif a.categoria == "preferida" and a.seleccion is not None:
+                ano = formatear_fecha(self.coincidencias(a).iloc[a.seleccion].get("fecha", ""))[:4]
+            if ano and not getattr(a, "motivo_fecha", ""):
+                anos_por_disco.setdefault(disco_de(a), []).append(int(ano))
+
+        for a in self.archivos:
+            a.disco = None
+            anos = anos_por_disco.get(disco_de(a), [])
+            if a.categoria != "dudosa" or len(anos) < 2:
+                continue
+            desde, hasta = min(anos), max(anos)
+            encajan = set()
+            for pos, (_, c) in enumerate(self.coincidencias(a).iterrows()):
+                f = formatear_fecha(c.get("fecha", ""))[:4]
+                if f and desde - 1 <= int(f) <= hasta + 1:
+                    encajan.add(pos)
+            if encajan:
+                tipo, nombre = disco_de(a)
+                donde = f"del álbum «{getattr(a.tags, 'album', '')}»" if tipo == "album" else "de la misma carpeta"
+                rango = f"{desde}" if desde == hasta else f"{desde}–{hasta}"
+                a.disco = {"encajan": encajan, "texto": f"las otras {len(anos)} canciones {donde} son de {rango}"}
+
+    def marcar_por_disco(self):
+        marcadas = 0
+        for a in self.archivos:
+            d = getattr(a, "disco", None)
+            if a.categoria == "dudosa" and d and len(d["encajan"]) == 1 and a.seleccion is None:
+                a.seleccion = next(iter(d["encajan"]))
+                marcadas += 1
+        self.rellenar_tabla()
+        QMessageBox.information(
+            self, "Marcar por disco",
+            f"Marcadas {marcadas} canción(es) en las que solo una opción encaja con los años del resto del disco "
+            "(💿 en la columna Usar).\n\nRevísalas antes de aplicar: es una pista, no una certeza."
+            if marcadas else "No hay canciones en las que solo una opción encaje con los años del disco.")
 
     def resumen(self):
         if not self.archivos:
@@ -597,14 +652,29 @@ class tango_tags_qt_ventana(QMainWindow):
             estado, color = "✖ Error al guardar", QColor("#ef9a9a")
         else:
             estado, color = CATEGORIAS[archivo.categoria][0], fondo
-        it = self.item(estado, color, tooltip=CATEGORIAS[archivo.categoria][2])
+        explicacion = [CATEGORIAS[archivo.categoria][2]]
+        motivo = getattr(archivo, "motivo_fecha", "")
+        disco = getattr(archivo, "disco", None)
+        if motivo and archivo.estado_guardado is None and archivo.categoria == "dudosa":
+            estado += " · fecha del CD"
+        if motivo:
+            explicacion.append(f"La fecha del archivo no sirve para elegir: {motivo}.")
+        if disco:
+            explicacion.append(disco["texto"])
+        it = self.item(estado, color, tooltip="\n\n".join(explicacion))
         it.setFont(QFont("", -1, QFont.Bold))
         self.tabla.setItem(fila, COL_ESTADO, it)
         ruta = archivo.ruta_archivo
+        album = texto(getattr(archivo.tags, "album", ""))
         for col, clave in ((COL_TITULO, "title"), (COL_ARTISTA, "artist"), (COL_ANO, "year"),
                            (COL_GENERO, "genre"), (COL_COMPOSITOR, "composer")):
-            self.tabla.setItem(fila, col, self.item(actuales[clave], fondo,
-                                                    tooltip=f"{actuales[clave]}\n\n{ruta}"))
+            tip = f"{actuales[clave]}\n\n{ruta}" + (f"\nÁlbum: {album}" if album else "")
+            celda = self.item(actuales[clave], fondo, tooltip=tip)
+            if col == COL_ANO and motivo:
+                celda.setForeground(QBrush(QColor("#999")))
+                celda.setText(f"{actuales[clave][:4]} (CD)")
+                celda.setToolTip(f"{motivo}.\nNo se usa para elegir la grabación.")
+            self.tabla.setItem(fila, col, celda)
         play = self.item("▶", fondo, tooltip="Escuchar el archivo")
         play.setTextAlignment(Qt.AlignCenter)
         self.tabla.setItem(fila, COL_PLAY, play)
@@ -627,6 +697,11 @@ class tango_tags_qt_ventana(QMainWindow):
         usar.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable)
         usar.setCheckState(Qt.Checked if archivo.seleccion == pos else Qt.Unchecked)
         usar.setToolTip("Marcar para escribir estas tags en el archivo")
+        disco = getattr(archivo, "disco", None)
+        encaja = bool(disco) and pos in disco["encajan"]
+        if encaja:
+            usar.setText("💿")
+            usar.setToolTip(f"Encaja con el resto del disco: {disco['texto']}")
         self.tabla.setItem(fila, COL_USAR, usar)
 
         for col, (campo, formatear) in COLUMNAS_BD.items():
@@ -636,7 +711,11 @@ class tango_tags_qt_ventana(QMainWindow):
             color = fondo
             if colores is not None and indice in colores.index and COLORES_COLUMNA[col] in colores.columns:
                 color = QColor(COLORES_SUAVES.get(colores.at[indice, COLORES_COLUMNA[col]], fondo))
-            self.tabla.setItem(fila, col, self.item(valor, color, editable=True, tooltip=tip))
+            celda = self.item(valor, color, editable=True, tooltip=tip)
+            if encaja and col == COL_BD_FECHA:
+                celda.setFont(QFont("", -1, QFont.Bold))
+                celda.setToolTip(f"{tip}\n💿 Encaja con el resto del disco ({disco['texto']})")
+            self.tabla.setItem(fila, col, celda)
 
         for col, campo in ((COL_BD_PLAY30, "audio30"), (COL_BD_PLAY10, "audio10")):
             hay_audio = bool(texto(coincidencia.get(campo, "")).strip())

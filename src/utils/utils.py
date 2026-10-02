@@ -399,6 +399,40 @@ def buscar_titulo(database, tag):
     return 0, pd.DataFrame()  # Retorna 0 si no se encontraron coincidencias
 
 
+def _muertes_normalizadas():
+    from src.utils.buscar_artista import normalizar_nombre
+    return {normalizar_nombre(k): v for k, v in fallecimiento.items()}
+
+
+def fecha_es_de_cd(fecha_archivo, orquestas_bd, fechas_bd):
+    """
+    Los archivos suelen traer la fecha de salida del CD, no la de grabación. Devuelve el motivo
+    (texto) si la fecha del archivo no puede ser de grabación, o "" si puede serlo:
+      - es posterior a la muerte del director de todas las orquestas candidatas, o
+      - es de 1985 o después y 15 años posterior a todas las grabaciones candidatas.
+    """
+    from src.utils.buscar_artista import normalizar_nombre
+    from src.utils.formato_tags import formatear_fecha
+    fecha = formatear_fecha(fecha_archivo)
+    if not fecha:
+        return ""
+    ano = int(fecha[:4])
+    muertes = _muertes_normalizadas()
+    fallecidos = []   # (orquesta, fecha de muerte del director) o None si no se sabe
+    for orquesta in set(orquestas_bd):
+        n = normalizar_nombre(orquesta)
+        # "cuarteto roberto firpo" contiene al director "roberto firpo"
+        candidatos = [(d, f) for d, f in muertes.items() if d == n or re.search(rf"\b{re.escape(d)}\b", n)]
+        fallecidos.append(max(candidatos, key=lambda x: len(x[0])) if candidatos else None)
+    if fallecidos and None not in fallecidos and all(ano > m.year for _, m in fallecidos):
+        director, m = max(fallecidos, key=lambda x: x[1])
+        return f"{ano} es posterior a la muerte de {director.title()} ({m.year}): es la fecha del CD"
+    anos_bd = [int(f[:4]) for f in (formatear_fecha(x) for x in fechas_bd) if f]
+    if anos_bd and ano >= 1985 and ano - max(anos_bd) >= 15:
+        return f"{ano} es muy posterior a todas las grabaciones (la última de {max(anos_bd)}): es la fecha del CD"
+    return ""
+
+
 def compare_tags(artista_coincidencia, titulo_coincidencia, database, tag):
     """
     Compara las tags del archivo con cada fila candidata de la base de datos.
@@ -445,14 +479,10 @@ def compare_tags(artista_coincidencia, titulo_coincidencia, database, tag):
     c[TagLabels.CANTOR_PARCIAL] = constante(not cantor_f)   # el archivo no dice cantor
     c[TagLabels.CANTOR_NEGATIVO] = constante(True)
 
-    # Fecha
+    # Fecha. Si es la del CD (no la de grabación) no sirve para comparar: todas quedan en "parcial"
     fecha_f = formatear_fecha(tag.year)
     ano_tag = fecha_f[:4]
-    try:
-        muerte = fallecimiento[simple(orquesta_tag)]
-    except KeyError:
-        muerte = None
-    fecha_imposible = bool(muerte and parse_year(fecha_f) and muerte < parse_year(fecha_f))
+    fecha_imposible = bool(fecha_es_de_cd(fecha_f, list(columna("artista")), list(columna("fecha"))))
     fechas_bd = [formatear_fecha(x) for x in columna("fecha")]
     c[TagLabels.FECHA_EXACTA] = serie(bool(f) and f == fecha_f for f in fechas_bd)
     c[TagLabels.FECHA] = serie(bool(f and ano_tag) and f[:4] == ano_tag for f in fechas_bd)

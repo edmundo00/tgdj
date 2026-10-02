@@ -22,6 +22,7 @@ class FILETOFINDQT:
         self.titulo_coincidencia = int(0)
 
         self.perfect_match = False
+        self.motivo_fecha = ""
 
 
         if tags is None:
@@ -46,7 +47,8 @@ class FILETOFINDQT:
             year=tags[2],
             genre=tags[3],
             composer=tags[4],
-            _filename=tags[5]
+            _filename=tags[5],
+            album=tags[6] if len(tags) > 6 else ""
         )
         return custom_tags
 
@@ -120,6 +122,22 @@ class FILETOFINDQT:
 
         # Buscar el título
         self.titulo_coincidencia, database_titulo = buscar_titulo(artist_songs, self.tags)
+        # La misma grabación repetida (El Recodo y tango.info) se muestra una sola vez: la más completa
+        if len(database_titulo) > 1:
+            from src.utils.correcciones import claves
+            completa = ((database_titulo["compositor_autor"].astype(str) != "").astype(int)
+                        + (database_titulo["fecha"].astype(str).str.len() == 10).astype(int)
+                        + (database_titulo.get("audio30", "").astype(str) != "").astype(int))
+            database_titulo = (database_titulo.assign(_clave=claves(database_titulo), _completa=completa)
+                               .sort_values("_completa", ascending=False, kind="stable")
+                               .drop_duplicates("_clave").drop(columns=["_clave", "_completa"]))
+        # Opciones en orden cronológico (las sin fecha al final)
+        if not database_titulo.empty:
+            orden = database_titulo["fecha"].astype(str).replace("", "9999")
+            database_titulo = database_titulo.loc[orden.sort_values(kind="stable").index]
+            # Fecha del archivo que en realidad es la del CD: no sirve para elegir
+            self.motivo_fecha = fecha_es_de_cd(self.tags.year, list(database_titulo["artista"]),
+                                               list(database_titulo["fecha"]))
 
         if self.titulo_coincidencia == 0:
             self.resultado = 'Titulo no encontrado'

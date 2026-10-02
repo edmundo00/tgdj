@@ -4,7 +4,7 @@ from src.utils.buscar_artista import (
     IndiceArtistas, separar_orquesta_cantor, normalizar_nombre, EXACTA, NORMALIZADA, PARCIAL, NINGUNA,
 )
 
-CLAVES = ["Juan D'Arienzo", "Los Solistas de D'Arienzo", "Orquesta La Juan D'Arienzo", "Carlos Di Sarli",
+CLAVES = ["Roberto Firpo", "Cuarteto Típico Roberto Firpo", "Alberto Echagüe", "Juan Maglio", "Juan D'Arienzo", "Los Solistas de D'Arienzo", "Orquesta La Juan D'Arienzo", "Carlos Di Sarli",
           "Carlos di Sarli", "Osvaldo Pugliese", "Orquesta Típica Victor", "Francisco Canaro", "Rafael Canaro",
           "Ángel D'Agostino"]
 
@@ -45,6 +45,14 @@ class IndiceTest(unittest.TestCase):
         claves, nivel = self.indice.buscar("Juan D'Arienzo; Alberto Echagüe")
         self.assertEqual(nivel, EXACTA)
         self.assertIn("Juan D'Arienzo", claves)
+
+    def test_dos_formaciones_del_mismo_director(self):
+        claves, _ = self.indice.buscar("Roberto Firpo, Cuarteto Roberto Firpo")
+        self.assertEqual(claves, ["Roberto Firpo", "Cuarteto Típico Roberto Firpo"])
+
+    def test_coma_con_cantor_o_nombre_no_junta(self):
+        self.assertNotIn("Alberto Echagüe", self.indice.buscar("Juan D'Arienzo, Alberto Echagüe")[0])
+        self.assertNotIn("Juan Maglio", self.indice.buscar("D'Arienzo, Juan")[0])
 
     def test_relleno(self):
         self.assertEqual(self.indice.buscar("Orquesta Típica de Osvaldo Pugliese"), (["Osvaldo Pugliese"], NORMALIZADA))

@@ -25,6 +25,15 @@ parcial (falta el dato), rojo = distinto.
 Menú **Ayuda → Cómo se usa** (F1) tiene la misma explicación dentro de la app.
 Si cargas desde MusicBee, después de aplicar haz en MusicBee *Herramientas → Volver a leer tags*.
 
+### Fechas de CD y "Marcar por disco"
+
+Muchos archivos traen la fecha de salida del CD (p. ej. 2014), no la de grabación. Si la fecha es
+posterior a la muerte del director, o muy posterior a todas las grabaciones, se muestra como
+**"2014 (CD)"** y no se usa para elegir: la canción queda en *Hay que elegir* sin nada marcado.
+Las opciones salen en orden cronológico y sin repetir. 💿 marca las que encajan con los años de las
+demás canciones del mismo disco (álbum o carpeta); **Marcar por disco** marca la opción cuando solo
+encaja una. Siempre se puede escuchar el archivo (▶) y los fragmentos de la BD (▶30s/▶10s).
+
 ### Buscar en la base de datos (Ctrl+F)
 
 Una sola caja: escribe palabras de título, orquesta, cantor o compositor en cualquier orden, sin
