@@ -17,6 +17,9 @@ class FormatoFechaTest(unittest.TestCase):
         self.assertEqual(formatear_fecha("2005 07 11"), "2005-07-11")
         self.assertEqual(formatear_fecha("11.07.2005"), "2005-07-11")
 
+    def test_fecha_grabacion_y_publicacion(self):
+        self.assertEqual(formatear_fecha("R.1953 P.1974"), "1953")
+
     def test_fechas_parciales(self):
         self.assertEqual(formatear_fecha("1941"), "1941")
         self.assertEqual(formatear_fecha("1953-10"), "1953-10")

@@ -30,8 +30,9 @@ class Database:
             # Base de datos sin limpiar: normalizar en memoria (python -m src.utils.mejorar_bd lo deja hecho)
             from src.utils.mejorar_bd import mejorar
             self.db = mejorar(self.db)[0]
-        # Correcciones hechas a mano desde el buscador (data/correcciones.csv)
-        from src.utils import correcciones
+        # Tu forma de escribir los nombres (data/grafias.csv) y correcciones a mano (data/correcciones.csv)
+        from src.utils import correcciones, grafias
+        self.db = grafias.aplicar(self.db)
         self.db = correcciones.aplicar(self.db)
         self.dic_art = {artista: group for artista, group in self.db.groupby('artista_min')}
         print("Data loaded successfully")

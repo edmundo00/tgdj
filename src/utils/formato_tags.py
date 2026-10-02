@@ -69,6 +69,11 @@ def formatear_fecha(fecha):
     if not texto:
         return ""
 
+    # "R.1953 P.1974" = grabado (Recorded) en 1953, publicado en 1974: vale la de grabación
+    m = re.search(r"\bR\.?\s*(\d{4}(?:-\d{2}(?:-\d{2})?)?)", texto)
+    if m and re.search(r"\bP\.?\s*\d{4}", texto):
+        texto = m.group(1)
+
     # Quitar partes a cero: 1941-00-00 -> 1941, 1941-03-00 -> 1941-03
     texto = re.sub(r"(-00)+$", "", texto)
 

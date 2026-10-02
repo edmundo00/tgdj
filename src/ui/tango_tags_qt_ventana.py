@@ -288,6 +288,7 @@ class tango_tags_qt_ventana(QMainWindow):
         m_archivo.addSeparator()
         m_archivo.addAction("Regenerar base de datos limpia (desde mergeddb.csv)…", self.regenerar_bd)
         m_archivo.addAction("Canciones marcadas «No tocar»…", self.ver_no_tocar)
+        m_archivo.addAction("Grafías de nombres (di Sarli / Di Sarli…)…", self.editar_grafias)
         m_archivo.addSeparator()
         m_archivo.addAction("Salir", self.close)
 
@@ -868,6 +869,28 @@ class tango_tags_qt_ventana(QMainWindow):
         if siguiente is not None:
             self.ir_a(siguiente)
         self.statusBar().showMessage(f"«{t['title']}» marcada como No tocar (Archivo → Canciones «No tocar» para deshacerlo)", 8000)
+
+    def editar_grafias(self):
+        from src.ui.dialogo_grafias import DialogoGrafias
+        from src.utils.buscar_artista import separar_orquesta_cantor
+        db = self.data_store.get_db()
+        col_art = "_artista_bd" if "_artista_bd" in db else "artista"
+        col_can = "_cantor_bd" if "_cantor_bd" in db else "cantor"
+        nombres_bd = set(db[col_art]) | {x.strip() for v in db[col_can] for x in re.split(r",|\sy\s", str(v)) if x.strip()}
+        cargadas = {}
+        for a in self.archivos:
+            orq, cant = separar_orquesta_cantor(texto(getattr(a.tags, "artist", "")))
+            for nombre in [orq] + [c.strip() for c in re.split(r",|\sy\s", cant) if c.strip()]:
+                if nombre:
+                    cargadas[nombre] = cargadas.get(nombre, 0) + 1
+        if DialogoGrafias(self, nombres_bd, cargadas).exec_() == QDialog.Accepted:
+            QApplication.setOverrideCursor(Qt.WaitCursor)
+            try:
+                self.recargar_bd()
+            finally:
+                QApplication.restoreOverrideCursor()
+            QMessageBox.information(self, "Grafías guardadas",
+                                    "Guardadas. Vuelve a cargar las canciones para ver las sugerencias con las grafías nuevas.")
 
     def ver_no_tocar(self):
         DialogoNoTocar(self).exec_()
