@@ -106,6 +106,8 @@ Si cargaste desde MusicBee, después haz en MusicBee <i>Herramientas → Volver 
 (con vista previa de las tandas; las que mezclan orquestas salen en rojo);
 <i>Control diapos</i> va pasando las diapos durante la milonga.</li>
 </ol>
+<p><b>Teclado</b> en la tabla: 1–9 elegir · 0 ninguna · Espacio escuchar · S siguiente por decidir · X no tocar.</p>
+<p><b>Archivo</b>: Estado de la colección, Duplicados, Grafías de nombres, Canciones «No tocar», Historial de cambios.</p>
 <p>Al cargar se <b>saltan las canciones ya revisadas</b> (compositor con formato
 <i>Musica: … - Letra: …</i>). Se puede desactivar en <i>Opciones</i>.
 <i>Cancelar</i> (abajo a la derecha) para una carga o una escritura larga.</p>

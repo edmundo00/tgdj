@@ -44,6 +44,25 @@ La ventana puede quedarse abierta: sigue a la canción seleccionada y *Usar para
 (o doble clic / Enter) se la asigna. *Corregir datos…* guarda correcciones en
 `data/correcciones.csv`, que se aplican siempre al cargar.
 
+### Revisar rápido con el teclado
+
+En la tabla: **1–9** elige la opción, **0** ninguna, **Espacio** escucha tu archivo, **S** va a la siguiente
+canción por decidir, **X** la marca como **No tocar** (no vuelve a aparecer al cargar;
+*Archivo → Canciones «No tocar»* para deshacerlo).
+
+### Grafías de nombres
+
+`data/grafias.csv` dice cómo escribir cada orquesta/cantor ("Carlos di Sarli", "Alfredo de Angelis"…) y
+manda sobre la base de datos. Se creó con la forma que más usas en tu colección;
+*Archivo → Grafías de nombres…* para cambiarla.
+
+### Estado de la colección y duplicados
+
+*Archivo → Estado de la colección*: por carpeta, % revisadas, fechas completas/de CD/sin fecha, artistas en
+otro formato… (con caché: segundos). Doble clic en una carpeta para revisarla.
+*Archivo → Duplicados*: copias de audio idéntico **dentro de cada colección**; se elige cuál conservar y el
+resto se **mueve** a `MUSICA/_duplicados` (nunca se borra; se puede deshacer).
+
 ### Deshacer
 
 Cada *Aplicar tags* guarda `output/backups/tags_FECHA.csv` con el valor anterior de cada campo.
