@@ -19,9 +19,8 @@ from PyQt5.QtWidgets import (
     QMainWindow, QAction, QToolBar, QTableWidget, QTableWidgetItem, QVBoxLayout, QHBoxLayout,
     QWidget, QLabel, QHeaderView, QDialog, QPushButton, QFileDialog, QLineEdit, QCheckBox,
     QFrame, QMessageBox, QProgressBar, QApplication, QStyle, QToolButton, QDialogButtonBox,
-    QAbstractItemView, QGridLayout, QInputDialog,
+    QAbstractItemView, QInputDialog,
 )
-from unidecode import unidecode
 
 import re
 
@@ -94,7 +93,7 @@ Los colores indican cuánto se parece cada campo
 <li>Marca la casilla <b>Usar</b> de la coincidencia correcta (solo una por canción).
 Las sugeridas ya vienen marcadas.</li>
 <li>Puedes <b>editar</b> cualquier celda de la parte BD antes de aplicar.</li>
-<li>Si no hay coincidencias, haz <b>doble clic</b> en la parte BD para buscar a mano.</li>
+<li>Si no hay coincidencias, haz <b>doble clic</b> en la parte BD para buscar a mano. El buscador (Ctrl+F) usa una sola caja: palabras en cualquier orden, años como 1944, 1940-1945 o 1940s; puede quedarse abierto y sigue a la canción seleccionada. Si ves un error en la base de datos, <i>Corregir datos…</i> en su ficha.</li>
 <li>Doble clic en la parte del archivo muestra la ruta y permite abrir la carpeta.</li>
 <li>Clic en ▶ para escuchar; <i>Parar</i> detiene el audio.</li>
 </ul></li>
@@ -341,6 +340,7 @@ class tango_tags_qt_ventana(QMainWindow):
             t.horizontalHeaderItem(col).setBackground(cabecera_bd)
             t.horizontalHeaderItem(col).setToolTip("Datos de la base de datos (con el formato final)")
         t.itemChanged.connect(self.on_item_changed)
+        t.itemSelectionChanged.connect(self.seleccion_cambiada)
         t.cellClicked.connect(self.on_cell_clicked)
         t.cellDoubleClicked.connect(self.on_cell_double_clicked)
         return t
@@ -829,18 +829,51 @@ class tango_tags_qt_ventana(QMainWindow):
 
     # ------------------------------------------------------------------ búsqueda en BD
     def buscar_en_bd(self, archivo=None):
-        if not isinstance(archivo, FILETOFINDQT):
+        """Abre (o trae al frente) el buscador. Si se llama para una canción sin coincidencias, la busca ya."""
+        from src.ui.buscador_bd import VentanaBuscador
+        para_cancion = isinstance(archivo, FILETOFINDQT)
+        if not para_cancion:
             archivo = self.archivo_seleccionado()
-        dialogo = DialogoBuscarBD(self, self.data_store.get_db(), archivo)
-        if dialogo.exec_() == QDialog.Accepted and archivo is not None and dialogo.fila_elegida is not None:
-            fila = dialogo.fila_elegida
-            actuales = self.coincidencias(archivo)
-            if fila.name in actuales.index:
-                archivo.seleccion = actuales.index.get_loc(fila.name)
-            else:
-                archivo.coincidencias = pd.concat([actuales, fila.to_frame().T])
-                archivo.seleccion = len(archivo.coincidencias) - 1
-            self.rellenar_tabla()
+        if getattr(self, "buscador", None) is None:
+            self.buscador = VentanaBuscador(
+                self, obtener_indice=self.data_store.get_indice_busqueda, obtener_bd=self.data_store.get_db,
+                usar=self.asignar_desde_bd,
+                reproducir=lambda enlace: self.reproducir_audio(utils.link_to_music(enlace)),
+                parar=self.stop_music, recargar_bd=self.recargar_bd)
+        self.buscador.set_destino(archivo, buscar_por_defecto=para_cancion)
+        self.buscador.show()
+        self.buscador.raise_()
+        self.buscador.activateWindow()
+        self.buscador.caja.setFocus()
+        self.buscador.caja.selectAll()
+
+    def recargar_bd(self):
+        from src.config.config import DB_CSV_PATH
+        self.data_store.load_data(DB_CSV_PATH)
+        self.data_store.get_indice_busqueda()
+
+    def seleccion_cambiada(self):
+        if getattr(self, "buscador", None) is not None and self.buscador.isVisible():
+            self.buscador.set_destino(self.archivo_seleccionado())
+
+    def asignar_desde_bd(self, archivo, indice_bd):
+        """Asigna a la canción una grabación elegida en el buscador y la marca en 'Usar'."""
+        if archivo not in self.archivos:
+            return
+        fila = self.data_store.get_db().loc[indice_bd]
+        actuales = self.coincidencias(archivo)
+        if indice_bd in actuales.index:
+            archivo.seleccion = actuales.index.get_loc(indice_bd)
+        else:
+            archivo.coincidencias = pd.concat([actuales, fila.to_frame().T])
+            archivo.seleccion = len(archivo.coincidencias) - 1
+        self.rellenar_tabla()
+        for f, (a, pos) in self.fila_a_archivo.items():
+            if a is archivo and pos == archivo.seleccion:
+                self.tabla.selectRow(f)
+                self.tabla.scrollToItem(self.tabla.item(f, COL_USAR))
+                break
+        self.statusBar().showMessage(f"Asignada «{fila['titulo']}» ({fila['artista']}). Pulsa Aplicar tags para escribirla.")
 
     # ------------------------------------------------------------------ audio y diapos
     def reproducir_audio(self, ruta):
@@ -989,121 +1022,3 @@ class DialogoConfirmar(QDialog):
         botones.accepted.connect(self.accept)
         botones.rejected.connect(self.reject)
         lay.addWidget(botones)
-
-
-class DialogoBuscarBD(QDialog):
-    """Búsqueda libre en la base de datos; opcionalmente asigna el resultado a una canción."""
-
-    MAX_RESULTADOS = 500
-    COLUMNAS = (("titulo", "Título"), ("artista", "Orquesta"), ("cantor", "Cantor"),
-                ("fecha", "Fecha"), ("estilo", "Estilo"), ("compositor_autor", "Compositor"))
-
-    def __init__(self, parent, db, archivo=None):
-        super().__init__(parent)
-        self.db = db
-        self.archivo = archivo
-        self.fila_elegida = None
-        self.resultados = db.iloc[0:0]
-        self.setWindowTitle("Buscar en la base de datos")
-        self.resize(1200, 650)
-        lay = QVBoxLayout(self)
-
-        if archivo is not None:
-            t = tags_actuales(archivo)
-            lay.addWidget(QLabel(f"Buscando para: <b>{t['title'] or os.path.basename(archivo.ruta_archivo)}</b>"
-                                 f" — {t['artist']} ({t['year']})"))
-
-        form = QGridLayout()
-        self.campos = {}
-        for i, (clave, nombre) in enumerate((("titulo", "Título"), ("artista", "Orquesta"),
-                                             ("cantor", "Cantor"))):
-            form.addWidget(QLabel(nombre + ":"), 0, i * 2)
-            e = QLineEdit()
-            e.returnPressed.connect(self.buscar)
-            form.addWidget(e, 0, i * 2 + 1)
-            self.campos[clave] = e
-        form.addWidget(QLabel("Año desde:"), 1, 0)
-        self.desde = QLineEdit()
-        self.desde.setMaximumWidth(80)
-        form.addWidget(self.desde, 1, 1, Qt.AlignLeft)
-        form.addWidget(QLabel("hasta:"), 1, 2)
-        self.hasta = QLineEdit()
-        self.hasta.setMaximumWidth(80)
-        form.addWidget(self.hasta, 1, 3, Qt.AlignLeft)
-        for e in (self.desde, self.hasta):
-            e.returnPressed.connect(self.buscar)
-        boton = QPushButton("Buscar")
-        boton.clicked.connect(self.buscar)
-        form.addWidget(boton, 1, 5)
-        lay.addLayout(form)
-
-        self.tabla = QTableWidget(0, len(self.COLUMNAS))
-        self.tabla.setHorizontalHeaderLabels([n for _, n in self.COLUMNAS])
-        self.tabla.verticalHeader().hide()
-        self.tabla.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.tabla.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.tabla.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.tabla.setSortingEnabled(True)
-        self.tabla.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.tabla.cellDoubleClicked.connect(lambda *_: self.usar())
-        lay.addWidget(self.tabla)
-        self.info = QLabel("")
-        lay.addWidget(self.info)
-
-        botones = QDialogButtonBox()
-        if archivo is not None:
-            usar = botones.addButton("Usar para esta canción", QDialogButtonBox.AcceptRole)
-            usar.clicked.connect(self.usar)
-        botones.addButton("Cerrar", QDialogButtonBox.RejectRole).clicked.connect(self.reject)
-        lay.addWidget(botones)
-
-        if archivo is not None:
-            from src.utils.utils import separar_artistas
-            t = tags_actuales(archivo)
-            orquesta, _ = separar_artistas(t["artist"])
-            self.campos["titulo"].setText(t["title"])
-            self.campos["artista"].setText(orquesta)
-            self.buscar()
-
-    @staticmethod
-    def normalizar(serie):
-        return serie.astype(str).map(lambda s: unidecode(s).lower())
-
-    def buscar(self):
-        r = self.db
-        for clave, e in self.campos.items():
-            q = unidecode(e.text().strip()).lower()
-            if q:
-                r = r[self.normalizar(r[clave]).str.contains(q, regex=False)]
-        anos = pd.to_numeric(r["fecha"].astype(str).str[:4], errors="coerce")
-        if self.desde.text().strip().isdigit():
-            r = r[anos >= int(self.desde.text())]
-            anos = anos.loc[r.index]
-        if self.hasta.text().strip().isdigit():
-            r = r[anos <= int(self.hasta.text())]
-        total = len(r)
-        self.resultados = r.head(self.MAX_RESULTADOS)
-
-        self.tabla.setSortingEnabled(False)
-        self.tabla.setRowCount(len(self.resultados))
-        for i, (indice, fila) in enumerate(self.resultados.iterrows()):
-            for c, (clave, _) in enumerate(self.COLUMNAS):
-                it = QTableWidgetItem(texto(fila[clave]))
-                it.setData(Qt.UserRole, indice)
-                it.setToolTip(texto(fila[clave]))
-                self.tabla.setItem(i, c, it)
-        self.tabla.setSortingEnabled(True)
-        self.info.setText(f"{total} resultado(s)" +
-                          (f", se muestran los primeros {self.MAX_RESULTADOS}" if total > self.MAX_RESULTADOS else "")
-                          + (" — doble clic para usarlo" if self.archivo is not None else ""))
-
-    def usar(self):
-        if self.archivo is None:
-            return
-        filas = self.tabla.selectionModel().selectedRows()
-        if not filas:
-            QMessageBox.information(self, "Elige una fila", "Selecciona primero un resultado de la lista.")
-            return
-        indice = self.tabla.item(filas[0].row(), 0).data(Qt.UserRole)
-        self.fila_elegida = self.db.loc[indice]
-        self.accept()

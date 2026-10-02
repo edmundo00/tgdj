@@ -25,6 +25,16 @@ parcial (falta el dato), rojo = distinto.
 Menú **Ayuda → Cómo se usa** (F1) tiene la misma explicación dentro de la app.
 Si cargas desde MusicBee, después de aplicar haz en MusicBee *Herramientas → Volver a leer tags*.
 
+### Buscar en la base de datos (Ctrl+F)
+
+Una sola caja: escribe palabras de título, orquesta, cantor o compositor en cualquier orden, sin
+preocuparte de acentos (`rosa firpo`, `pugliese chanel`). Un año (`1944`), un rango (`1940-1945`) o
+una década (`1940s`) filtran por fecha. Filtros de un clic por estilo, fuente y "con audio".
+Las filas repetidas de la misma grabación salen juntas, con su fuente (El Recodo / tango.info).
+La ventana puede quedarse abierta: sigue a la canción seleccionada y *Usar para esta canción*
+(o doble clic / Enter) se la asigna. *Corregir datos…* guarda correcciones en
+`data/correcciones.csv`, que se aplican siempre al cargar.
+
 ### Deshacer
 
 Cada *Aplicar tags* guarda `output/backups/tags_FECHA.csv` con el valor anterior de cada campo.

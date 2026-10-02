@@ -3,6 +3,7 @@
 Arrancar con:  python tangotags.py   (o doble clic en TangoTags.bat)
 """
 import sys
+import threading
 
 import pygame
 from PyQt5.QtCore import Qt
@@ -31,4 +32,7 @@ if __name__ == "__main__":
     ventana = tango_tags_qt_ventana()
     ventana.showMaximized()
     splash.finish(ventana)
+
+    # Preparar el índice del buscador en segundo plano, para que "Buscar en BD" abra al instante
+    threading.Thread(target=Database().get_indice_busqueda, daemon=True).start()
     sys.exit(app.exec_())

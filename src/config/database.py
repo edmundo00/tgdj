@@ -3,6 +3,9 @@ import os
 from src.utils.utils import *
 from dateutil import parser
 import re
+import threading
+
+_cerrojo_indice = threading.Lock()
 
 
 class Database:
@@ -27,8 +30,20 @@ class Database:
             # Base de datos sin limpiar: normalizar en memoria (python -m src.utils.mejorar_bd lo deja hecho)
             from src.utils.mejorar_bd import mejorar
             self.db = mejorar(self.db)[0]
+        # Correcciones hechas a mano desde el buscador (data/correcciones.csv)
+        from src.utils import correcciones
+        self.db = correcciones.aplicar(self.db)
         self.dic_art = {artista: group for artista, group in self.db.groupby('artista_min')}
         print("Data loaded successfully")
+
+    def get_indice_busqueda(self):
+        """Índice para el buscador (se construye la primera vez; tarda unos segundos)."""
+        from src.utils.buscador import IndiceBusqueda
+        with _cerrojo_indice:   # puede llamarse a la vez desde el hilo que lo prepara al arrancar
+            if getattr(self, "_indice", None) is None or self._indice_de is not self.db:
+                self._indice = IndiceBusqueda(self.db)
+                self._indice_de = self.db
+        return self._indice
 
     def get_db(self):
         return self.db
