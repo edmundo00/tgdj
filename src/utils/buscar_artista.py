@@ -54,6 +54,8 @@ def variantes_orquesta(artista):
 class IndiceArtistas:
     def __init__(self, claves):
         self.claves = list(claves)
+        self._conjunto = set(self.claves)
+        self._resultados = {}       # muchas canciones comparten artista: se busca una sola vez
         self.normalizadas = {}
         for clave in self.claves:
             n = normalizar_nombre(clave)
@@ -62,6 +64,12 @@ class IndiceArtistas:
 
     def buscar(self, artista):
         """Devuelve (lista de claves de la BD, nivel) o (None, NINGUNA)."""
+        if artista not in self._resultados:
+            self._resultados[artista] = self._buscar_con_comas(artista)
+        claves, nivel = self._resultados[artista]
+        return (list(claves) if claves else None), nivel
+
+    def _buscar_con_comas(self, artista):
         orquesta, _ = separar_orquesta_cantor(artista)
         if "," in orquesta:
             # "Roberto Firpo, Cuarteto Roberto Firpo": dos formaciones -> se buscan las dos y se juntan.
@@ -80,7 +88,7 @@ class IndiceArtistas:
         variantes = variantes_orquesta(artista)
 
         # Exacta solo si la tag está escrita tal cual (no al darle la vuelta, por ejemplo)
-        if variantes and variantes[0] in self.claves:
+        if variantes and variantes[0] in self._conjunto:
             return self.normalizadas.get(normalizar_nombre(variantes[0]), [variantes[0]]), EXACTA
         for v in variantes:
             n = normalizar_nombre(v)
@@ -92,10 +100,11 @@ class IndiceArtistas:
             n = normalizar_nombre(v)
             if not n:
                 continue
-            dentro = [k for nk, ks in self.normalizadas.items()
-                      if re.search(rf"\b{re.escape(n)}\b", nk) for k in ks]
+            # Los nombres normalizados solo tienen [a-z0-9 ]: "palabra entera" = buscar con espacios alrededor
+            n_ = f" {n} "
+            dentro = [k for nk, ks in self.normalizadas.items() if n_ in f" {nk} " for k in ks]
             contiene = [k for nk, ks in self.normalizadas.items()
-                        if len(nk.split()) >= 2 and re.search(rf"\b{re.escape(nk)}\b", n) for k in ks]
+                        if len(nk.split()) >= 2 and f" {nk} " in n_ for k in ks]
             if dentro or contiene:
                 return (contiene or dentro), PARCIAL
 

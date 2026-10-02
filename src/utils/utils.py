@@ -272,31 +272,11 @@ def contain_most_words(database, text, columna):
     text = text.replace("(", "").replace(")", "")
     text_words = set(word for word in text.lower().split() if word not in articulos_preposiciones_comunes)
 
-    # Lists to store counts of common words
-    lista_numero_palabras_comun = []
-
-    for index, row in database.iterrows():
-        # Normalize and preprocess the row text
-        words = unidecode(str(row[columna]))
-        words = words.replace("(", "").replace(")", "")
-        words_words = set(words.lower().split())
-
-        # Calculate the number of common words
-        common_words = text_words.intersection(words_words)
-        numero_de_palabras_en_comun = len(common_words)
-        lista_numero_palabras_comun.append((index, numero_de_palabras_en_comun))
-
-    # Find the maximum number of common words
-    maximo_palabras = max(lista_numero_palabras_comun, key=lambda x: x[1])[1]
-
-    # Create a boolean Series aligned with the DataFrame's index
-    coincidencias = pd.Series(False, index=database.index)
-    if maximo_palabras > 0:
-        # Find indices with the maximum number of common words
-        indices_mas_palabras = [index for index, value in lista_numero_palabras_comun if value == maximo_palabras]
-        coincidencias.loc[indices_mas_palabras] = True
-
-    return coincidencias
+    # Palabras en común con cada fila (sin iterrows: es lo más lento de la búsqueda)
+    comunes = [len(text_words & set(unidecode(str(v)).replace("(", "").replace(")", "").lower().split()))
+               for v in database[columna].values]
+    maximo_palabras = max(comunes, default=0)
+    return pd.Series([maximo_palabras > 0 and c == maximo_palabras for c in comunes], index=database.index)
 
 def get_file_name_without_extension(file_path):
     # Extract the file name with extension
@@ -544,7 +524,7 @@ def compare_tags(artista_coincidencia, titulo_coincidencia, database, tag):
             nuevas["composer"] = combinar_compositor(compositor_actual, nuevas["composer"])
         return all(not v or v == actual[k] for k, v in nuevas.items())
 
-    c[TagLabels.TODO] = serie(sin_cambios(fila) for _, fila in database.iterrows())
+    c[TagLabels.TODO] = serie(sin_cambios(fila) for fila in database.to_dict("records"))
     perfect_match = bool(c[TagLabels.TODO].any())
     perfect_match_index = c[TagLabels.TODO].idxmax() if perfect_match else None
     return c, perfect_match, perfect_match_index
@@ -630,9 +610,70 @@ def guardar_archivo_output(tipo, dataframe, encabezados=None):
     return file_path
 
 
+def leer_info_wav(ruta_archivo):
+    """Tags del bloque LIST/INFO de un WAV (INAM, IART...), en UTF-8 o, si no, latin-1."""
+    import struct
+    campos = {b"INAM": "title", b"IART": "artist", b"ICRD": "date", b"IGNR": "genre",
+              b"IPRD": "album", b"ICMT": "comment", b"IMUS": "composer"}
+    datos = {}
+    with open(ruta_archivo, "rb") as f:
+        if f.read(4) != b"RIFF":
+            return datos
+        f.read(8)
+        while True:
+            cabecera = f.read(8)
+            if len(cabecera) < 8:
+                break
+            nombre, tamano = cabecera[:4], struct.unpack("<I", cabecera[4:])[0]
+            if nombre == b"LIST" and f.read(4) == b"INFO":
+                fin = f.tell() + tamano - 4
+                while f.tell() < fin - 8:
+                    clave = f.read(4)
+                    largo = struct.unpack("<I", f.read(4))[0]
+                    valor = f.read(largo).split(b"\x00")[0]
+                    if largo % 2:
+                        f.read(1)
+                    if clave in campos:
+                        try:
+                            datos[campos[clave]] = valor.decode("utf-8")
+                        except UnicodeDecodeError:
+                            datos[campos[clave]] = valor.decode("latin-1")
+                break
+            f.seek(tamano + (tamano % 2), 1)
+    return datos
+
+
 def leer_tags(ruta_archivo):
-    tags = TinyTag.get(ruta_archivo)
-    return tags
+    """
+    Tags del archivo (sin calcular la duración, que es lenta y aquí no hace falta).
+    Si TinyTag falla (p. ej. tags en codificación antigua latin-1), se leen con mutagen.
+    """
+    try:
+        return TinyTag.get(ruta_archivo, duration=False)
+    except Exception:
+        from types import SimpleNamespace
+        import mutagen
+        # Nombres internos de ID3 (WAV/AIFF) -> nombres sencillos
+        frames = {"TIT2": "title", "TPE1": "artist", "TDRC": "date", "TYER": "date", "TCON": "genre",
+                  "TCOM": "composer", "TALB": "album", "TPE2": "albumartist"}
+        datos = leer_info_wav(ruta_archivo) if ruta_archivo.lower().endswith(".wav") else {}
+        if datos.get("date") and not re.search(r"\d{4}", datos["date"]):
+            datos.pop("date")       # "????"
+        try:
+            audio = mutagen.File(ruta_archivo, easy=True)
+            for clave, valor in (audio.tags.items() if audio is not None and audio.tags is not None else []):
+                campo = frames.get(clave, clave)
+                if hasattr(valor, "text"):
+                    valor = valor.text
+                valor = str(valor[0] if isinstance(valor, list) and valor else valor)
+                if campo in ("title", "artist", "date", "genre", "composer", "album", "albumartist") and valor:
+                    datos[campo] = valor     # ID3 (UTF-16) es más fiable que RIFF INFO
+        except Exception:
+            pass
+        return SimpleNamespace(
+            title=datos.get("title"), artist=datos.get("artist"), year=datos.get("date"),
+            genre=datos.get("genre"), composer=datos.get("composer"), album=datos.get("album"),
+            albumartist=datos.get("albumartist"), _filename=ruta_archivo, duration=None)
 
 
 from datetime import datetime
