@@ -13,6 +13,7 @@ PyQt5
 watchdog
 Levenshtein
 python-dateutil
+av          # reproducir m4a/wma (pygame no sabe)
 
 # solo para crear el .exe (crear_exe.bat)
 pyinstaller

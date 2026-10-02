@@ -182,7 +182,7 @@ class tango_tags_qt_ventana(QMainWindow):
 
         self.reproductor = Reproductor(self)
         self.reproductor.cambiado.connect(self.pintar_sonando)
-        self.reproductor.error.connect(lambda m: self.statusBar().showMessage(m, 8000))
+        self.reproductor.error.connect(lambda m: QMessageBox.warning(self, "No se puede reproducir", m))
         self.statusBar().addPermanentWidget(BarraSonando(self.reproductor))
         self.celdas_audio = {}      # (fila, col) -> (clave, ruta, descripción, fondo)
 
