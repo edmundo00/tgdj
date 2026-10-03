@@ -255,7 +255,9 @@ class VentanaDuplicados(QWidget):
         if QMessageBox.question(self, "Deshacer", f"¿Devolver a su sitio los {n} archivos del último movimiento?") \
                 != QMessageBox.Yes:
             return
-        movidos = pd.read_csv(registro, sep=";", na_filter=False, dtype=str, encoding="utf-8-sig")["origen"].tolist()
+        from src.config.config import ruta_local
+        movidos = [ruta_local(r) for r in
+                   pd.read_csv(registro, sep=";", na_filter=False, dtype=str, encoding="utf-8-sig")["origen"]]
         restaurados, errores = duplicados.deshacer(registro)
         self.avisar_biblioteca(movidos)
         mensaje = f"Devueltos {restaurados} archivos a su sitio."

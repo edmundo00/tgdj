@@ -13,7 +13,7 @@ from PyQt5.QtCore import Qt, QAbstractTableModel, QModelIndex, QTimer, QEvent
 from PyQt5.QtGui import QColor, QFont
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QTreeWidget, QTreeWidgetItem, QLineEdit, QLabel, QPushButton,
-    QTableView, QAbstractItemView, QMenu, QMessageBox,
+    QTableView, QAbstractItemView, QMenu, QMessageBox, QSizePolicy,
 )
 
 from src.utils import no_tocar
@@ -28,6 +28,8 @@ ESTADOS = {
     "sin_artista": ("✖ Sin artista", "#ffebee", "El artista no está en la base de datos"),
     "error": ("⚠ Error", "#ffebee", "No se pudo comparar"),
     "": ("… Por comparar", "#f5f5f5", "Todavía no comparada (la biblioteca lo hace en segundo plano)"),
+    "nube": ("☁ En la nube", "#e3f2fd", "Solo en la nube de Dropbox (sin descargar en este ordenador): "
+                                       "no se abre para no forzar la descarga"),
 }
 COLUMNAS = [("estado", "Estado"), ("title", "Título"), ("artist", "Artista"), ("year", "Año"), ("genre", "Género"),
             ("composer", "Compositor"), ("album", "Álbum"), ("coleccion", "Colección"), ("carpeta_rel", "Carpeta"),
@@ -65,6 +67,10 @@ class ModeloCanciones(QAbstractTableModel):
     def fila(self, n):
         return self.df.iloc[n]
 
+    @staticmethod
+    def estado_de(f):
+        return "nube" if f["estado"] == "" and f["en_nube"] and not f["tags_leidas"] else f["estado"]
+
     def data(self, indice, rol=Qt.DisplayRole):
         if not indice.isValid():
             return None
@@ -72,7 +78,7 @@ class ModeloCanciones(QAbstractTableModel):
         campo = COLUMNAS[indice.column()][0]
         if rol == Qt.DisplayRole:
             if campo == "estado":
-                texto = ESTADOS.get(f["estado"], ESTADOS[""])[0]
+                texto = ESTADOS.get(self.estado_de(f), ESTADOS[""])[0]
                 if f["estado"] == "dudosa" and f["motivo_fecha"]:
                     texto += " · fecha CD"
                 return texto
@@ -80,16 +86,20 @@ class ModeloCanciones(QAbstractTableModel):
                 return datetime.fromtimestamp(f["visto_primera"]).strftime("%Y-%m-%d") if f["visto_primera"] else ""
             if campo == "ext":
                 return str(f["ext"]).lstrip(".").upper()
+            if campo == "title" and not f["title"]:
+                return os.path.splitext(os.path.basename(f["ruta"]))[0]       # sin título en las tags: el nombre
             return str(f[campo] or "")
+        if rol == Qt.ForegroundRole and campo == "title" and not f["title"]:
+            return QColor("#888")
         if rol == Qt.BackgroundRole and campo == "estado":
-            return QColor(ESTADOS.get(f["estado"], ESTADOS[""])[1])
+            return QColor(ESTADOS.get(self.estado_de(f), ESTADOS[""])[1])
         if rol == Qt.FontRole and campo == "estado":
             fuente = QFont()
             fuente.setBold(True)
             return fuente
         if rol == Qt.ToolTipRole:
             if campo == "estado":
-                partes = [ESTADOS.get(f["estado"], ESTADOS[""])[2]]
+                partes = [ESTADOS.get(self.estado_de(f), ESTADOS[""])[2]]
                 if f["motivo_fecha"]:
                     partes.append(f["motivo_fecha"])
                 if f["cambios"] and f["cambios"] not in ("{}", ""):
@@ -140,9 +150,16 @@ class VistaBiblioteca(QWidget):
         derecha = QWidget()
         ld = QVBoxLayout(derecha)
         ld.setContentsMargins(4, 0, 0, 0)
+        self.etiqueta_aviso = QLabel()
+        self.etiqueta_aviso.setWordWrap(True)
+        self.etiqueta_aviso.setStyleSheet("background:#e3f2fd; border:1px solid #90caf9; border-radius:5px; "
+                                          "padding:8px; font-size:13px;")
+        self.etiqueta_aviso.hide()
+        ld.addWidget(self.etiqueta_aviso)
         arriba = QHBoxLayout()
         self.titulo = QLabel()
         self.titulo.setStyleSheet("font-size:15px; font-weight:bold;")
+        self.titulo.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)     # el nombre de la lista, entero
         self.caja = QLineEdit()
         self.caja.setClearButtonEnabled(True)
         self.caja.setPlaceholderText("Buscar en esta lista: título, artista, álbum, carpeta, año (1944, 1940-1945)…")
@@ -238,6 +255,11 @@ class VistaBiblioteca(QWidget):
         self.df = resto.sort_values("id").reset_index(drop=True)
         self.repintar()
 
+    def aviso(self, texto):
+        """Mensaje arriba de la tabla (vacío: se quita)."""
+        self.etiqueta_aviso.setText(texto)
+        self.etiqueta_aviso.setVisible(bool(texto))
+
     def refrescar_no_tocar(self):
         if self.df.empty:
             return
@@ -258,6 +280,7 @@ class VistaBiblioteca(QWidget):
         ahora = time.time()
         anterior = self.biblioteca.inicio_sesion_anterior()
         revisable = ~d["notocar"]
+        nube = (d["estado"] == "") & (d["en_nube"] == 1) & (d["tags_leidas"] == 0)
         return {
             "nuevas_sesion": ("Desde la última vez", (d["visto_primera"] >= anterior) if anterior else d["id"] < 0),
             "nuevas_7": ("Últimos 7 días", d["visto_primera"] >= ahora - 7 * 86400),
@@ -267,10 +290,11 @@ class VistaBiblioteca(QWidget):
             "fecha_cd": ("· con fecha de CD", (d["estado"] == "dudosa") & (d["motivo_fecha"] != "") & revisable),
             "sin_titulo": ("Título no encontrado", (d["estado"] == "sin_titulo") & revisable),
             "sin_artista": ("Artista no encontrado", (d["estado"] == "sin_artista") & revisable),
-            "pendientes": ("Por comparar", d["estado"].isin(["", "error"])),
+            "pendientes": ("Por comparar", d["estado"].isin(["", "error"]) & ~nube),
             "todas": ("Todas", d["id"] >= 0),
             "perfectas": ("Perfectas", d["estado"] == "perfecta"),
             "notocar": ("No tocar", d["notocar"]),
+            "nube": ("☁ Solo en la nube", nube),
         }
 
     def pintar_arbol(self):
@@ -295,10 +319,12 @@ class VistaBiblioteca(QWidget):
         for titulo, claves in (("🆕 Nuevas", ("nuevas_sesion", "nuevas_7", "nuevas_30")),
                                ("✎ Por revisar", ("sugeridas", "elegir", "fecha_cd", "sin_titulo", "sin_artista",
                                                   "pendientes")),
-                               ("📚 Toda la música", ("todas", "perfectas", "notocar"))):
+                               ("📚 Toda la música", ("todas", "perfectas", "notocar", "nube"))):
             g = grupo(titulo)
             for clave in claves:
                 texto, mascara = listas[clave]
+                if clave == "nube" and not mascara.any():
+                    continue
                 it = QTreeWidgetItem(g, [f"{texto}   ({int(mascara.sum()):,})".replace(",", ".")])
                 it.setData(0, Qt.UserRole, ("lista", clave))
                 if clave == "fecha_cd":

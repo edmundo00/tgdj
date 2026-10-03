@@ -66,8 +66,10 @@ def deshacer(ruta_csv, escribir_tags):
     """
     df = leer_backup(ruta_csv)
     restaurados, errores = 0, []
+    from src.config.config import ruta_local
     for archivo, grupo in df.groupby("archivo", sort=False):
         valores = dict(zip(grupo["campo"], grupo["antes"]))
+        archivo = ruta_local(archivo)        # copia hecha en otro ordenador (D:\\Dropbox ↔ C:\\Dropbox)
         if os.path.exists(archivo) and escribir_tags(archivo, valores, borrar_vacios=True):
             restaurados += 1
         else:

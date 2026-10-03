@@ -111,7 +111,9 @@ def deshacer(registro):
     """Devuelve los archivos movidos a su sitio. Devuelve (restaurados, errores)."""
     df = pd.read_csv(registro, sep=";", na_filter=False, dtype=str, encoding="utf-8-sig")
     restaurados, errores = 0, []
+    from src.config.config import ruta_local
     for origen, destino in zip(df["origen"], df["destino"]):
+        origen, destino = ruta_local(origen), ruta_local(destino)     # movido desde otro ordenador
         try:
             if os.path.exists(origen):
                 raise OSError("ya existe un archivo en el sitio original")

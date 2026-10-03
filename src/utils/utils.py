@@ -735,7 +735,8 @@ def leer_lineas_m3u(m3u_file_path):
 
 def load_m3u_file_helper(m3u_file_path):
     """Rutas de las canciones de una playlist .m3u/.m3u8 (sin comentarios ni líneas vacías)."""
+    from src.config.config import ruta_local
     lineas, _ = leer_lineas_m3u(m3u_file_path)
-    return [l.strip() for l in lineas if l.strip() and not l.strip().startswith("#")]
+    return [ruta_local(l.strip()) for l in lineas if l.strip() and not l.strip().startswith("#")]
 
 

@@ -1,4 +1,5 @@
 import os
+import re
 import configparser
 from PIL import ImageFont
 import pandas as pd
@@ -69,22 +70,39 @@ config = configparser.ConfigParser()
 # Read the config file
 config.read(CONFIG_FILE)
 
-# Function to get the appropriate music path
+def dropbox_de_este_ordenador():
+    """La carpeta de Dropbox según el propio Dropbox (%LOCALAPPDATA%\\Dropbox\\info.json), o None."""
+    import json
+    for base in (os.getenv("LOCALAPPDATA"), os.getenv("APPDATA")):
+        try:
+            with open(os.path.join(base or "", "Dropbox", "info.json"), encoding="utf-8") as f:
+                info = json.load(f)
+        except (OSError, ValueError):
+            continue
+        for cuenta in ("personal", "business"):
+            ruta = (info.get(cuenta) or {}).get("path")
+            if ruta and os.path.isdir(ruta):
+                return ruta
+    return None
+
+
 def get_music_path():
-    # Get current computer name or user name
+    """
+    Carpeta de Dropbox. config.ini está dentro de Dropbox (es el mismo en todos los ordenadores), así que:
+    1) [UserPaths] <usuario de Windows> si existe; 2) [Paths] music_path si existe en este ordenador;
+    3) la que dice Dropbox (p. ej. C:\\Dropbox en el portátil y D:\\Dropbox en el fijo).
+    """
     user_name = os.getenv('USERNAME', 'default')
-
-    # Try to get the path defined under UserPaths for the current user
-    music_path = config.get('UserPaths', user_name, fallback=None)
-
-    # If no user-specific path is found, use the generic one
-    if not music_path:
-        music_path = config.get('Paths', 'music_path', fallback=None)
-
-    if not music_path:
-        raise ValueError("Music path not set in the config file. Please update the config.ini.")
-
-    return music_path
+    candidatas = [config.get('UserPaths', user_name, fallback=None), config.get('Paths', 'music_path', fallback=None)]
+    for ruta in candidatas:
+        if ruta and os.path.isdir(ruta):
+            return ruta
+    detectada = dropbox_de_este_ordenador()
+    if detectada:
+        return detectada
+    if any(candidatas):
+        return next(r for r in candidatas if r)
+    raise ValueError("Music path not set in the config file. Please update the config.ini.")
 
 # General paths and variables
 MUSIC_PATH = get_music_path()
@@ -113,6 +131,20 @@ project_root = PROJECT_ROOT
 #directorio_raiz = dropbox_path + "\\MUSICA\\MP3\\TANGO\\other_stuff\\"
 directorio_raiz = MUSIC_PATH
 dropbox_path=MUSIC_PATH
+
+
+def ruta_local(ruta):
+    """
+    Una ruta guardada en otro ordenador (p. ej. D:\\Dropbox\\… en el fijo) traducida a la carpeta de Dropbox
+    de este (C:\\Dropbox\\… en el portátil). Si ya existe, o no es de Dropbox, se devuelve tal cual.
+    """
+    if not ruta or os.path.exists(ruta):
+        return ruta
+    m = re.search(r"[\\/]Dropbox[\\/]", ruta)
+    if not m:
+        return ruta
+    traducida = os.path.join(dropbox_path, *re.split(r"[\\/]", ruta[m.end():]))
+    return traducida if os.path.normcase(traducida) != os.path.normcase(ruta) else ruta
 m3u_start_path = os.path.join(dropbox_path, "TDJ", "playlists","trabajo")
 presentations_start_path = os.path.join(dropbox_path, "TDJ", "Presentacion")
 musicbee_start_folder = os.path.join(dropbox_path, "TDJ", "MUSICBEE DATABASES")

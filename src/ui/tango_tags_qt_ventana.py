@@ -937,6 +937,12 @@ class tango_tags_qt_ventana(QMainWindow):
     def _biblioteca_progreso(self, fase, hechos, total):
         if fase == "leer" and total:
             self.etiqueta_biblioteca.setText(f"📚 Biblioteca: leyendo tags de lo nuevo… {hechos} de {total}")
+            if total > 2000:
+                self.vista_biblioteca.aviso(
+                    f"<b>Preparando tu biblioteca en este ordenador:</b> leyendo las tags de toda tu música… "
+                    f"{hechos:,} de {total:,}".replace(",", ".")
+                    + ". Solo pasa la primera vez (luego se pone al día en segundos). "
+                      "Puedes seguir usando la app; la lista se va completando sola.")
             # Si es mucho (p. ej. reconstruyendo), la vista se va refrescando cada minuto
             import time as _t
             if total > 2000 and _t.time() - getattr(self, "_ultimo_refresco", 0) > 60:
@@ -944,8 +950,13 @@ class tango_tags_qt_ventana(QMainWindow):
                 self.vista_biblioteca.cargar()
         elif fase == "emparejar" and total:
             self.etiqueta_biblioteca.setText(f"📚 Biblioteca: comparando con la base de datos… {hechos} de {total}")
+            if total > 2000:
+                self.vista_biblioteca.aviso(
+                    f"<b>Preparando tu biblioteca:</b> comparando con la base de datos de tango… "
+                    f"{hechos:,} de {total:,}".replace(",", ".") + " (un par de minutos).")
 
     def _biblioteca_terminada(self, informe):
+        self.vista_biblioteca.aviso("")
         if isinstance(informe, Exception):
             self.etiqueta_biblioteca.setText("📚 Biblioteca: error al actualizar")
             self.etiqueta_biblioteca.setToolTip(str(informe))
@@ -1269,7 +1280,8 @@ class tango_tags_qt_ventana(QMainWindow):
                 f"({historial.resumen_backup(ruta_csv)}):\n\n{ejemplos}\n\n¿Continuar?") != QMessageBox.Yes:
             return
         restaurados, errores = historial.deshacer(ruta_csv, utils.escribir_tags)
-        afectados = set(df["archivo"])
+        from src.config.config import ruta_local
+        afectados = {ruta_local(a) for a in df["archivo"]}
         for a in self.archivos:
             if a.ruta_archivo in afectados:
                 try:
