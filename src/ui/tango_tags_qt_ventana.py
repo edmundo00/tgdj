@@ -13,7 +13,7 @@ import subprocess
 
 import pandas as pd
 import pygame
-from PyQt5.QtCore import Qt, QSize, QSettings, QThread, QEvent
+from PyQt5.QtCore import Qt, QSize, QSettings, QThread, QEvent, pyqtSignal
 from PyQt5.QtGui import QIcon, QColor, QBrush, QFont
 from PyQt5.QtWidgets import (
     QMainWindow, QAction, QToolBar, QTableWidget, QTableWidgetItem, QVBoxLayout, QHBoxLayout,
@@ -162,6 +162,11 @@ class tango_tags_qt_ventana(QMainWindow):
         self.reproductor.cambiado.connect(self.pintar_sonando)
         self.reproductor.error.connect(lambda m: QMessageBox.warning(self, "No se puede reproducir", m))
         self.statusBar().addPermanentWidget(BarraSonando(self.reproductor))
+        self.etiqueta_biblioteca = QLabel("")
+        self.etiqueta_biblioteca.setStyleSheet("color:#555; padding:0 8px;")
+        self.statusBar().addPermanentWidget(self.etiqueta_biblioteca)
+        self._hilo_biblioteca = None
+        self._biblioteca = None
         self.celdas_audio = {}      # (fila, col) -> (clave, ruta, descripción, fondo)
 
         self.progress_bar = QProgressBar()
@@ -272,6 +277,8 @@ class tango_tags_qt_ventana(QMainWindow):
         m_archivo.addAction("Grafías de nombres (di Sarli / Di Sarli…)…", self.editar_grafias)
         m_archivo.addSeparator()
         m_archivo.addAction("Estado de la colección…", self.abrir_estado)
+        m_archivo.addAction("Actualizar la biblioteca ahora", self.actualizar_biblioteca)
+        m_archivo.addAction("Carpetas de la biblioteca…", self.editar_carpetas)
         m_archivo.addAction("Duplicados…", lambda: self.abrir_duplicados([]))
         m_archivo.addAction("Reparar playlists…", self.abrir_reparar_playlists)
         m_archivo.addSeparator()
@@ -843,9 +850,9 @@ class tango_tags_qt_ventana(QMainWindow):
         col_art = "_artista_bd" if "_artista_bd" in db else "artista"
         col_can = "_cantor_bd" if "_cantor_bd" in db else "cantor"
         nombres_bd = set(db[col_art]) | {x.strip() for v in db[col_can] for x in re.split(r",|\sy\s", str(v)) if x.strip()}
-        cargadas = {}
-        for a in self.archivos:
-            orq, cant = separar_orquesta_cantor(texto(getattr(a.tags, "artist", "")))
+        cargadas = {}       # nombres de toda tu colección (biblioteca), con cuántos archivos tiene cada grafía
+        for artista in self.biblioteca.dataframe()["artist"]:
+            orq, cant = separar_orquesta_cantor(artista)
             for nombre in [orq] + [c.strip() for c in re.split(r",|\sy\s", cant) if c.strip()]:
                 if nombre:
                     cargadas[nombre] = cargadas.get(nombre, 0) + 1
@@ -858,11 +865,69 @@ class tango_tags_qt_ventana(QMainWindow):
             QMessageBox.information(self, "Grafías guardadas",
                                     "Guardadas. Vuelve a cargar las canciones para ver las sugerencias con las grafías nuevas.")
 
+    # ------------------------------------------------------------------ biblioteca
+    @property
+    def biblioteca(self):
+        if self._biblioteca is None:
+            from src.biblioteca.biblioteca import Biblioteca
+            self._biblioteca = Biblioteca()
+        return self._biblioteca
+
+    def iniciar_biblioteca(self):
+        """Al arrancar: apunta la sesión (para 'nuevas desde la última vez') y se pone al día en segundo plano."""
+        self.actualizar_biblioteca(empezar_sesion=True)
+
+    def actualizar_biblioteca(self, empezar_sesion=False):
+        if self._hilo_biblioteca is not None and self._hilo_biblioteca.isRunning():
+            return
+        self.etiqueta_biblioteca.setText("📚 Biblioteca: buscando cambios…")
+        self._hilo_biblioteca = ActualizarBiblioteca(self.biblioteca, empezar_sesion)
+        self._hilo_biblioteca.progreso.connect(self._biblioteca_progreso)
+        self._hilo_biblioteca.terminado.connect(self._biblioteca_terminada)
+        self._hilo_biblioteca.start()
+
+    def _biblioteca_progreso(self, fase, hechos, total):
+        if fase == "leer" and total:
+            self.etiqueta_biblioteca.setText(f"📚 Biblioteca: leyendo tags de lo nuevo… {hechos} de {total}")
+
+    def _biblioteca_terminada(self, informe):
+        if isinstance(informe, Exception):
+            self.etiqueta_biblioteca.setText("📚 Biblioteca: error al actualizar")
+            self.etiqueta_biblioteca.setToolTip(str(informe))
+            return
+        total = self.biblioteca.cuantos()
+        partes = [f"{informe[k]} {n}" for k, n in (("nuevas", "nuevas"), ("cambiadas", "cambiadas"),
+                                                   ("movidas", "movidas"), ("borradas", "borradas")) if informe[k]]
+        self.etiqueta_biblioteca.setText(f"📚 {total:,} canciones".replace(",", ".")
+                                         + (" · " + ", ".join(partes) if partes else " · al día"))
+        self.etiqueta_biblioteca.setToolTip(
+            f"Biblioteca actualizada en {informe['segundos']} s: {informe['nuevas']} nuevas, "
+            f"{informe['cambiadas']} cambiadas, {informe['movidas']} movidas, {informe['borradas']} borradas, "
+            f"{informe['leidas']} tags leídas, {informe['errores']} con error, {informe['en_nube']} solo en la nube.\n"
+            "Archivo → Actualizar la biblioteca ahora para volver a mirar.")
+        # Lo que dependía de la colección se recalcula con los datos nuevos
+        self._indice_coleccion = None
+        self._indice_tengo = None
+        if getattr(self, "buscador", None) is not None:
+            self.buscador.tengo = None
+        if getattr(self, "ventana_estado", None) is not None and self.ventana_estado.isVisible():
+            self.ventana_estado.cargar()
+
+    def editar_carpetas(self):
+        from src.ui.dialogo_carpetas import DialogoCarpetas
+        if DialogoCarpetas(self).exec_() == QDialog.Accepted:
+            from src.biblioteca.biblioteca import leer_config
+            self.biblioteca.config = leer_config()
+            self.actualizar_biblioteca()
+
     def abrir_estado(self):
         from src.ui.ventana_estado import VentanaEstado
         if getattr(self, "ventana_estado", None) is None:
-            self.ventana_estado = VentanaEstado(self, revisar_carpeta=self.revisar_carpeta,
-                                                abrir_duplicados=self.abrir_duplicados)
+            self.ventana_estado = VentanaEstado(
+                self, self.biblioteca, actualizar=self.actualizar_biblioteca, revisar_coleccion=self.revisar_coleccion,
+                abrir_duplicados=self.abrir_duplicados, editar_carpetas=self.editar_carpetas)
+        else:
+            self.ventana_estado.cargar()
         self.ventana_estado.show()
         self.ventana_estado.raise_()
         self.ventana_estado.activateWindow()
@@ -871,48 +936,36 @@ class tango_tags_qt_ventana(QMainWindow):
         from src.ui.ventana_playlists import VentanaPlaylists
         if getattr(self, "ventana_playlists", None) is None:
             self.ventana_playlists = VentanaPlaylists(self, self.reproductor, self.indice_coleccion)
+        self.ventana_playlists.indice = None          # con los datos más recientes de la biblioteca
         self.ventana_playlists.show()
         self.ventana_playlists.raise_()
         self.ventana_playlists.analizar()
 
     def indice_coleccion(self):
-        """Índice de tu colección para buscar canciones movidas (usa la caché del Estado de la colección)."""
-        from src.utils import coleccion, playlists
-        from src.ui.ventana_estado import raiz_musica
-        if getattr(self, "_indice_coleccion", None) is not None:
-            return self._indice_coleccion        # ya preparado en esta sesión
-        if not os.path.exists(coleccion.CACHE):
-            if QMessageBox.question(
-                    self, "Índice de la colección",
-                    "Para buscar las canciones hay que mirar toda tu música una vez (unos minutos la primera vez; "
-                    "luego se recuerda). ¿Hacerlo ahora?") != QMessageBox.Yes:
-                return None
-            self.empezar_progreso(1)
-            try:
-                coleccion.escanear(raiz_musica(), progreso=lambda h, t, l: (
-                    self.progress_bar.setMaximum(t), self.progress_bar.setValue(h), QApplication.processEvents()),
-                    cancelado=lambda: self._cancelado)
-            finally:
-                self.terminar_progreso()
-        else:
-            coleccion.escanear(raiz_musica())      # al día con lo último (rápido con la caché)
-        df = pd.read_csv(coleccion.CACHE, sep=";", na_filter=False, dtype=str, encoding="utf-8")
-        self._indice_coleccion = playlists.IndiceColeccion(df)
+        """Índice de tu colección para buscar canciones movidas (de la biblioteca)."""
+        from src.utils import playlists
+        if getattr(self, "_indice_coleccion", None) is None:
+            self._indice_coleccion = playlists.IndiceColeccion(self.biblioteca.dataframe())
         return self._indice_coleccion
 
     def abrir_duplicados(self, colecciones):
         from src.ui.ventana_duplicados import VentanaDuplicados
-        self.ventana_duplicados = VentanaDuplicados(self, self.reproductor, colecciones)
+        self.ventana_duplicados = VentanaDuplicados(self, self.reproductor, self.biblioteca, colecciones)
         self.ventana_duplicados.show()
         self.ventana_duplicados.raise_()
 
-    def revisar_carpeta(self, carpeta):
-        rutas = []
-        for raiz, _, ficheros in os.walk(carpeta):
-            rutas += [os.path.join(raiz, f) for f in sorted(ficheros) if f.lower().endswith(EXTENSIONES_AUDIO)]
+    def revisar_filas(self, df, origen):
+        """Carga en la tabla canciones de la biblioteca usando las tags que ya tiene (sin volver a leerlas)."""
+        filas = df.sort_values("ruta")
+        rutas_y_tags = [(r["ruta"], [r["title"], r["artist"], r["year"], r["genre"], r["composer"], r["ruta"],
+                                     r["album"]]) if r["tags_leidas"] and not r["error"] else (r["ruta"], None)
+                        for r in filas.to_dict("records")]
         self.raise_()
         self.activateWindow()
-        self.procesar_archivos([(r, None) for r in rutas], origen=carpeta)
+        self.procesar_archivos(rutas_y_tags, origen=origen)
+
+    def revisar_coleccion(self, nombre):
+        self.revisar_filas(self.biblioteca.dataframe("coleccion=? AND en_nube=0", (nombre,)), origen=nombre)
 
     def ver_no_tocar(self):
         DialogoNoTocar(self).exec_()
@@ -1152,12 +1205,11 @@ class tango_tags_qt_ventana(QMainWindow):
         self.data_store.get_indice_busqueda()
 
     def indice_tengo(self):
-        """Qué grabaciones tienes (de la caché del Estado de la colección). None si aún no se ha mirado."""
+        """Qué grabaciones tienes (de la biblioteca)."""
         from src.utils import coleccion
-        if getattr(self, "_indice_tengo", None) is None and os.path.exists(coleccion.CACHE):
-            df = pd.read_csv(coleccion.CACHE, sep=";", na_filter=False, dtype=str, encoding="utf-8")
-            self._indice_tengo = coleccion.IndiceTengo(df)
-        return getattr(self, "_indice_tengo", None)
+        if getattr(self, "_indice_tengo", None) is None:
+            self._indice_tengo = coleccion.IndiceTengo(self.biblioteca.dataframe())
+        return self._indice_tengo
 
     def seleccion_cambiada(self):
         if getattr(self, "buscador", None) is not None and self.buscador.isVisible():
@@ -1244,7 +1296,30 @@ class tango_tags_qt_ventana(QMainWindow):
     def closeEvent(self, event):
         for clave in ("opt_fecha", "opt_guardar_coinc", "opt_guardar_resid", "opt_saltar", "opt_no_tocar"):
             self.settings.setValue(clave, getattr(self, clave).isChecked())
+        if self._hilo_biblioteca is not None and self._hilo_biblioteca.isRunning():
+            self._hilo_biblioteca.requestInterruption()
+            self._hilo_biblioteca.wait(5000)
         event.accept()
+
+
+class ActualizarBiblioteca(QThread):
+    """Pone la biblioteca al día sin bloquear la ventana."""
+    progreso = pyqtSignal(str, int, int)
+    terminado = pyqtSignal(object)        # informe (dict) o la excepción
+
+    def __init__(self, biblioteca, empezar_sesion=False):
+        super().__init__()
+        self.biblioteca, self.empezar_sesion = biblioteca, empezar_sesion
+
+    def run(self):
+        try:
+            if self.empezar_sesion:
+                self.biblioteca.empezar_sesion()
+            informe = self.biblioteca.actualizar(progreso=lambda f, h, t: self.progreso.emit(f, h, t),
+                                                 cancelado=self.isInterruptionRequested)
+            self.terminado.emit(informe)
+        except Exception as e:
+            self.terminado.emit(e)
 
 
 class EnSegundoPlano(QThread):

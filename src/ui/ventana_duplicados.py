@@ -9,8 +9,8 @@ from PyQt5.QtWidgets import (
     QAbstractItemView, QProgressBar, QApplication, QMessageBox,
 )
 
-from src.utils import coleccion, duplicados
-from src.ui.ventana_estado import raiz_musica
+from src.biblioteca.biblioteca import CARPETA_DUPLICADOS, raices_absolutas
+from src.utils import duplicados
 
 
 def tamano_texto(b):
@@ -18,8 +18,10 @@ def tamano_texto(b):
 
 
 class VentanaDuplicados(QWidget):
-    def __init__(self, parent, reproductor, colecciones=None):
+    def __init__(self, parent, reproductor, biblioteca, colecciones=None):
         super().__init__(parent, Qt.Window)
+        self.biblioteca = biblioteca
+        self.raiz_de = {}         # ruta -> carpeta raíz de la biblioteca (para mover a su _duplicados)
         self.setWindowTitle("Duplicados")
         self.resize(1300, 750)
         self.reproductor = reproductor
@@ -82,24 +84,24 @@ class VentanaDuplicados(QWidget):
     def actualizar_titulo(self):
         donde = ", ".join(self.colecciones) if self.colecciones else "todas las colecciones"
         self.titulo.setText(
-            f"Copias <b>idénticas</b> (mismo contenido) dentro de cada colección de <b>{raiz_musica()}</b> — "
+            "Copias <b>idénticas</b> (mismo audio) dentro de cada colección de tu biblioteca — "
             f"buscando en: <b>{donde}</b>.<br>Las copias no se borran: se mueven a <i>_duplicados</i> "
             "(misma estructura de carpetas) y se puede deshacer. Las colecciones distintas no se comparan entre sí.")
 
     # ------------------------------------------------------------------ buscar
     def buscar(self):
         self._cancelar = False
-        raiz = raiz_musica()
         self.progreso.show()
         self.boton_cancelar.show()
         self.boton_buscar.setEnabled(False)
         QApplication.setOverrideCursor(Qt.WaitCursor)
         try:
-            self.progreso.setMaximum(0)
-            self.progreso.setFormat("Mirando tamaños…")
-            QApplication.processEvents()
-            archivos = [(r, c, t) for r, c, t, _ in coleccion.listar(raiz)
-                        if not self.colecciones or c in self.colecciones]
+            df = self.biblioteca.dataframe("en_nube=0")
+            if self.colecciones:
+                df = df[df["coleccion"].isin(self.colecciones)]
+            self.raiz_de = dict(zip(df["ruta"], df["raiz"]))
+            self.tags = {f["ruta"]: f for f in df[["ruta", "title", "artist", "year", "composer"]].to_dict("records")}
+            archivos = list(zip(df["ruta"], df["coleccion"], df["bytes"]))
 
             def progreso(hechos, total):
                 self.progreso.setMaximum(total)
@@ -107,27 +109,24 @@ class VentanaDuplicados(QWidget):
                 self.progreso.setFormat("Comparando contenido… %v de %m")
                 QApplication.processEvents()
 
-            self.grupos = duplicados.buscar(archivos, progreso, lambda: self._cancelar)
+            # Las huellas de audio se guardan en la biblioteca: la segunda vez es casi instantáneo
+            self.grupos = duplicados.buscar(archivos, progreso, lambda: self._cancelar,
+                                            huellas_de=self.biblioteca.huellas)
         finally:
             QApplication.restoreOverrideCursor()
             self.progreso.hide()
             self.boton_cancelar.hide()
             self.boton_buscar.setEnabled(True)
-        self.cargar_tags()
         revisadas = {r for r, t in self.tags.items() if str(t.get("composer", "")).startswith("Musica:")}
         self.conservar = {i: duplicados.sugerir_conservar(g, revisadas) for i, g in enumerate(self.grupos)}
         self.pintar()
 
-    def cargar_tags(self):
-        self.tags = {}
-        if os.path.exists(coleccion.CACHE):
-            df = pd.read_csv(coleccion.CACHE, sep=";", na_filter=False, dtype=str, encoding="utf-8")
-            rutas = {r for g in self.grupos for r in g}
-            self.tags = {f["ruta"]: f for f in df[df["ruta"].isin(rutas)].to_dict("records")}
+    def relativa(self, ruta):
+        raiz = self.raiz_de.get(ruta, "")
+        return os.path.join(os.path.basename(raiz), os.path.relpath(ruta, raiz)) if raiz else ruta
 
     # ------------------------------------------------------------------ tabla
     def pintar(self):
-        raiz = raiz_musica()
         filas = sum(len(g) + 1 for g in self.grupos)
         self.tabla.blockSignals(True)
         self.tabla.clearSpans()
@@ -137,7 +136,7 @@ class VentanaDuplicados(QWidget):
         for i, g in enumerate(self.grupos):
             tam = os.path.getsize(g[0]) if os.path.exists(g[0]) else 0
             cab = QTableWidgetItem(f"Grupo {i + 1}: {len(g)} copias idénticas de {tamano_texto(tam)} — "
-                                   f"{os.path.relpath(os.path.dirname(g[0]), raiz)}")
+                                   f"{os.path.dirname(self.relativa(g[0]))}")
             cab.setFont(QFont("", -1, QFont.Bold))
             cab.setBackground(QColor("#eceff1"))
             cab.setFlags(Qt.ItemIsEnabled)
@@ -151,7 +150,7 @@ class VentanaDuplicados(QWidget):
                 usar.setCheckState(Qt.Checked if self.conservar.get(i) == ruta else Qt.Unchecked)
                 self.tabla.setItem(n, 0, usar)
                 self.tabla.setItem(n, 1, QTableWidgetItem("▶"))
-                nombre = QTableWidgetItem(os.path.relpath(ruta, raiz))
+                nombre = QTableWidgetItem(self.relativa(ruta))
                 nombre.setToolTip(ruta)
                 self.tabla.setItem(n, 2, nombre)
                 self.tabla.setItem(n, 3, QTableWidgetItem(os.path.splitext(ruta)[1][1:].upper()))
@@ -224,16 +223,24 @@ class VentanaDuplicados(QWidget):
             return
         if QMessageBox.question(
                 self, "Mover copias",
-                f"Se van a mover {len(mover)} archivos a «{os.path.join(raiz_musica(), coleccion.CARPETA_DUPLICADOS)}».\n\n"
-                "No se borra nada y se puede deshacer.\n\nOjo: si MusicBee o alguna playlist usaba esas copias, "
-                "dejarán de encontrarlas (en MusicBee: Herramientas → Volver a escanear).\n\n¿Continuar?") != QMessageBox.Yes:
+                f"Se van a mover {len(mover)} archivos a la carpeta «{CARPETA_DUPLICADOS}» de su biblioteca "
+                "(misma estructura de carpetas).\n\nNo se borra nada y se puede deshacer.\n\nOjo: si MusicBee o alguna "
+                "playlist usaba esas copias, dejarán de encontrarlas (Reparar playlists las arregla; en MusicBee: "
+                "Herramientas → Volver a escanear).\n\n¿Continuar?") != QMessageBox.Yes:
             return
         if self.reproductor.clave is not None:
             self.reproductor.parar()
-        movidos, errores, registro = duplicados.mover(mover, raiz_musica())
+        por_raiz = {}
+        for r in mover:
+            por_raiz.setdefault(self.raiz_de.get(r) or os.path.dirname(r), []).append(r)
+        movidos, errores, registros = 0, [], []
+        for raiz, rutas in por_raiz.items():
+            n, e, registro = duplicados.mover(rutas, raiz)
+            movidos, errores = movidos + n, errores + e
+            registros.append(os.path.basename(registro))
         self.grupos = []
         self.pintar()
-        mensaje = f"Movidos {movidos} archivos. Registro: {os.path.basename(registro)}"
+        mensaje = f"Movidos {movidos} archivos. Registro: {', '.join(registros)}"
         if errores:
             mensaje += f"\n\n{len(errores)} no se pudieron mover:\n" + "\n".join(f"{r}: {e}" for r, e in errores[:10])
         (QMessageBox.warning if errores else QMessageBox.information)(self, "Mover copias", mensaje)
@@ -254,8 +261,9 @@ class VentanaDuplicados(QWidget):
         (QMessageBox.warning if errores else QMessageBox.information)(self, "Deshacer", mensaje)
 
     def abrir_carpeta(self):
-        carpeta = os.path.join(raiz_musica(), coleccion.CARPETA_DUPLICADOS)
-        if os.path.isdir(carpeta):
-            os.startfile(carpeta)
-        else:
-            QMessageBox.information(self, "_duplicados", "Todavía no se ha movido nada.")
+        for raiz, _, _ in raices_absolutas(self.biblioteca.config):
+            carpeta = os.path.join(raiz, CARPETA_DUPLICADOS)
+            if os.path.isdir(carpeta):
+                os.startfile(carpeta)
+                return
+        QMessageBox.information(self, "_duplicados", "Todavía no se ha movido nada.")

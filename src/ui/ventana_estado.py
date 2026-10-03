@@ -1,15 +1,15 @@
-"""Archivo → Estado de la colección: cómo está de ordenada cada carpeta de música."""
+"""Archivo → Estado de la colección: cómo está de ordenada cada colección (datos de la biblioteca)."""
 import os
 
 import pandas as pd
-from PyQt5.QtCore import Qt, QSettings
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor, QFont
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTableWidget, QTableWidgetItem, QHeaderView,
-    QAbstractItemView, QProgressBar, QFileDialog, QApplication, QMessageBox,
+    QAbstractItemView, QMessageBox,
 )
 
-from src.config.config import dropbox_path
+from src.biblioteca.biblioteca import raices_absolutas
 from src.utils import coleccion, no_tocar
 
 COLUMNAS = [
@@ -24,49 +24,36 @@ AYUDA = {
     "fecha_completa": "Fecha de grabación AAAA-MM-DD",
     "fecha_cd": "Año 1990 o posterior: casi seguro es la fecha del CD, no la de grabación",
     "artista_raro": "Artista con ; , - o feat en vez de «Orquesta / Cantor»",
-    "copias": "Archivos del mismo tamaño exacto dentro de la carpeta (usa Duplicados para comprobarlo)",
+    "copias": "Archivos del mismo tamaño exacto dentro de la colección (usa Duplicados para comprobarlo)",
 }
 
 
-def raiz_musica():
-    return QSettings("TangoTags", "TangoTags").value("raiz_musica", os.path.join(dropbox_path, "TDJ", "MUSICA"))
-
-
 class VentanaEstado(QWidget):
-    def __init__(self, parent, revisar_carpeta, abrir_duplicados):
+    def __init__(self, parent, biblioteca, actualizar, revisar_coleccion, abrir_duplicados, editar_carpetas):
         super().__init__(parent, Qt.Window)
         self.setWindowTitle("Estado de la colección")
         self.resize(1300, 560)
-        self.revisar_carpeta, self.abrir_duplicados = revisar_carpeta, abrir_duplicados
+        self.biblioteca = biblioteca
+        self.revisar_coleccion, self.abrir_duplicados = revisar_coleccion, abrir_duplicados
         self.df = pd.DataFrame()
-        self._cancelar = False
         lay = QVBoxLayout(self)
 
         fila = QHBoxLayout()
-        self.etiqueta_raiz = QLabel()
-        cambiar = QPushButton("Cambiar carpeta…")
-        cambiar.clicked.connect(self.cambiar_raiz)
-        self.boton_actualizar = QPushButton("⟳  Actualizar")
-        self.boton_actualizar.setToolTip("Vuelve a mirar la música. La primera vez tarda unos minutos; "
-                                         "después solo lee lo que haya cambiado")
-        self.boton_actualizar.clicked.connect(self.actualizar)
+        self.etiqueta_raices = QLabel()
+        self.etiqueta_raices.setWordWrap(True)
+        carpetas = QPushButton("Carpetas…")
+        carpetas.setToolTip("Qué carpetas forman tu biblioteca")
+        carpetas.clicked.connect(editar_carpetas)
         duplicados = QPushButton("Buscar duplicados…")
         duplicados.clicked.connect(lambda: self.abrir_duplicados(self.colecciones_seleccionadas()))
-        fila.addWidget(self.etiqueta_raiz, 1)
-        fila.addWidget(cambiar)
+        self.boton_actualizar = QPushButton("⟳  Actualizar")
+        self.boton_actualizar.setToolTip("Buscar cambios en la música (en segundo plano; solo lee lo nuevo o cambiado)")
+        self.boton_actualizar.clicked.connect(actualizar)
+        fila.addWidget(self.etiqueta_raices, 1)
+        fila.addWidget(carpetas)
         fila.addWidget(duplicados)
         fila.addWidget(self.boton_actualizar)
         lay.addLayout(fila)
-
-        self.progreso = QProgressBar()
-        self.progreso.hide()
-        self.boton_cancelar = QPushButton("Cancelar")
-        self.boton_cancelar.hide()
-        self.boton_cancelar.clicked.connect(lambda: setattr(self, "_cancelar", True))
-        fila2 = QHBoxLayout()
-        fila2.addWidget(self.progreso, 1)
-        fila2.addWidget(self.boton_cancelar)
-        lay.addLayout(fila2)
 
         self.tabla = QTableWidget(0, len(COLUMNAS) + 1)
         self.tabla.setHorizontalHeaderLabels(["Colección"] + [n for _, n, _ in COLUMNAS])
@@ -80,55 +67,27 @@ class VentanaEstado(QWidget):
         self.tabla.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         self.tabla.cellDoubleClicked.connect(self.doble_clic)
         lay.addWidget(self.tabla, 1)
-        self.info = QLabel("Doble clic en una carpeta para revisarla en la ventana principal.")
+        self.info = QLabel()
         self.info.setStyleSheet("color:#666;")
         lay.addWidget(self.info)
+        self.cargar()
 
-        self.etiqueta_raiz.setText(f"Música: <b>{raiz_musica()}</b>")
-        if os.path.exists(coleccion.CACHE):
-            self.cargar_cache()
-
-    def cambiar_raiz(self):
-        carpeta = QFileDialog.getExistingDirectory(self, "Carpeta de la música", raiz_musica())
-        if carpeta:
-            QSettings("TangoTags", "TangoTags").setValue("raiz_musica", carpeta)
-            self.etiqueta_raiz.setText(f"Música: <b>{carpeta}</b>")
-
-    def cargar_cache(self):
-        df = pd.read_csv(coleccion.CACHE, sep=";", na_filter=False, dtype=str, encoding="utf-8")
-        raiz = os.path.normcase(os.path.normpath(raiz_musica()))
-        self.df = df[df["ruta"].map(lambda r: os.path.normcase(r).startswith(raiz))]
+    def cargar(self):
+        """Vuelve a leer la biblioteca y repinta (rápido: es una consulta)."""
+        raices = [r for r, _, _ in raices_absolutas(self.biblioteca.config)]
+        self.etiqueta_raices.setText("Biblioteca: " + " · ".join(f"<b>{r}</b>" for r in raices))
+        self.df = self.biblioteca.dataframe()
         self.pintar()
-        self.info.setText("Datos de la última vez (pulsa Actualizar para volver a mirar). "
-                          "Doble clic en una carpeta para revisarla.")
-
-    def actualizar(self):
-        self._cancelar = False
-        self.progreso.show()
-        self.boton_cancelar.show()
-        self.boton_actualizar.setEnabled(False)
-
-        def progreso(hechos, total, leidos):
-            self.progreso.setMaximum(total)
-            self.progreso.setValue(hechos)
-            self.progreso.setFormat(f"%v de %m archivos  ({leidos} leídos del disco)")
-            QApplication.processEvents()
-
-        try:
-            self.df = coleccion.escanear(raiz_musica(), progreso=progreso, cancelado=lambda: self._cancelar)
-        finally:
-            self.progreso.hide()
-            self.boton_cancelar.hide()
-            self.boton_actualizar.setEnabled(True)
-        self.pintar()
-        self.info.setText(("Cancelado: se muestra lo que dio tiempo a mirar. " if self._cancelar else "")
-                          + "Doble clic en una carpeta para revisarla en la ventana principal.")
+        actualizando = " (buscando cambios…)" if self.biblioteca.actualizando() else ""
+        self.info.setText(f"{len(self.df):,} canciones{actualizando}. ".replace(",", ".")
+                          + "Doble clic en una colección para revisarla en la ventana principal.")
 
     def pintar(self):
+        self.tabla.setRowCount(0)
         if self.df.empty:
             return
         r = coleccion.resumen(self.df, no_tocar.claves())
-        tam = pd.to_numeric(self.df["bytes"], errors="coerce")
+        tam = self.df["bytes"]
         copias = self.df[tam.duplicated(keep=False) & (tam > 100_000)].groupby(["coleccion", "bytes"]).size()
         copias = (copias - 1).groupby(level=0).sum()
         r["copias"] = copias.reindex(r.index).fillna(0)
@@ -167,7 +126,6 @@ class VentanaEstado(QWidget):
         nombre = self.tabla.item(fila, 0).text()
         if nombre == "TOTAL":
             return
-        carpeta = os.path.join(raiz_musica(), nombre)
-        if QMessageBox.question(self, "Revisar carpeta",
+        if QMessageBox.question(self, "Revisar colección",
                                 f"¿Cargar «{nombre}» en la ventana principal para revisarla?") == QMessageBox.Yes:
-            self.revisar_carpeta(carpeta)
+            self.revisar_coleccion(nombre)

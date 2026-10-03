@@ -148,8 +148,14 @@ def propuesta_segura(entrada):
         seguros.sort(key=lambda c: (_coleccion(c[0]) != _coleccion(entrada.ruta),
                                     os.path.basename(c[0]).lower() != nombre))
         return seguros[0][0]
-    if not entrada.tamano and len(entrada.candidatos) == 1:
-        return entrada.candidatos[0][0]
+    if not entrada.tamano:
+        # Sin tamaño no se puede comprobar que sea el mismo archivo: solo si se llama exactamente igual
+        # (nombre y extensión). "Nombre parecido" o "mismo artista y título" pueden ser otra versión
+        # (p. ej. la cortina entera .flac en vez de la recortada .mp3).
+        nombre = os.path.basename(entrada.ruta.replace("\\", "/")).lower()
+        exactos = [c[0] for c in entrada.candidatos if os.path.basename(c[0]).lower() == nombre]
+        if len(exactos) == 1:
+            return exactos[0]
     return None
 
 

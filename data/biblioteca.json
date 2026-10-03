@@ -1,0 +1,16 @@
+{
+  "raices": [
+    {
+      "ruta": "TDJ/MUSICA",
+      "subcarpetas_son_colecciones": true,
+      "excluir": [
+        "musica_variada_edmundo"
+      ]
+    },
+    {
+      "ruta": "TDJ/TIDAL Download",
+      "subcarpetas_son_colecciones": false,
+      "excluir": []
+    }
+  ]
+}

@@ -56,5 +56,17 @@ class PlaylistsTest(unittest.TestCase):
         self.assertEqual(len([x for x in playlists.analizar(self.m3u, indice) if not x.existe]), 1)
 
 
+class PropuestaSeguraTest(unittest.TestCase):
+    def test_sin_tamano_un_nombre_parecido_no_es_seguro(self):
+        e = playlists.Entrada(0, r"D:\x\Cortinas Cortadas\Ava Max - Salt.mp3", False)
+        e.candidatos = [(r"D:\x\Cortinas Enteras\Ava Max - Salt.flac", "nombre de archivo parecido", False)]
+        self.assertIsNone(playlists.propuesta_segura(e))
+
+    def test_sin_tamano_mismo_nombre_exacto_si(self):
+        e = playlists.Entrada(0, r"D:\x\Vieja\Ava Max - Salt.mp3", False)
+        e.candidatos = [(r"D:\x\Nueva\Ava Max - Salt.mp3", "mismo nombre de archivo", False)]
+        self.assertEqual(playlists.propuesta_segura(e), r"D:\x\Nueva\Ava Max - Salt.mp3")
+
+
 if __name__ == "__main__":
     unittest.main()

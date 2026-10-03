@@ -1,7 +1,4 @@
 """Archivo → Grafías de nombres…: elegir cómo se escribe cada orquesta/cantor."""
-import os
-
-import pandas as pd
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (
@@ -9,22 +6,13 @@ from PyQt5.QtWidgets import (
     QAbstractItemView, QComboBox, QDialogButtonBox, QCheckBox,
 )
 
-from src.config.config import DATA_FOLDER
 from src.utils import grafias
 
-NOMBRES_COLECCION = os.path.join(DATA_FOLDER, "nombres_coleccion.csv")
 
 
 def contar_nombres(extra=None):
-    """{grafía: nº de archivos} de tu colección (data/nombres_coleccion.csv) + canciones cargadas."""
-    cuenta = {}
-    if os.path.exists(NOMBRES_COLECCION):
-        df = pd.read_csv(NOMBRES_COLECCION, sep=";", na_filter=False, dtype=str, encoding="utf-8-sig")
-        for g, k in zip(df["grafia"], df["archivos"]):
-            cuenta[g] = cuenta.get(g, 0) + int(k)
-    for g, k in (extra or {}).items():
-        cuenta[g] = max(cuenta.get(g, 0), k)
-    return cuenta
+    """{grafía: nº de archivos} de tu colección (la calcula la ventana principal desde la biblioteca)."""
+    return dict(extra or {})
 
 
 class DialogoGrafias(QDialog):

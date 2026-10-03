@@ -69,6 +69,20 @@ canción por decidir, **X** la marca como **No tocar** (no vuelve a aparecer al 
 manda sobre la base de datos. Se creó con la forma que más usas en tu colección;
 *Archivo → Grafías de nombres…* para cambiarla.
 
+### Biblioteca (toda tu música)
+
+La app conoce toda tu música: `TDJ/MUSICA` (cada subcarpeta es una colección; sin `musica_variada_edmundo`)
+y `TDJ/TIDAL Download` (la bandeja de entrada). Se configura en *Archivo → Carpetas de la biblioteca* y se
+guarda en `data/biblioteca.json` (rutas relativas a Dropbox: vale en todos los ordenadores).
+
+Al abrir la app se pone al día **en segundo plano** (abajo a la derecha: «📚 46.308 canciones · al día»): mira
+tamaño y fecha de cada archivo (unos segundos) y solo lee las tags de lo nuevo o cambiado. Reconoce las
+canciones **movidas** (p. ej. de TIDAL Download a MUSICA) sin perder su fecha de llegada. Los archivos
+«solo en la nube» de Dropbox no se abren. *Archivo → Actualizar la biblioteca ahora* para volver a mirar.
+
+La base de datos es local (`%LOCALAPPDATA%\TangoTagsiblioteca.sqlite`, una por ordenador) y es una
+caché: si se borra, se reconstruye. Tus decisiones (No tocar, grafías, correcciones, copias) siguen en Dropbox.
+
 ### Estado de la colección y duplicados
 
 *Archivo → Estado de la colección*: por carpeta, % revisadas, fechas completas/de CD/sin fecha, artistas en

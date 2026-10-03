@@ -35,9 +35,10 @@ def huella(ruta):
     return h.hexdigest()
 
 
-def buscar(archivos, progreso=None, cancelado=None):
+def buscar(archivos, progreso=None, cancelado=None, huellas_de=None):
     """
     archivos: iterable de (ruta, coleccion, tamaño). Solo se comparan archivos de la misma colección.
+    huellas_de(rutas) -> {ruta: huella}: opcional, para usar las huellas guardadas en la biblioteca.
     Devuelve una lista de grupos (listas de rutas) de copias idénticas.
     """
     por_tamano = defaultdict(list)
@@ -50,11 +51,15 @@ def buscar(archivos, progreso=None, cancelado=None):
         if cancelado and cancelado():
             break
         por_huella = defaultdict(list)
-        for r in rutas:
-            try:
-                por_huella[huella(r)].append(r)
-            except OSError:
-                pass
+        if huellas_de is not None:
+            for r, h in huellas_de(rutas).items():
+                por_huella[h].append(r)
+        else:
+            for r in rutas:
+                try:
+                    por_huella[huella(r)].append(r)
+                except OSError:
+                    pass
         grupos += [sorted(g) for g in por_huella.values() if len(g) > 1]
         if progreso:
             progreso(i, len(candidatos))

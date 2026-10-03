@@ -5,6 +5,16 @@ import unittest
 from src.utils import coleccion, duplicados
 
 
+def listar(raiz):
+    """(ruta, colección = primera subcarpeta, tamaño) sin entrar en _duplicados."""
+    for actual, carpetas, ficheros in os.walk(raiz):
+        carpetas[:] = [c for c in carpetas if c != "_duplicados"]
+        col = os.path.relpath(actual, raiz).split(os.sep)[0]
+        for f in ficheros:
+            r = os.path.join(actual, f)
+            yield r, col, os.path.getsize(r)
+
+
 def escribir(ruta, contenido):
     os.makedirs(os.path.dirname(ruta), exist_ok=True)
     with open(ruta, "wb") as f:
@@ -23,7 +33,7 @@ class DuplicadosTest(unittest.TestCase):
         escribir(os.path.join(self.raiz, "Dan", "La Taba.mp3"), audio)   # otra colección: no cuenta
 
     def archivos(self):
-        return [(r, c, t) for r, c, t, _ in coleccion.listar(self.raiz)]
+        return list(listar(self.raiz))
 
     def test_solo_identicas_y_dentro_de_la_misma_coleccion(self):
         grupos = duplicados.buscar(self.archivos())

@@ -35,4 +35,6 @@ if __name__ == "__main__":
 
     # Preparar el índice del buscador en segundo plano, para que "Buscar en BD" abra al instante
     threading.Thread(target=Database().get_indice_busqueda, daemon=True).start()
+    # Y la biblioteca (toda tu música) se pone al día, también en segundo plano
+    ventana.iniciar_biblioteca()
     sys.exit(app.exec_())
