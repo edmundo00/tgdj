@@ -44,6 +44,19 @@ La ventana puede quedarse abierta: sigue a la canción seleccionada y *Usar para
 (o doble clic / Enter) se la asigna. *Corregir datos…* guarda correcciones en
 `data/correcciones.csv`, que se aplican siempre al cargar.
 
+### Ver qué cambiará, editar a mano y columnas
+
+Al marcar una opción, las celdas de tu archivo que van a cambiar salen en amarillo como «antes → después».
+**Editar a mano** (botón, tecla **E** o doble clic en la parte del archivo): formulario con título, orquesta,
+cantor, fecha, estilo, música y letra, con el formato correcto, copia de seguridad y deshacer.
+Clic derecho en la cabecera de cualquier tabla para ocultar/mostrar columnas; los anchos se recuerdan.
+
+### ¿La tengo? (en el buscador)
+
+Columna **Tuya**: ✔ esa grabación está en tu colección, ≈ tienes ese tema por esa orquesta con otra fecha.
+Filtros **La tengo** / **Me falta** (p. ej. `di sarli rufino` + *Me falta* = lo que te falta de Di Sarli con
+Rufino). La ficha dice dónde la tienes y *Escuchar la mía*. Usa los datos de *Estado de la colección*.
+
 ### Revisar rápido con el teclado
 
 En la tabla: **1–9** elige la opción, **0** ninguna, **Espacio** escucha tu archivo, **S** va a la siguiente

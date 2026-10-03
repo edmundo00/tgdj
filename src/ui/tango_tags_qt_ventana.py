@@ -95,7 +95,9 @@ Los colores indican cuánto se parece cada campo
 Las sugeridas ya vienen marcadas.</li>
 <li>Puedes <b>editar</b> cualquier celda de la parte BD antes de aplicar.</li>
 <li>Si no hay coincidencias, haz <b>doble clic</b> en la parte BD para buscar a mano. El buscador (Ctrl+F) usa una sola caja: palabras en cualquier orden, años como 1944, 1940-1945 o 1940s; puede quedarse abierto y sigue a la canción seleccionada. Si ves un error en la base de datos, <i>Corregir datos…</i> en su ficha.</li>
-<li>Doble clic en la parte del archivo muestra la ruta y permite abrir la carpeta.</li>
+<li>Al marcar una opción, lo que va a cambiar en tu archivo sale en <span style='background:#fff59d'>amarillo</span> como «antes → después».</li>
+<li>Doble clic en la parte del archivo (o tecla E, o <i>Editar a mano</i>): escribir las tags a mano, con el formato correcto, copia y deshacer.</li>
+<li>Clic derecho en la cabecera de la tabla: ocultar/mostrar columnas; arrastra los bordes para cambiar anchos (se recuerdan).</li>
 <li>Clic en ▶ para escuchar (no cambia la fila seleccionada). Lo que suena se ve en verde con ■; clic otra vez para parar, o <b>■ Parar</b> abajo a la derecha, o Esc.</li>
 </ul></li>
 <li><b>Aplicar tags</b>: muestra el antes/después de cada archivo y pide confirmación.
@@ -131,6 +133,9 @@ REVISADA = re.compile(r"^Musica: .+ - Letra: .+$")
 def ya_revisada(compositor):
     """Las canciones que ya pasaron por la BD tienen el compositor en el formato nuevo completo."""
     return bool(REVISADA.match(texto(compositor).strip()))
+
+
+NOMBRE_CAMPO = {"title": "título", "artist": "artista", "year": "fecha", "genre": "género", "composer": "compositor"}
 
 
 def categoria_de(archivo):
@@ -246,6 +251,9 @@ class tango_tags_qt_ventana(QMainWindow):
                                  "las demás canciones del mismo disco (solo si encaja una)"))
         tb.addAction(self.accion("Desmarcar\ntodo", self.icono(estandar=QStyle.SP_DialogResetButton),
                                  self.desmarcar_todo, "Quitar todas las marcas de 'Usar'"))
+        tb.addAction(self.accion("Editar\na mano", self.icono(estandar=QStyle.SP_FileDialogDetailedView), self.editar_a_mano,
+                                 "Escribir a mano las tags de la canción seleccionada (para las que no están en la BD). "
+                                 "También con doble clic en la parte del archivo o la tecla E"))
         tb.addAction(self.accion("No\ntocar", self.icono(estandar=QStyle.SP_DialogNoButton), self.marcar_no_tocar,
                                  "Dejar la canción seleccionada como está y no volver a enseñarla al cargar "
                                  "(Archivo → Canciones «No tocar» para deshacerlo). Tecla X"))
@@ -334,7 +342,7 @@ class tango_tags_qt_ventana(QMainWindow):
             lay.addWidget(cb)
         lay.addStretch(1)
         teclas = QLabel("Teclado: <b>1–9</b> elegir · <b>0</b> ninguna · <b>Espacio</b> escuchar · "
-                        "<b>S</b> siguiente por decidir · <b>X</b> no tocar")
+                        "<b>S</b> siguiente por decidir · <b>X</b> no tocar · <b>E</b> editar a mano")
         teclas.setStyleSheet("color:#666;")
         lay.addWidget(teclas)
         lay.addSpacing(20)
@@ -354,20 +362,17 @@ class tango_tags_qt_ventana(QMainWindow):
         t.setSelectionMode(QAbstractItemView.SingleSelection)
         t.setEditTriggers(QAbstractItemView.EditKeyPressed | QAbstractItemView.SelectedClicked)
         t.setWordWrap(False)
-        h = t.horizontalHeader()
-        h.setSectionResizeMode(QHeaderView.Interactive)
-        for col, ancho in ((COL_ESTADO, 165), (COL_ANO, 85), (COL_GENERO, 90), (COL_PLAY, 32),
-                           (COL_USAR, 56), (COL_BD_FECHA, 90), (COL_BD_ESTILO, 95),
-                           (COL_BD_PLAY30, 42), (COL_BD_PLAY10, 42)):
-            h.setSectionResizeMode(col, QHeaderView.Fixed)
-            t.setColumnWidth(col, ancho)
-        for col in (COL_TITULO, COL_ARTISTA, COL_COMPOSITOR, COL_BD_TITULO, COL_BD_ORQUESTA,
-                    COL_BD_CANTOR, COL_BD_COMPOSITOR):
-            h.setSectionResizeMode(col, QHeaderView.Stretch)
         cabecera_bd = QColor("#e3f2fd")
         for col in range(COL_USAR, len(CABECERAS)):
             t.horizontalHeaderItem(col).setBackground(cabecera_bd)
-            t.horizontalHeaderItem(col).setToolTip("Datos de la base de datos (con el formato final)")
+            t.horizontalHeaderItem(col).setToolTip("Datos de la base de datos (con el formato final). "
+                                                   "Clic derecho: ocultar/mostrar columnas")
+        from src.ui.columnas import preparar_columnas
+        preparar_columnas(t, "principal", {
+            COL_ESTADO: 165, COL_TITULO: 190, COL_ARTISTA: 210, COL_ANO: 95, COL_GENERO: 95, COL_COMPOSITOR: 230,
+            COL_PLAY: 32, COL_USAR: 56, COL_BD_TITULO: 190, COL_BD_ORQUESTA: 160, COL_BD_CANTOR: 160,
+            COL_BD_FECHA: 95, COL_BD_ESTILO: 100, COL_BD_COMPOSITOR: 330, COL_BD_PLAY30: 42, COL_BD_PLAY10: 42,
+        }, siempre_visibles={COL_ESTADO, COL_USAR, COL_BD_TITULO})
         t.viewport().installEventFilter(self)
         t.installEventFilter(self)          # teclado: 1-9, 0, Espacio, S, X
         t.itemChanged.connect(self.on_item_changed)
@@ -648,6 +653,7 @@ class tango_tags_qt_ventana(QMainWindow):
         for n, archivo in enumerate(visibles):
             fondo = QColor("#ffffff") if n % 2 == 0 else QColor("#f5f5f5")
             inicio = fila
+            archivo._fila, archivo._fondo = fila, fondo
             coincidencias = self.coincidencias(archivo)
             self.pintar_archivo(fila, archivo, fondo)
             if coincidencias.empty:
@@ -697,6 +703,10 @@ class tango_tags_qt_ventana(QMainWindow):
             explicacion.append(f"La fecha del archivo no sirve para elegir: {motivo}.")
         if disco:
             explicacion.append(disco["texto"])
+        _, _, cambia = self.cambios_de(archivo) if archivo.estado_guardado is None else ({}, {}, {})
+        if archivo.seleccion is not None and archivo.estado_guardado is None:
+            explicacion.append("Al aplicar cambia: " + ", ".join(NOMBRE_CAMPO[k] for k in cambia) if cambia
+                               else "Con la opción marcada no cambia nada.")
         it = self.item(estado, color, tooltip="\n\n".join(explicacion))
         it.setFont(QFont("", -1, QFont.Bold))
         self.tabla.setItem(fila, COL_ESTADO, it)
@@ -710,6 +720,14 @@ class tango_tags_qt_ventana(QMainWindow):
                 celda.setForeground(QBrush(QColor("#999")))
                 celda.setText(f"{actuales[clave][:4]} (CD)")
                 celda.setToolTip(f"{motivo}.\nNo se usa para elegir la grabación.")
+            if clave in cambia:
+                # Lo que va a cambiar: en amarillo, "antes → después"
+                antes = celda.text() or "(vacío)"
+                celda.setText(f"{antes}  →  {cambia[clave]}")
+                celda.setBackground(QColor("#fff59d"))
+                celda.setForeground(QBrush(QColor("#000")))
+                celda.setToolTip(f"Al aplicar cambiará:\n\nAntes:    {actuales[clave] or '(vacío)'}\n"
+                                 f"Después: {cambia[clave]}\n\n{ruta}")
             self.tabla.setItem(fila, col, celda)
         titulo = actuales["title"] or os.path.basename(ruta)
         self.celda_audio(fila, COL_PLAY, ("archivo", ruta), ruta, f"Tu archivo: {titulo} — {actuales['artist']}",
@@ -718,7 +736,7 @@ class tango_tags_qt_ventana(QMainWindow):
     def pintar_sin_coincidencias(self, fila, fondo):
         for col in range(COL_USAR, len(CABECERAS)):
             self.tabla.setItem(fila, col, self.item("", fondo))
-        aviso = self.item("— sin coincidencias: doble clic aquí para buscar en la BD —", fondo,
+        aviso = self.item("— sin coincidencias: doble clic aquí para buscar en la BD · E para editar a mano —", fondo,
                           tooltip="Doble clic para buscar esta canción en la base de datos")
         aviso.setForeground(QBrush(QColor("#888")))
         self.tabla.setItem(fila, COL_BD_TITULO, aviso)
@@ -778,6 +796,7 @@ class tango_tags_qt_ventana(QMainWindow):
                 if a is archivo and p is not None and p != pos:
                     self.tabla.item(fila, COL_USAR).setCheckState(Qt.Unchecked)
             self._rellenando = False
+            self.repintar_archivo(archivo)
         elif item.column() in COLUMNAS_BD:
             # Edición manual: se guarda en las coincidencias para que no se pierda al filtrar
             campo = COLUMNAS_BD[item.column()][0]
@@ -785,6 +804,8 @@ class tango_tags_qt_ventana(QMainWindow):
             archivo.coincidencias = archivo.coincidencias.copy()
             archivo.coincidencias.iat[pos, columna] = item.text()
             item.setToolTip(item.text())
+            if archivo.seleccion == pos:
+                self.repintar_archivo(archivo)
 
     def eventFilter(self, objeto, evento):
         """Clic en ▶/■: reproduce o para sin seleccionar la fila. Teclas de revisión en la tabla."""
@@ -831,6 +852,9 @@ class tango_tags_qt_ventana(QMainWindow):
         if texto_tecla == "x":
             self.marcar_no_tocar()
             return True
+        if texto_tecla == "e":
+            self.editar_a_mano(archivo)
+            return True
         return False
 
     def refrescar_usar(self, archivo):
@@ -840,6 +864,16 @@ class tango_tags_qt_ventana(QMainWindow):
             if a is archivo and pos is not None and self.tabla.item(fila, COL_USAR) is not None:
                 self.tabla.item(fila, COL_USAR).setCheckState(Qt.Checked if archivo.seleccion == pos else Qt.Unchecked)
         self._rellenando = False
+        self.repintar_archivo(archivo)
+
+    def repintar_archivo(self, archivo):
+        """Vuelve a pintar la parte del archivo (estado y lo que va a cambiar) de una canción."""
+        if getattr(archivo, "_fila", None) is None or self.fila_a_archivo.get(archivo._fila, (None,))[0] is not archivo:
+            return
+        previo = self._rellenando
+        self._rellenando = True
+        self.pintar_archivo(archivo._fila, archivo, archivo._fondo)
+        self._rellenando = previo
 
     def ir_a(self, archivo, pos=None):
         for fila, (a, p) in self.fila_a_archivo.items():
@@ -989,9 +1023,38 @@ class tango_tags_qt_ventana(QMainWindow):
             return
         archivo, pos = self.fila_a_archivo[fila]
         if col in COLUMNAS_ARCHIVO and col != COL_PLAY:
-            self.mostrar_detalles(archivo)
+            self.editar_a_mano(archivo)
         elif pos is None and col >= COL_USAR:
             self.buscar_en_bd(archivo)
+
+    def editar_a_mano(self, archivo=None):
+        """Formulario para escribir las tags de una canción a mano (con copia y deshacer)."""
+        from src.ui.dialogo_editar import DialogoEditar
+        archivo = archivo if isinstance(archivo, FILETOFINDQT) else self.archivo_seleccionado()
+        if archivo is None:
+            QMessageBox.information(self, "Editar a mano", "Selecciona primero una canción en la tabla.")
+            return
+        dialogo = DialogoEditar(self, archivo.ruta_archivo, tags_actuales(archivo), self.reproductor)
+        if dialogo.exec_() != QDialog.Accepted:
+            return
+        cambios = dialogo.cambios()
+        historial.guardar_backup([(archivo.ruta_archivo, tags_actuales(archivo), cambios)])
+        if self.reproductor.sonando(("archivo", archivo.ruta_archivo)):
+            self.reproductor.parar()
+        ok = utils.update_tags(archivo.ruta_archivo, title=cambios.get("title"), artist=cambios.get("artist"),
+                               year=cambios.get("year"), genre=cambios.get("genre"), composer=cambios.get("composer"))
+        archivo.estado_guardado = ok
+        if ok:
+            try:
+                archivo.tags = utils.leer_tags(archivo.ruta_archivo)
+            except Exception:
+                pass
+            archivo.seleccion = None
+            self.statusBar().showMessage("Tags guardadas a mano (Deshacer las devuelve).", 8000)
+        else:
+            QMessageBox.warning(self, "Editar a mano", "No se pudieron escribir las tags en el archivo.")
+        self.rellenar_tabla()
+        self.ir_a(archivo)
 
     def marcar_sugeridas(self):
         for a in self.archivos:
@@ -1025,17 +1088,23 @@ class tango_tags_qt_ventana(QMainWindow):
             subprocess.Popen(["explorer", "/select,", os.path.normpath(archivo.ruta_archivo)])
 
     # ------------------------------------------------------------------ aplicar tags
+    def cambios_de(self, archivo):
+        """(tags actuales, tags nuevas, solo lo que cambia) si se aplica la opción marcada."""
+        actuales = tags_actuales(archivo)
+        if archivo.seleccion is None or self.coincidencias(archivo).empty:
+            return actuales, {}, {}
+        nuevas = tags_desde_coincidencia(self.coincidencias(archivo).iloc[archivo.seleccion])
+        if actuales["composer"]:   # no perder lo que el archivo sabe y la base de datos no
+            nuevas["composer"] = combinar_compositor(actuales["composer"], nuevas["composer"])
+        # Solo se escriben los campos con valor nuevo y distinto
+        return actuales, nuevas, {k: v for k, v in nuevas.items() if v and v != actuales[k]}
+
     def aplicar_tags(self):
         cambios, sin_cambios = [], 0
         for archivo in self.archivos:
             if archivo.seleccion is None:
                 continue
-            nuevas = tags_desde_coincidencia(self.coincidencias(archivo).iloc[archivo.seleccion])
-            actuales = tags_actuales(archivo)
-            if actuales["composer"]:   # no perder lo que el archivo sabe y la base de datos no
-                nuevas["composer"] = combinar_compositor(actuales["composer"], nuevas["composer"])
-            # Solo se escriben los campos con valor nuevo y distinto
-            diferencias = {k: v for k, v in nuevas.items() if v and v != actuales[k]}
+            actuales, nuevas, diferencias = self.cambios_de(archivo)
             if diferencias:
                 cambios.append((archivo, actuales, nuevas, diferencias))
             else:
@@ -1148,8 +1217,10 @@ class tango_tags_qt_ventana(QMainWindow):
             self.buscador = VentanaBuscador(
                 self, obtener_indice=self.data_store.get_indice_busqueda, obtener_bd=self.data_store.get_db,
                 usar=self.asignar_desde_bd,
-                reproductor=self.reproductor, recargar_bd=self.recargar_bd)
-        self.buscador.set_destino(archivo, buscar_por_defecto=para_cancion)
+                reproductor=self.reproductor, recargar_bd=self.recargar_bd, obtener_tengo=self.indice_tengo)
+        # Busca ya la canción si se abre para ella o si la caja está vacía
+        self.buscador.set_destino(archivo, buscar_por_defecto=para_cancion or (
+            archivo is not None and not self.buscador.caja.text().strip()))
         self.buscador.show()
         self.buscador.raise_()
         self.buscador.activateWindow()
@@ -1160,6 +1231,14 @@ class tango_tags_qt_ventana(QMainWindow):
         from src.config.config import DB_CSV_PATH
         self.data_store.load_data(DB_CSV_PATH)
         self.data_store.get_indice_busqueda()
+
+    def indice_tengo(self):
+        """Qué grabaciones tienes (de la caché del Estado de la colección). None si aún no se ha mirado."""
+        from src.utils import coleccion
+        if getattr(self, "_indice_tengo", None) is None and os.path.exists(coleccion.CACHE):
+            df = pd.read_csv(coleccion.CACHE, sep=";", na_filter=False, dtype=str, encoding="utf-8")
+            self._indice_tengo = coleccion.IndiceTengo(df)
+        return getattr(self, "_indice_tengo", None)
 
     def seleccion_cambiada(self):
         if getattr(self, "buscador", None) is not None and self.buscador.isVisible():

@@ -22,9 +22,9 @@ from unidecode import unidecode
 from src.utils.buscador import interpretar_consulta, normalizar, NOMBRES_FUENTE
 from src.utils.formato_tags import tags_desde_coincidencia
 
-COLUMNAS = [("titulo", "Título"), ("orquesta", "Orquesta"), ("cantor", "Cantor"), ("fecha", "Fecha"),
-            ("estilo", "Estilo"), ("musica", "Música"), ("letra", "Letra"), ("fuentes", "Fuente"),
-            ("audio", "Audio")]
+COLUMNAS = [("tengo", "Tuya"), ("titulo", "Título"), ("orquesta", "Orquesta"), ("cantor", "Cantor"),
+            ("fecha", "Fecha"), ("estilo", "Estilo"), ("musica", "Música"), ("letra", "Letra"),
+            ("fuentes", "Fuente"), ("audio", "Audio")]
 RESALTABLES = {"titulo", "orquesta", "cantor", "musica", "letra"}
 GRIS = "#8a8a8a"
 
@@ -87,6 +87,8 @@ class ModeloResultados(QAbstractTableModel):
         return self.df.iloc[n]
 
     def texto(self, fila, campo):
+        if campo == "tengo":
+            return {"si": "✔", "otra": "≈"}.get(fila.get("_tengo", ""), "")
         if campo == "fuentes":
             return " · ".join(NOMBRES_FUENTE.get(f, f) for f in fila["fuentes"])
         if campo == "audio":
@@ -114,6 +116,9 @@ class ModeloResultados(QAbstractTableModel):
             if not valor:
                 vacio = {"cantor": "instrumental", "fecha": "sin fecha", "musica": "?", "letra": "?"}.get(campo, "")
                 return f"<i style='color:{GRIS}'>{vacio}</i>"
+            if campo == "tengo" and valor:
+                color = "#2e7d32" if valor == "✔" else "#ef6c00"
+                return f"<b style='color:{color}'>{valor}</b>"
             if campo == "audio" and valor == "■":
                 return "<b style='color:white; background:#43a047'>&nbsp;■&nbsp;</b>"
             if campo == "fuentes":
@@ -124,8 +129,12 @@ class ModeloResultados(QAbstractTableModel):
         if rol == Qt.ToolTipRole:
             if campo == "audio":
                 return {"▶": "Clic para escuchar el fragmento", "■": "Sonando: clic para parar"}.get(valor)
+            if campo == "tengo":
+                return {"✔": "La tienes en tu colección (mismo título, orquesta y año)",
+                        "≈": "Tienes este tema por esta orquesta, pero con otra fecha "
+                             "(otra grabación, o tu archivo tiene la fecha del CD)"}.get(valor, "No la tienes")
             return valor or None
-        if rol == Qt.TextAlignmentRole and campo == "audio":
+        if rol == Qt.TextAlignmentRole and campo in ("audio", "tengo"):
             return Qt.AlignCenter
         return None
 
@@ -183,9 +192,11 @@ class VentanaBuscador(QWidget):
     reproducir(enlace) / parar(): audio de los fragmentos de la base de datos.
     """
 
-    def __init__(self, parent, obtener_indice, obtener_bd, usar, reproductor, recargar_bd):
+    def __init__(self, parent, obtener_indice, obtener_bd, usar, reproductor, recargar_bd, obtener_tengo=None):
         super().__init__(parent, Qt.Window)
         self.recargar_bd = recargar_bd
+        self.obtener_tengo = obtener_tengo
+        self.tengo = None
         self.reproductor = reproductor
         self.setWindowTitle("Buscar en la base de datos")
         self.obtener_indice, self.obtener_bd = obtener_indice, obtener_bd
@@ -237,6 +248,13 @@ class VentanaBuscador(QWidget):
         self.chip_audio.toggled.connect(self.buscar)
         filtros.addWidget(self.chip_audio)
         filtros.addSpacing(16)
+        filtros.addWidget(QLabel("Tu colección:"))
+        self.chip_tengo = Chip("La tengo", "Solo las grabaciones que ya tienes (✔ misma fecha, ≈ otra fecha)")
+        self.chip_no_tengo = Chip("Me falta", "Solo las grabaciones que NO tienes en tu colección")
+        for c in (self.chip_tengo, self.chip_no_tengo):
+            c.toggled.connect(self.buscar)
+            filtros.addWidget(c)
+        filtros.addSpacing(16)
         filtros.addWidget(QLabel("Años:"))
         self.desde, self.hasta = QSpinBox(), QSpinBox()
         for sb, texto in ((self.desde, "desde"), (self.hasta, "hasta")):
@@ -276,12 +294,11 @@ class VentanaBuscador(QWidget):
         self.tabla.setFont(fuente)
         h = self.tabla.horizontalHeader()
         h.setHighlightSections(False)
-        anchos = {"titulo": 3, "orquesta": 2.4, "cantor": 2, "musica": 2, "letra": 2}
-        for col, (campo, _) in enumerate(COLUMNAS):
-            if campo in anchos:
-                h.setSectionResizeMode(col, QHeaderView.Stretch)
-            else:
-                h.setSectionResizeMode(col, QHeaderView.ResizeToContents)
+        from src.ui.columnas import preparar_columnas
+        anchos = {"tengo": 44, "titulo": 260, "orquesta": 190, "cantor": 170, "fecha": 95, "estilo": 100,
+                  "musica": 190, "letra": 190, "fuentes": 140, "audio": 50}
+        preparar_columnas(self.tabla, "buscador", {i: anchos[c] for i, (c, _) in enumerate(COLUMNAS)},
+                          siempre_visibles={1})
         self.tabla.selectionModel().selectionChanged.connect(self.mostrar_detalle)
         self.tabla.doubleClicked.connect(
             lambda i: None if COLUMNAS[i.column()][0] == "audio" else self.enter_tabla())
@@ -305,6 +322,9 @@ class VentanaBuscador(QWidget):
         self.boton_30 = QPushButton("▶  Escuchar 30 s")
         self.boton_10 = QPushButton("▶  Escuchar 10 s")
         self.boton_parar = QPushButton("■  Parar")
+        self.boton_mia = QPushButton("▶  Escuchar la mía")
+        self.boton_mia.setToolTip("Escuchar tu archivo de esta grabación")
+        self.boton_mia.clicked.connect(self.escuchar_mia)
         self.boton_copiar = QPushButton("Copiar ficha")
         self.boton_corregir = QPushButton("✎  Corregir datos…")
         self.boton_corregir.setToolTip("Corregir un error de la base de datos (se guarda en data/correcciones.csv)")
@@ -314,8 +334,8 @@ class VentanaBuscador(QWidget):
         self.boton_parar.clicked.connect(self.reproductor.parar)
         self.reproductor.cambiado.connect(self.sonando_cambiado)
         self.boton_copiar.clicked.connect(self.copiar)
-        for b in (self.boton_usar, self.boton_30, self.boton_10, self.boton_parar, self.boton_copiar,
-                  self.boton_corregir):
+        for b in (self.boton_usar, self.boton_30, self.boton_10, self.boton_mia, self.boton_parar,
+                  self.boton_copiar, self.boton_corregir):
             botones.addWidget(b)
         botones.addStretch(1)
         ficha_lay.addLayout(botones)
@@ -354,7 +374,8 @@ class VentanaBuscador(QWidget):
         super().closeEvent(evento)
 
     def quitar_filtros(self):
-        for c in [*self.chips_estilo.values(), *self.chips_fuente.values(), self.chip_audio]:
+        for c in [*self.chips_estilo.values(), *self.chips_fuente.values(), self.chip_audio,
+                  self.chip_tengo, self.chip_no_tengo]:
             c.blockSignals(True)
             c.setChecked(False)
             c.blockSignals(False)
@@ -414,6 +435,14 @@ class VentanaBuscador(QWidget):
         r = indice.buscar(texto, estilos=estilos, fuentes=fuentes, desde=desde, hasta=hasta)
         if self.chip_audio.isChecked() and not r.empty:
             r = r[(r["audio30"] != "") | (r["audio10"] != "")]
+        r = self.marcar_tengo(r)
+        if not r.empty and (self.chip_tengo.isChecked() or self.chip_no_tengo.isChecked()):
+            quiero = set()
+            if self.chip_tengo.isChecked():
+                quiero |= {"si", "otra"}
+            if self.chip_no_tengo.isChecked():
+                quiero |= {""}
+            r = r[r["_tengo"].isin(quiero)]
         palabras_n = [normalizar(p) for p in palabras if normalizar(p)]
         self.modelo.poner(r, palabras_n)
 
@@ -450,6 +479,7 @@ class VentanaBuscador(QWidget):
         self.boton_10.setEnabled(hay and bool(g["audio10"]))
         self.boton_copiar.setEnabled(hay)
         self.boton_corregir.setEnabled(hay)
+        self.boton_mia.setEnabled(hay and bool(g.get("_mias")))
         self.sonando_cambiado(self.reproductor.clave)
         if not hay:
             self.texto_ficha.setText(f"<span style='color:{GRIS}'>Selecciona una grabación para ver su ficha.</span>")
@@ -470,6 +500,7 @@ class VentanaBuscador(QWidget):
               <tr>{etiqueta('Música')}<td>{esc(g['musica']) or '?'}</td>
                   {etiqueta('Letra')}<td>{esc(g['letra']) or '?'}</td></tr>
               <tr>{etiqueta('Fuente')}<td colspan=3>{esc(fuentes)}{rep}</td></tr>
+              <tr>{etiqueta('Tu colección')}<td colspan=3>{self.texto_mias(g)}</td></tr>
             </table>
             <div style='margin-top:8px; color:{GRIS}'>Tags que se escribirían:</div>
             <div style='font-family:Consolas,monospace; font-size:12px'>
@@ -559,6 +590,39 @@ class VentanaBuscador(QWidget):
         finally:
             QApplication.restoreOverrideCursor()
         self.info.setText(self.info.text() + "   ✔ Corrección guardada.")
+
+    # ------------------------------------------------------------------ ¿la tengo?
+    def marcar_tengo(self, r):
+        """Añade a los resultados _tengo ('si'/'otra'/'') y _mias (tus archivos de esa grabación)."""
+        if self.tengo is None and self.obtener_tengo is not None:
+            self.tengo = self.obtener_tengo() or False
+        if r.empty or not self.tengo:
+            r = r.copy()
+            r["_tengo"], r["_mias"] = "", [[] for _ in range(len(r))]
+            return r
+        estados = [self.tengo.buscar(t, o, f) for t, o, f in zip(r["titulo"], r["orquesta"], r["fecha"])]
+        r = r.copy()
+        r["_tengo"] = [e for e, _ in estados]
+        r["_mias"] = [m for _, m in estados]
+        return r
+
+    def texto_mias(self, g):
+        if not self.tengo:
+            return (f"<span style='color:{GRIS}'>Para saberlo, abre una vez <i>Archivo → Estado de la "
+                    "colección</i></span>")
+        mias = g.get("_mias") or []
+        if not mias:
+            return "<span style='color:#c62828'>No la tienes</span>"
+        cabecera = ("<b style='color:#2e7d32'>✔ La tienes</b>" if g.get("_tengo") == "si"
+                    else "<b style='color:#ef6c00'>≈ Tienes este tema por esta orquesta con otra fecha</b>")
+        lista = "<br>".join(html.escape(m.split("MUSICA", 1)[-1].lstrip("\\/")) for m in mias[:3])
+        return f"{cabecera}<br><span style='font-size:11px; color:#555'>{lista}</span>"
+
+    def escuchar_mia(self):
+        g = self.grabacion_actual()
+        if g is not None and g.get("_mias"):
+            ruta = g["_mias"][0]
+            self.reproductor.alternar(("archivo", ruta), ruta, f"Tu archivo: {g['titulo']} — {g['orquesta']}")
 
     def copiar(self):
         g = self.grabacion_actual()

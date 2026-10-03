@@ -97,3 +97,34 @@ def resumen(df, no_tocar_claves=None):
     r = d.groupby("coleccion").sum(numeric_only=True)
     r.loc["TOTAL"] = r.sum()
     return r.sort_values("archivos", ascending=False)
+
+
+class IndiceTengo:
+    """
+    ¿Tengo esta grabación? Busca en tu colección (la caché) por título + orquesta, sin acentos ni
+    mayúsculas. 'si' = también coincide el año; 'otra' = tienes ese tema por esa orquesta pero con
+    otra fecha (otra grabación, o la fecha del CD); '' = no lo tienes.
+    """
+
+    def __init__(self, df):
+        from src.utils.buscador import normalizar
+        from src.utils.buscar_artista import normalizar_nombre, separar_orquesta_cantor
+        self._normalizar, self._nombre = normalizar, normalizar_nombre
+        df = df[~df["ruta"].str.contains(r"[\/]_duplicados[\/]", regex=True)]
+        self.archivos = {}
+        for ruta, titulo, artista, year in zip(df["ruta"], df["title"], df["artist"], df["year"]):
+            if not titulo:
+                continue
+            orquesta = separar_orquesta_cantor(artista)[0].split(",")[0]
+            clave = normalizar(titulo) + "|" + normalizar_nombre(orquesta)
+            self.archivos.setdefault(clave, []).append((ruta, formatear_fecha(year)[:4]))
+
+    def buscar(self, titulo, orquesta, fecha):
+        """Devuelve ('si' | 'otra' | '', [rutas, primero las del mismo año])."""
+        lista = self.archivos.get(self._normalizar(titulo) + "|" + self._nombre(orquesta), [])
+        if not lista:
+            return "", []
+        ano = formatear_fecha(fecha)[:4]
+        mismas = [r for r, a in lista if ano and a == ano]
+        otras = [r for r, a in lista if r not in mismas]
+        return ("si" if mismas else "otra"), mismas + otras
