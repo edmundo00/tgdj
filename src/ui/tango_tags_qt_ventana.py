@@ -1442,12 +1442,15 @@ class ActualizarBiblioteca(QThread):
                     return
                 avisar = lambda f, h, t: self.progreso.emit(f, h, t)
                 informe = self.biblioteca.actualizar(progreso=avisar, cancelado=self.isInterruptionRequested)
+                if not self.isInterruptionRequested():
+                    self.biblioteca.guardar_copia()      # ya hay copia aunque se cierre la app a mitad de comparar
                 # Nivel 3: estado de lo nuevo o cambiado (o de todo, si cambiaron las reglas), en procesos aparte
                 if not self.isInterruptionRequested():
                     emparejado = self.biblioteca.emparejar(version_reglas(self.usar_fecha), usar_fecha=self.usar_fecha,
                                                            progreso=avisar, cancelado=self.isInterruptionRequested)
                     informe["emparejadas"] = emparejado["emparejadas"]
-                    self.biblioteca.guardar_copia()
+                    if emparejado["emparejadas"]:
+                        self.biblioteca.guardar_copia()
             self.terminado.emit(informe)
         except Exception as e:
             self.terminado.emit(e)
