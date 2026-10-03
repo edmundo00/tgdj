@@ -34,11 +34,15 @@ def preparar_columnas(tabla, nombre, anchos_por_defecto, siempre_visibles=()):
                           {str(c): tabla.columnWidth(c) for c in range(n) if not tabla.isColumnHidden(c)})
         settings.setValue(f"columnas/{nombre}/ocultas", [c for c in range(n) if tabla.isColumnHidden(c)])
 
+    def al_cambiar_ancho(*_):
+        temporizador.start()
+
     temporizador.timeout.connect(guardar)
-    cabecera.sectionResized.connect(lambda *_: temporizador.start())
+    cabecera.sectionResized.connect(al_cambiar_ancho)
 
     def menu(pos):
         m = QMenu(tabla)
+        vivas = []          # las funciones de las opciones viven mientras el menú está abierto (ver abajo)
         m.addSection("Columnas visibles")
         for col in range(n):
             titulo = modelo.headerData(col, Qt.Horizontal, Qt.DisplayRole) or f"Columna {col + 1}"
@@ -46,7 +50,8 @@ def preparar_columnas(tabla, nombre, anchos_por_defecto, siempre_visibles=()):
             accion.setCheckable(True)
             accion.setChecked(not tabla.isColumnHidden(col))
             accion.setEnabled(col not in siempre_visibles)
-            accion.toggled.connect(lambda visible, c=col: (tabla.setColumnHidden(c, not visible), guardar()))
+            vivas.append(lambda visible, c=col: (tabla.setColumnHidden(c, not visible), guardar()))
+            accion.toggled.connect(vivas[-1])
         m.addSeparator()
         m.addAction("Anchos por defecto", lambda: (
             [tabla.setColumnWidth(c, anchos_por_defecto.get(c, 120)) for c in range(n)], guardar()))
@@ -55,6 +60,9 @@ def preparar_columnas(tabla, nombre, anchos_por_defecto, siempre_visibles=()):
 
     cabecera.setContextMenuPolicy(Qt.CustomContextMenu)
     cabecera.customContextMenuRequested.connect(menu)
+    # Con Python 3.13 + PyQt5, el recolector de basura puede liberar estas funciones aunque estén conectadas
+    # (y la app se cae al cambiar un ancho u ocultar una columna): la tabla las guarda para que vivan con ella.
+    tabla._columnas_funciones = (guardar, al_cambiar_ancho, menu, temporizador)
     for col in range(n):
         item = tabla.horizontalHeaderItem(col) if hasattr(tabla, "horizontalHeaderItem") else None
         if item is not None and not item.toolTip():
