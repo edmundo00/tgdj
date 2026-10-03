@@ -80,7 +80,7 @@ tamaño y fecha de cada archivo (unos segundos) y solo lee las tags de lo nuevo 
 canciones **movidas** (p. ej. de TIDAL Download a MUSICA) sin perder su fecha de llegada. Los archivos
 «solo en la nube» de Dropbox no se abren. *Archivo → Actualizar la biblioteca ahora* para volver a mirar.
 
-La base de datos es local (`%LOCALAPPDATA%\TangoTagsiblioteca.sqlite`, una por ordenador) y es una
+La base de datos es local (`%LOCALAPPDATA%\TangoTags\biblioteca.sqlite`, una por ordenador) y es una
 caché: si se borra, se reconstruye. Tus decisiones (No tocar, grafías, correcciones, copias) siguen en Dropbox.
 
 ### Estado de la colección y duplicados
