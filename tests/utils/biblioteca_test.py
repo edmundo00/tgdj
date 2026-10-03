@@ -111,6 +111,73 @@ class BibliotecaTest(unittest.TestCase):
         self.assertEqual(self.bib.inicio_sesion_anterior(), primera)
 
 
+    # ---- seguridad: nunca perder la biblioteca por un fallo ----
+    def test_raiz_no_disponible_no_borra_nada(self):
+        self.actualizar()
+        os.rename(self.musica, self.musica + "_fuera")          # p. ej. Dropbox o el disco no están
+        inf = self.actualizar()
+        self.assertEqual((inf["borradas"], inf["no_borradas"]), (0, 2))
+        self.assertEqual(self.bib.cuantos(), 2)
+        os.rename(self.musica + "_fuera", self.musica)
+        inf = self.actualizar()
+        self.assertEqual((inf["nuevas"], inf["leidas"]), (0, 0))  # siguen siendo las mismas filas
+
+    def test_desaparecen_demasiadas_de_golpe(self):
+        for i in range(60):
+            escribir(os.path.join(self.musica, "Edmundo", "Varios", f"c{i}.mp3"), os.urandom(3000 + i))
+        self.actualizar()
+        for i in range(55):
+            os.remove(os.path.join(self.musica, "Edmundo", "Varios", f"c{i}.mp3"))
+        inf = self.actualizar()
+        self.assertEqual((inf["borradas"], inf["no_borradas"]), (0, 55))
+        os.remove(os.path.join(self.musica, "Edmundo", "Firpo", "Ojos negros.flac"))
+        self.assertEqual(self.actualizar()["borradas"], 0)        # mientras siga la sospecha, nada
+        for i in range(55):
+            escribir(os.path.join(self.musica, "Edmundo", "Varios", f"c{i}.mp3"), os.urandom(3000 + i))
+        self.assertEqual(self.actualizar()["borradas"], 1)        # una sola sí se borra
+
+    def _danar(self, ruta):
+        import gc
+        gc.collect()
+        with open(ruta, "r+b") as f:
+            f.seek(4096)
+            f.write(os.urandom(4096 * 3))
+
+    def test_danada_se_recupera_de_la_copia(self):
+        self.actualizar()
+        self.assertTrue(self.bib.guardar_copia())
+        ruta, config = self.bib.ruta_bd, self.bib.config
+        con = self.bib.conexion()
+        con.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        con.close()
+        del self.bib
+        self._danar(ruta)
+        self.bib = Biblioteca(ruta, config=config)
+        self.assertEqual(self.bib.reparada, "copia")
+        self.assertEqual(sorted(self.bib.dataframe()["title"]), ["La taba", "Ojos negros"])
+        self.assertTrue(any(".dañada-" in f for f in os.listdir(self.dir)))
+        self.assertEqual(self.actualizar()["leidas"], 0)          # sigue incremental
+
+    def test_danada_sin_copia_empieza_de_nuevo(self):
+        self.actualizar()
+        ruta, config = self.bib.ruta_bd, self.bib.config
+        con = self.bib.conexion()
+        con.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        con.close()
+        del self.bib
+        self._danar(ruta)
+        self.bib = Biblioteca(ruta, config=config)
+        self.assertEqual(self.bib.reparada, "nueva")
+        self.assertEqual(self.actualizar()["leidas"], 2)
+
+    def test_una_sola_actualizacion_a_la_vez(self):
+        with self.bib.bloqueo_procesos() as primera:
+            with self.bib.bloqueo_procesos() as segunda:
+                self.assertEqual((primera, segunda), (True, False))
+        with self.bib.bloqueo_procesos() as otra_vez:
+            self.assertTrue(otra_vez)
+
+
 class EmparejarTest(unittest.TestCase):
     """Nivel 3: estado de cada canción guardado y versión de reglas."""
 

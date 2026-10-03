@@ -908,6 +908,14 @@ class tango_tags_qt_ventana(QMainWindow):
     def iniciar_biblioteca(self):
         """Al arrancar: enseña lo que ya se sabía, apunta la sesión y se pone al día en segundo plano."""
         self.vista_biblioteca.cargar()
+        if self.biblioteca.reparada:
+            QMessageBox.information(
+                self, "Biblioteca reparada",
+                "La base de datos local de la biblioteca estaba dañada (tus canciones no se han tocado).\n\n"
+                + ("Se ha recuperado la última copia buena y ahora se pone al día sola."
+                   if self.biblioteca.reparada == "copia" else
+                   "No había copia, así que se reconstruye sola en segundo plano: leer las tags de toda la "
+                   "música lleva un rato (unos 20 minutos). Puedes seguir usando la app mientras."))
         self.actualizar_biblioteca(empezar_sesion=True)
 
     def actualizar_biblioteca(self, empezar_sesion=False):
@@ -924,6 +932,11 @@ class tango_tags_qt_ventana(QMainWindow):
     def _biblioteca_progreso(self, fase, hechos, total):
         if fase == "leer" and total:
             self.etiqueta_biblioteca.setText(f"📚 Biblioteca: leyendo tags de lo nuevo… {hechos} de {total}")
+            # Si es mucho (p. ej. reconstruyendo), la vista se va refrescando cada minuto
+            import time as _t
+            if total > 2000 and _t.time() - getattr(self, "_ultimo_refresco", 0) > 60:
+                self._ultimo_refresco = _t.time()
+                self.vista_biblioteca.cargar()
         elif fase == "emparejar" and total:
             self.etiqueta_biblioteca.setText(f"📚 Biblioteca: comparando con la base de datos… {hechos} de {total}")
 
@@ -931,6 +944,10 @@ class tango_tags_qt_ventana(QMainWindow):
         if isinstance(informe, Exception):
             self.etiqueta_biblioteca.setText("📚 Biblioteca: error al actualizar")
             self.etiqueta_biblioteca.setToolTip(str(informe))
+            return
+        if informe.get("otra_ventana"):
+            self.etiqueta_biblioteca.setText("📚 Biblioteca: la está actualizando otra ventana de TangoTags")
+            self.vista_biblioteca.cargar()
             return
         total = self.biblioteca.cuantos()
         partes = [f"{informe[k]} {n}" for k, n in (("nuevas", "nuevas"), ("cambiadas", "cambiadas"),
@@ -942,6 +959,8 @@ class tango_tags_qt_ventana(QMainWindow):
             f"{informe['cambiadas']} cambiadas, {informe['movidas']} movidas, {informe['borradas']} borradas, "
             f"{informe['leidas']} tags leídas, {informe.get('emparejadas', 0)} comparadas con la base de datos, "
             f"{informe['errores']} con error, {informe['en_nube']} solo en la nube.\n"
+            + (f"{informe['no_borradas']} desaparecidas NO se quitaron (carpeta no disponible o demasiadas de golpe).\n"
+               if informe.get("no_borradas") else "") +
             "Archivo → Actualizar la biblioteca ahora para volver a mirar.")
         # Lo que dependía de la colección se recalcula con los datos nuevos
         self._indice_coleccion = None
@@ -1369,13 +1388,18 @@ class ActualizarBiblioteca(QThread):
         try:
             if self.empezar_sesion:
                 self.biblioteca.empezar_sesion()
-            avisar = lambda f, h, t: self.progreso.emit(f, h, t)
-            informe = self.biblioteca.actualizar(progreso=avisar, cancelado=self.isInterruptionRequested)
-            # Nivel 3: estado de lo nuevo o cambiado (o de todo, si cambiaron las reglas), en procesos aparte
-            if not self.isInterruptionRequested():
-                emparejado = self.biblioteca.emparejar(version_reglas(self.usar_fecha), usar_fecha=self.usar_fecha,
-                                                       progreso=avisar, cancelado=self.isInterruptionRequested)
-                informe["emparejadas"] = emparejado["emparejadas"]
+            with self.biblioteca.bloqueo_procesos() as solo:
+                if not solo:      # otra ventana de TangoTags ya la está actualizando
+                    self.terminado.emit({"otra_ventana": True})
+                    return
+                avisar = lambda f, h, t: self.progreso.emit(f, h, t)
+                informe = self.biblioteca.actualizar(progreso=avisar, cancelado=self.isInterruptionRequested)
+                # Nivel 3: estado de lo nuevo o cambiado (o de todo, si cambiaron las reglas), en procesos aparte
+                if not self.isInterruptionRequested():
+                    emparejado = self.biblioteca.emparejar(version_reglas(self.usar_fecha), usar_fecha=self.usar_fecha,
+                                                           progreso=avisar, cancelado=self.isInterruptionRequested)
+                    informe["emparejadas"] = emparejado["emparejadas"]
+                    self.biblioteca.guardar_copia()
             self.terminado.emit(informe)
         except Exception as e:
             self.terminado.emit(e)

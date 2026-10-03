@@ -17,13 +17,20 @@ Actualizar en dos niveles, para que sea rápido:
      la siguiente vez sigue donde iba.
 Los archivos "solo en la nube" de Dropbox no se abren (se marcan en_nube) para no forzar descargas.
 
-La base de datos es una caché: si se borra, se reconstruye sola.
+La base de datos es una caché: si se borra, se reconstruye sola. Para no tener que reconstruirla:
+  · tras cada actualización que sale bien se guarda una copia (biblioteca.sqlite.copia);
+  · al abrir se comprueba (PRAGMA quick_check); si está dañada se aparta y se recupera la copia,
+    que luego se pone al día de forma incremental como siempre;
+  · solo una actualización a la vez, aunque la app esté abierta dos veces (archivo .bloqueo);
+  · si una carpeta raíz no está o "desaparece" de golpe gran parte de la música, no se borra nada.
 """
 import json
 import os
+import shutil
 import sqlite3
 import threading
 import time
+from contextlib import contextmanager
 
 import pandas as pd
 
@@ -82,6 +89,9 @@ COLUMNAS_EMPAREJADO = {
     "emparejado_el": "REAL",
 }
 ESTADOS = ("perfecta", "preferida", "dudosa", "sin_titulo", "sin_artista")
+
+
+BORRADO_SOSPECHOSO = 0.2      # si desaparece más de esta parte de una raíz de golpe, no se borra nada
 
 
 def ruta_bd_por_defecto():
@@ -151,6 +161,7 @@ class Biblioteca:
         os.makedirs(os.path.dirname(self.ruta_bd), exist_ok=True)
         self.config = config if config is not None else leer_config()
         self.base = base
+        self.reparada = self.reparar_si_hace_falta()     # None, "copia" o "nueva"
         with self.conexion() as con:
             con.executescript(ESQUEMA)
             existentes = {fila[1] for fila in con.execute("PRAGMA table_info(archivos)")}
@@ -163,8 +174,72 @@ class Biblioteca:
         """Una conexión nueva (cada hilo usa la suya). WAL: se puede leer mientras otro escribe."""
         con = sqlite3.connect(self.ruta_bd, timeout=30)
         con.execute("PRAGMA journal_mode=WAL")
-        con.execute("PRAGMA synchronous=NORMAL")
+        con.execute("PRAGMA synchronous=FULL")
         return con
+
+    # ------------------------------------------------------------------ salud
+    @property
+    def ruta_copia(self):
+        return self.ruta_bd + ".copia"
+
+    @staticmethod
+    def _sana(ruta):
+        if not os.path.exists(ruta):
+            return False
+        try:
+            con = sqlite3.connect(f"file:{ruta}?mode=ro", uri=True, timeout=30)
+            try:
+                return con.execute("PRAGMA quick_check").fetchone()[0] == "ok"
+            finally:
+                con.close()
+        except sqlite3.DatabaseError:
+            return False
+
+    def reparar_si_hace_falta(self):
+        """Si la base de datos está dañada la aparta (.dañada-fecha) y recupera la última copia buena."""
+        if not os.path.exists(self.ruta_bd) or self._sana(self.ruta_bd):
+            return None
+        sello = time.strftime("%Y%m%d-%H%M%S")
+        for sufijo in ("", "-wal", "-shm"):
+            if os.path.exists(self.ruta_bd + sufijo):
+                os.replace(self.ruta_bd + sufijo, f"{self.ruta_bd}.dañada-{sello}{sufijo}")
+        if self._sana(self.ruta_copia):
+            shutil.copyfile(self.ruta_copia, self.ruta_bd)
+            return "copia"
+        return "nueva"
+
+    def guardar_copia(self):
+        """Copia consistente (API de backup de SQLite) si la base de datos está sana."""
+        temporal = self.ruta_copia + ".tmp"
+        with self.conexion() as con:
+            if con.execute("PRAGMA quick_check").fetchone()[0] != "ok":
+                return False
+            destino = sqlite3.connect(temporal)
+            try:
+                con.backup(destino)
+            finally:
+                destino.close()
+        os.replace(temporal, self.ruta_copia)
+        return True
+
+    @contextmanager
+    def bloqueo_procesos(self):
+        """True si esta app es la única actualizando (otra ventana de TangoTags abierta → False)."""
+        import msvcrt
+        f = open(self.ruta_bd + ".bloqueo", "a+")
+        try:
+            try:
+                msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+            except OSError:
+                yield False
+                return
+            try:
+                yield True
+            finally:
+                f.seek(0)
+                msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+        finally:
+            f.close()
 
     # ------------------------------------------------------------------ meta
     def meta(self, clave, defecto=None):
@@ -200,6 +275,29 @@ class Biblioteca:
         cancelado = cancelado or (lambda: False)
         with _ACTUALIZANDO:
             return self._actualizar(progreso, cancelado, leer, huella)
+
+    @staticmethod
+    def _borrado_seguro(con, borrar, raices):
+        """
+        Quita de 'borrar' lo que no es creíble: archivos de una raíz que no está (disco o Dropbox
+        no disponible) o de una raíz de la que desaparece de golpe más del 20 %. Devuelve (borrar, no_borradas).
+        """
+        if not borrar:
+            return borrar, 0
+        por_raiz = dict(con.execute("SELECT raiz, COUNT(*) FROM archivos GROUP BY raiz").fetchall())
+        presentes = {os.path.normcase(r) for r, _, _ in raices if os.path.isdir(r)}
+        borrar_raiz = {}
+        for r in borrar:
+            borrar_raiz.setdefault(con.execute("SELECT raiz FROM archivos WHERE ruta=?", (r,)).fetchone()[0], []).append(r)
+        seguras = []
+        for raiz, rutas in borrar_raiz.items():
+            total = por_raiz.get(raiz, 0) or 1
+            configurada = any(os.path.normcase(raiz) == os.path.normcase(x) for x, _, _ in raices)
+            if configurada and (os.path.normcase(raiz) not in presentes
+                                or (len(rutas) > 50 and len(rutas) / total > BORRADO_SOSPECHOSO)):
+                continue
+            seguras.extend(rutas)
+        return seguras, len(borrar) - len(seguras)
 
     @staticmethod
     def actualizando():
@@ -263,6 +361,7 @@ class Biblioteca:
                             (nueva, raiz, coleccion, carpeta, ext, int(st.st_mtime), ahora, vieja))
             informe["movidas"] = len(movidas)
             borrar = [r for r in desaparecidas if r not in movidas.values()]
+            borrar, informe["no_borradas"] = self._borrado_seguro(con, borrar, raices_absolutas(self.config, self.base))
             con.executemany("DELETE FROM archivos WHERE ruta=?", [(r,) for r in borrar])
             informe["borradas"] = len(borrar)
 
