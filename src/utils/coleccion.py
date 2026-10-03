@@ -28,6 +28,13 @@ def resumen(df, no_tocar_claves=None):
         "sin_genero": df["genre"].str.strip() == "",
         "no_tocar": [no_tocar.esta(r, no_tocar_claves) for r in df["ruta"]] if no_tocar_claves else False,
     })
+    if "estado" in df:
+        estado = df["estado"].fillna("")
+        d["perfectas"] = estado == "perfecta"
+        d["sugeridas"] = estado == "preferida"
+        d["elegir"] = estado == "dudosa"
+        d["sin_coincidencia"] = estado.isin(["sin_titulo", "sin_artista"])
+        d["pendientes"] = estado == ""
     r = d.groupby("coleccion").sum(numeric_only=True)
     r.loc["TOTAL"] = r.sum()
     return r.sort_values("archivos", ascending=False)

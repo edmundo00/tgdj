@@ -14,12 +14,19 @@ from src.utils import coleccion, no_tocar
 
 COLUMNAS = [
     ("archivos", "Archivos", "n"), ("gb", "GB", "gb"),
+    ("perfectas", "Perfectas", "%bueno"), ("sugeridas", "Sugeridas", "n"), ("elegir", "Hay que elegir", "n"),
+    ("sin_coincidencia", "Sin coincidencia", "n"), ("pendientes", "Por comparar", "n"),
     ("revisadas", "Revisadas", "%bueno"), ("fecha_completa", "Fecha completa", "%bueno"),
     ("fecha_cd", "Fecha de CD", "%malo"), ("sin_fecha", "Sin fecha", "%malo"),
     ("artista_raro", "Artista en otro formato", "%malo"), ("sin_genero", "Sin género", "%malo"),
     ("no_tocar", "No tocar", "n"), ("copias", "Posibles copias", "n"),
 ]
 AYUDA = {
+    "perfectas": "Ya tienen la misma información que la base de datos",
+    "sugeridas": "Hay una grabación clara en la base de datos: se pueden revisar y aplicar",
+    "elegir": "Varias grabaciones posibles (o fecha de CD): hay que elegir",
+    "sin_coincidencia": "Título o artista no encontrado en la base de datos",
+    "pendientes": "Todavía no comparadas (la biblioteca lo hace en segundo plano)",
     "revisadas": "Ya pasaron por la base de datos (compositor «Musica: … - Letra: …»)",
     "fecha_completa": "Fecha de grabación AAAA-MM-DD",
     "fecha_cd": "Año 1990 o posterior: casi seguro es la fecha del CD, no la de grabación",

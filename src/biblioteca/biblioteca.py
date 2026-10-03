@@ -71,6 +71,18 @@ CREATE INDEX IF NOT EXISTS i_bytes ON archivos(bytes);
 CREATE TABLE IF NOT EXISTS meta (clave TEXT PRIMARY KEY, valor TEXT);
 """
 
+# Columnas del emparejado (fase 2). Se añaden a bibliotecas creadas antes.
+COLUMNAS_EMPAREJADO = {
+    "estado": "TEXT DEFAULT ''",          # perfecta | preferida | dudosa | sin_titulo | sin_artista | error
+    "sugerida": "INTEGER",                # índice en la base de datos de tango de la opción sugerida
+    "opciones": "TEXT DEFAULT ''",        # índices de las opciones (JSON)
+    "motivo_fecha": "TEXT DEFAULT ''",    # si la fecha del archivo es la del CD
+    "cambios": "TEXT DEFAULT ''",         # lo que cambiaría al aplicar la sugerida (JSON)
+    "version_reglas": "TEXT DEFAULT ''",  # con qué reglas se emparejó (ver motor.version_reglas)
+    "emparejado_el": "REAL",
+}
+ESTADOS = ("perfecta", "preferida", "dudosa", "sin_titulo", "sin_artista")
+
 
 def ruta_bd_por_defecto():
     base = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
@@ -141,6 +153,11 @@ class Biblioteca:
         self.base = base
         with self.conexion() as con:
             con.executescript(ESQUEMA)
+            existentes = {fila[1] for fila in con.execute("PRAGMA table_info(archivos)")}
+            for columna, tipo in COLUMNAS_EMPAREJADO.items():
+                if columna not in existentes:
+                    con.execute(f"ALTER TABLE archivos ADD COLUMN {columna} {tipo}")
+            con.execute("CREATE INDEX IF NOT EXISTS i_estado ON archivos(estado)")
 
     def conexion(self):
         """Una conexión nueva (cada hilo usa la suya). WAL: se puede leer mientras otro escribe."""
@@ -266,7 +283,7 @@ class Biblioteca:
                 raiz, coleccion, carpeta, ext, st = disco[r]
                 cambiada = b != st.st_size or m != int(st.st_mtime)
                 if cambiada:
-                    con.execute("""UPDATE archivos SET bytes=?, mtime=?, tags_leidas=0, huella='', en_nube=?,
+                    con.execute("""UPDATE archivos SET bytes=?, mtime=?, tags_leidas=0, huella='', en_nube=?, estado='',
                                    raiz=?, coleccion=?, carpeta=?, visto_ultima=? WHERE id=?""",
                                 (st.st_size, int(st.st_mtime), int(en_nube(st)), raiz, coleccion, carpeta, ahora, i))
                     informe["cambiadas"] += 1
@@ -302,6 +319,86 @@ class Biblioteca:
         informe["segundos"] = round(time.time() - t0, 1)
         self.poner_meta("ultima_actualizacion", time.time())
         return informe
+
+    # ------------------------------------------------------------------ emparejar (nivel 3)
+    def por_emparejar(self, version):
+        """Canciones con tags leídas cuyo estado falta o se calculó con otras reglas.
+        Primero las que nunca se emparejaron y las que no estaban perfectas (las que te interesan)."""
+        with self.conexion() as con:
+            return con.execute(
+                """SELECT id, ruta, title, artist, year, genre, composer, album FROM archivos
+                   WHERE tags_leidas=1 AND error='' AND en_nube=0 AND (estado='' OR version_reglas<>?)
+                   ORDER BY (estado='') DESC, (estado='perfecta') ASC, visto_primera DESC""", (version,)).fetchall()
+
+    def guardar_emparejados(self, resultados, version, con=None):
+        """resultados: [(id, resumen del motor o {'error': …})]."""
+        propia = con is None
+        con = con or self.conexion()
+        ahora = time.time()
+        filas = []
+        for i, r in resultados:
+            if "error" in r:
+                filas.append(("error", None, "", "", json.dumps({"error": r["error"]}), version, ahora, i))
+            else:
+                filas.append((r["categoria"], r["sugerida"], json.dumps(r["opciones"]), r["motivo_fecha"] or "",
+                              json.dumps(r["cambios"], ensure_ascii=False), version, ahora, i))
+        con.executemany("""UPDATE archivos SET estado=?, sugerida=?, opciones=?, motivo_fecha=?, cambios=?,
+                           version_reglas=?, emparejado_el=? WHERE id=?""", filas)
+        if propia:
+            con.commit()
+            con.close()
+
+    def emparejar(self, version, usar_fecha=True, procesos=None, progreso=None, cancelado=None,
+                  funcion_lote=None, tamano_lote=100):
+        """
+        Empareja con la base de datos de tango las canciones pendientes y guarda su estado.
+        Por defecto en procesos aparte (no frena la ventana y usa varios núcleos). funcion_lote: para
+        los tests (se ejecuta aquí mismo). Se puede cancelar: lo hecho queda guardado.
+        """
+        cancelado = cancelado or (lambda: False)
+        pendientes = self.por_emparejar(version)
+        total = len(pendientes)
+        if not total:
+            return {"emparejadas": 0, "total": 0, "segundos": 0.0}
+        lotes = [[(f[0], f[1], [f[2], f[3], f[4], f[5], f[6], f[1], f[7]]) for f in pendientes[i:i + tamano_lote]]
+                 for i in range(0, total, tamano_lote)]
+        t0, hechas = time.time(), 0
+        con = self.conexion()
+        try:
+            if funcion_lote is not None:
+                for lote in lotes:
+                    if cancelado():
+                        break
+                    self.guardar_emparejados(funcion_lote(lote), version, con)
+                    con.commit()
+                    hechas += len(lote)
+                    if progreso:
+                        progreso("emparejar", hechas, total)
+            else:
+                from concurrent.futures import ProcessPoolExecutor, as_completed
+                from src.biblioteca import trabajador
+                procesos = procesos or max(1, min(4, (os.cpu_count() or 2) // 2))
+                with ProcessPoolExecutor(procesos, initializer=trabajador.iniciar, initargs=(usar_fecha,)) as pool:
+                    futuros = [pool.submit(trabajador.emparejar_lote, lote) for lote in lotes]
+                    for futuro in as_completed(futuros):
+                        if cancelado():
+                            for f in futuros:
+                                f.cancel()
+                            break
+                        resultado = futuro.result()
+                        self.guardar_emparejados(resultado, version, con)
+                        con.commit()
+                        hechas += len(resultado)
+                        if progreso:
+                            progreso("emparejar", hechas, total)
+        finally:
+            con.commit()
+            con.close()
+        return {"emparejadas": hechas, "total": total, "segundos": round(time.time() - t0, 1)}
+
+    def contar_estados(self):
+        with self.conexion() as con:
+            return dict(con.execute("SELECT estado, COUNT(*) FROM archivos GROUP BY estado").fetchall())
 
     # ------------------------------------------------------------------ importar caché antigua
     def importar_cache_csv(self, ruta_csv):

@@ -295,6 +295,7 @@ class tango_tags_qt_ventana(QMainWindow):
         self.opt_fecha = m_opciones.addAction("Usar la fecha del archivo para elegir la sugerida")
         self.opt_fecha.setCheckable(True)
         self.opt_fecha.setChecked(self.settings.value("opt_fecha", DEFAULT_DATE_CHECKED, type=bool))
+        self.opt_fecha.toggled.connect(lambda _: self.actualizar_biblioteca())
         self.opt_guardar_coinc = m_opciones.addAction("Guardar CSV de coincidencias al cargar (carpeta output)")
         self.opt_guardar_coinc.setCheckable(True)
         self.opt_guardar_coinc.setChecked(self.settings.value("opt_guardar_coinc", False, type=bool))
@@ -879,9 +880,11 @@ class tango_tags_qt_ventana(QMainWindow):
 
     def actualizar_biblioteca(self, empezar_sesion=False):
         if self._hilo_biblioteca is not None and self._hilo_biblioteca.isRunning():
+            self._repetir_biblioteca = True      # cuando termine, otra vuelta (p. ej. cambiaron las reglas)
             return
+        self._repetir_biblioteca = False
         self.etiqueta_biblioteca.setText("📚 Biblioteca: buscando cambios…")
-        self._hilo_biblioteca = ActualizarBiblioteca(self.biblioteca, empezar_sesion)
+        self._hilo_biblioteca = ActualizarBiblioteca(self.biblioteca, empezar_sesion, self.opt_fecha.isChecked())
         self._hilo_biblioteca.progreso.connect(self._biblioteca_progreso)
         self._hilo_biblioteca.terminado.connect(self._biblioteca_terminada)
         self._hilo_biblioteca.start()
@@ -889,6 +892,8 @@ class tango_tags_qt_ventana(QMainWindow):
     def _biblioteca_progreso(self, fase, hechos, total):
         if fase == "leer" and total:
             self.etiqueta_biblioteca.setText(f"📚 Biblioteca: leyendo tags de lo nuevo… {hechos} de {total}")
+        elif fase == "emparejar" and total:
+            self.etiqueta_biblioteca.setText(f"📚 Biblioteca: comparando con la base de datos… {hechos} de {total}")
 
     def _biblioteca_terminada(self, informe):
         if isinstance(informe, Exception):
@@ -903,7 +908,8 @@ class tango_tags_qt_ventana(QMainWindow):
         self.etiqueta_biblioteca.setToolTip(
             f"Biblioteca actualizada en {informe['segundos']} s: {informe['nuevas']} nuevas, "
             f"{informe['cambiadas']} cambiadas, {informe['movidas']} movidas, {informe['borradas']} borradas, "
-            f"{informe['leidas']} tags leídas, {informe['errores']} con error, {informe['en_nube']} solo en la nube.\n"
+            f"{informe['leidas']} tags leídas, {informe.get('emparejadas', 0)} comparadas con la base de datos, "
+            f"{informe['errores']} con error, {informe['en_nube']} solo en la nube.\n"
             "Archivo → Actualizar la biblioteca ahora para volver a mirar.")
         # Lo que dependía de la colección se recalcula con los datos nuevos
         self._indice_coleccion = None
@@ -912,6 +918,8 @@ class tango_tags_qt_ventana(QMainWindow):
             self.buscador.tengo = None
         if getattr(self, "ventana_estado", None) is not None and self.ventana_estado.isVisible():
             self.ventana_estado.cargar()
+        if getattr(self, "_repetir_biblioteca", False):
+            self.actualizar_biblioteca()
 
     def editar_carpetas(self):
         from src.ui.dialogo_carpetas import DialogoCarpetas
@@ -1203,6 +1211,7 @@ class tango_tags_qt_ventana(QMainWindow):
         from src.config.config import DB_CSV_PATH
         self.data_store.load_data(DB_CSV_PATH)
         self.data_store.get_indice_busqueda()
+        self.actualizar_biblioteca()       # las reglas cambiaron: la biblioteca se vuelve a comparar
 
     def indice_tengo(self):
         """Qué grabaciones tienes (de la biblioteca)."""
@@ -1280,6 +1289,7 @@ class tango_tags_qt_ventana(QMainWindow):
             QMessageBox.critical(self, "Error", f"No se pudo regenerar la base de datos:\n{hilo.error}")
             return
         self.data_store.load_data(destino)
+        self.actualizar_biblioteca()
         resumen = "\n".join(f"  • {k}: {v}" for k, v in hilo.resultado.items())
         QMessageBox.information(self, "Base de datos regenerada",
                                 f"Hecho. La app ya usa la base de datos nueva.\n\n{resumen}\n\n"
@@ -1307,16 +1317,22 @@ class ActualizarBiblioteca(QThread):
     progreso = pyqtSignal(str, int, int)
     terminado = pyqtSignal(object)        # informe (dict) o la excepción
 
-    def __init__(self, biblioteca, empezar_sesion=False):
+    def __init__(self, biblioteca, empezar_sesion=False, usar_fecha=True):
         super().__init__()
-        self.biblioteca, self.empezar_sesion = biblioteca, empezar_sesion
+        self.biblioteca, self.empezar_sesion, self.usar_fecha = biblioteca, empezar_sesion, usar_fecha
 
     def run(self):
+        from src.motor.emparejar import version_reglas
         try:
             if self.empezar_sesion:
                 self.biblioteca.empezar_sesion()
-            informe = self.biblioteca.actualizar(progreso=lambda f, h, t: self.progreso.emit(f, h, t),
-                                                 cancelado=self.isInterruptionRequested)
+            avisar = lambda f, h, t: self.progreso.emit(f, h, t)
+            informe = self.biblioteca.actualizar(progreso=avisar, cancelado=self.isInterruptionRequested)
+            # Nivel 3: estado de lo nuevo o cambiado (o de todo, si cambiaron las reglas), en procesos aparte
+            if not self.isInterruptionRequested():
+                emparejado = self.biblioteca.emparejar(version_reglas(self.usar_fecha), usar_fecha=self.usar_fecha,
+                                                       progreso=avisar, cancelado=self.isInterruptionRequested)
+                informe["emparejadas"] = emparejado["emparejadas"]
             self.terminado.emit(informe)
         except Exception as e:
             self.terminado.emit(e)

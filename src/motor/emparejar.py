@@ -284,3 +284,24 @@ def elegir_preferida(booleanos, candidatas, usar_fecha=True):
     if len(mejores) == 1 or len(tags) == 1:
         return True, mejores[0]
     return False, 0
+
+
+# Súbelo cuando cambie la lógica del motor: obliga a re-emparejar toda la biblioteca
+VERSION_MOTOR = "2026-10-03.1"
+
+
+def version_reglas(usar_fecha=True):
+    """
+    Huella de todo lo que influye en el resultado del emparejado: la base de datos de tango, tus
+    grafías y correcciones, la opción de usar la fecha y la versión del motor. Si cambia, las
+    canciones guardadas en la biblioteca se vuelven a emparejar.
+    """
+    import hashlib
+    from src.config.config import DB_CSV_PATH
+    from src.utils import correcciones, grafias
+    h = hashlib.sha1(f"{VERSION_MOTOR}|fecha={bool(usar_fecha)}".encode())
+    for ruta in (DB_CSV_PATH, grafias.ARCHIVO, correcciones.ARCHIVO):
+        if os.path.exists(ruta):
+            st = os.stat(ruta)
+            h.update(f"{os.path.basename(ruta)}|{st.st_size}|{int(st.st_mtime)}".encode())
+    return h.hexdigest()[:16]

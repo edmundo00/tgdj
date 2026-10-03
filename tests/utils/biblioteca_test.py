@@ -111,5 +111,55 @@ class BibliotecaTest(unittest.TestCase):
         self.assertEqual(self.bib.inicio_sesion_anterior(), primera)
 
 
+class EmparejarTest(unittest.TestCase):
+    """Nivel 3: estado de cada canción guardado y versión de reglas."""
+
+    def setUp(self):
+        from tests.utils.motor_test import bd
+        from src.motor.emparejar import Motor, resumen
+        self.dir = tempfile.mkdtemp()
+        musica = os.path.join(self.dir, "MUSICA")
+        for nombre in ("Humillacion", "Ojos negros", "Desconocida"):
+            escribir(os.path.join(musica, "Edmundo", nombre + ".mp3"), os.urandom(3000 + len(nombre)))
+        config = {"raices": [{"ruta": musica, "subcarpetas_son_colecciones": True, "excluir": []}]}
+        self.bib = Biblioteca(os.path.join(self.dir, "bib.sqlite"), config=config)
+        tags = {"Humillacion": ("Juan D'Arienzo / Héctor Mauré", "1941"), "Ojos negros": ("Roberto Firpo", "2014"),
+                "Desconocida": ("Orquesta Inventada", "1950")}
+
+        def leer(ruta):
+            t = os.path.splitext(os.path.basename(ruta))[0]
+            return SimpleNamespace(title=t, artist=tags[t][0], album="", year=tags[t][1], genre="tango", composer="")
+        self.bib.actualizar(leer=leer)
+        db, dic = bd()
+        motor = Motor(db=db, dic_art=dic)
+        self.lote = lambda filas: [(i, resumen(motor.emparejar(r, t))) for i, r, t in filas]
+
+    def tearDown(self):
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def test_guarda_el_estado_y_no_repite(self):
+        inf = self.bib.emparejar("v1", funcion_lote=self.lote)
+        self.assertEqual((inf["emparejadas"], inf["total"]), (3, 3))
+        df = self.bib.dataframe().set_index("title")
+        self.assertEqual(df.loc["Humillacion", "estado"], "preferida")
+        self.assertIn("1941-07-14", df.loc["Humillacion", "cambios"])
+        self.assertEqual(df.loc["Ojos negros", "estado"], "dudosa")
+        self.assertIn("CD", df.loc["Ojos negros", "motivo_fecha"])
+        self.assertEqual(df.loc["Desconocida", "estado"], "sin_artista")
+        self.assertEqual(self.bib.emparejar("v1", funcion_lote=self.lote)["total"], 0)   # ya hecho
+
+    def test_otras_reglas_vuelven_a_emparejar(self):
+        self.bib.emparejar("v1", funcion_lote=self.lote)
+        self.assertEqual(self.bib.emparejar("v2", funcion_lote=self.lote)["total"], 3)
+
+    def test_archivo_cambiado_vuelve_a_emparejarse(self):
+        self.bib.emparejar("v1", funcion_lote=self.lote)
+        ruta = self.bib.dataframe("title=?", ("Desconocida",)).iloc[0]["ruta"]
+        escribir(ruta, os.urandom(9999))
+        self.bib.actualizar(leer=lambda r: SimpleNamespace(title="Desconocida", artist="Orquesta Inventada",
+                                                           album="", year="", genre="", composer=""))
+        self.assertEqual(self.bib.emparejar("v1", funcion_lote=self.lote)["total"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()

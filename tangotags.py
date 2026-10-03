@@ -16,6 +16,8 @@ from src.ui.tango_tags_qt_ventana import tango_tags_qt_ventana
 
 
 if __name__ == "__main__":
+    import multiprocessing
+    multiprocessing.freeze_support()     # necesario para los procesos aparte de la biblioteca en el .exe
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
 
