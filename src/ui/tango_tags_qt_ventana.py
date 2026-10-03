@@ -30,7 +30,10 @@ from src.config.config import (
     DEFAULT_DATE_CHECKED,
 )
 from src.config.database import Database
-from src.ui.file_to_find_qt import FILETOFINDQT
+from src.motor.emparejar import (
+    Motor, Cancion, NOMBRE_CAMPO, categoria_de, tags_actuales, texto, ya_revisada, cambios_de,
+    contexto_disco, leer_tags_lista,
+)
 from src.utils.MusicBeeLibraryTools import MusicBeeLibraryTools
 from src.utils import historial, no_tocar
 from src.ui.reproductor import Reproductor, BarraSonando
@@ -127,44 +130,12 @@ Si cargaste desde MusicBee, después haz en MusicBee <i>Herramientas → Volver 
 MENSAJE_INICIAL = ("<p style='font-size:15px; color:#555'>Empieza cargando canciones con los botones de "
                    "<b>① Cargar</b> (arriba a la izquierda).<br>Menú <b>Ayuda</b> para ver cómo funciona.</p>")
 
-REVISADA = re.compile(r"^Musica: .+ - Letra: .+$")
-
-
-def ya_revisada(compositor):
-    """Las canciones que ya pasaron por la BD tienen el compositor en el formato nuevo completo."""
-    return bool(REVISADA.match(texto(compositor).strip()))
-
-
-NOMBRE_CAMPO = {"title": "título", "artist": "artista", "year": "fecha", "genre": "género", "composer": "compositor"}
-
-
-def categoria_de(archivo):
-    if getattr(archivo, "perfect_match", False):
-        return "perfecta"
-    if getattr(archivo, "artist_not_found", False):
-        return "sin_artista"
-    if getattr(archivo, "title_not_found", False):
-        return "sin_titulo"
-    if getattr(archivo, "hay_coincidencia_preferida", False):
-        return "preferida"
-    return "dudosa"
-
-
-def texto(valor):
-    return "" if valor is None or (isinstance(valor, float) and pd.isna(valor)) else str(valor)
-
-
-def tags_actuales(archivo):
-    t = archivo.tags
-    return {k: texto(getattr(t, k, "")) for k in ("title", "artist", "year", "genre", "composer")}
-
-
 class tango_tags_qt_ventana(QMainWindow):
     def __init__(self):
         super().__init__()
         self.data_store = Database()
         self.settings = QSettings("TangoTags", "TangoTags")
-        self.archivos = []          # objetos FILETOFINDQT cargados
+        self.archivos = []          # Cancion (motor) cargadas
         self.fila_a_archivo = {}    # fila de la tabla -> (archivo, posición de la coincidencia o None)
         self._rellenando = False
 
@@ -474,6 +445,7 @@ class tango_tags_qt_ventana(QMainWindow):
         ocultas_no_tocar = 0
         marcadas_no_tocar = no_tocar.claves() if self.opt_no_tocar.isChecked() else set()
 
+        motor = Motor(usar_fecha=self.opt_fecha.isChecked())
         self.empezar_progreso(len(rutas_y_tags))
         try:
             for i, (ruta, tags) in enumerate(rutas_y_tags, 1):
@@ -489,28 +461,16 @@ class tango_tags_qt_ventana(QMainWindow):
                     ocultas_no_tocar += 1
                     continue
                 if tags is None:
-                    try:
-                        t = utils.leer_tags(ruta)
-                        tags = [t.title, t.artist, t.year, t.genre, t.composer, ruta, t.album]
-                    except Exception:
-                        tags = None
+                    tags = leer_tags_lista(ruta)
                 if self.opt_saltar.isChecked() and tags is not None and ya_revisada(tags[4]):
                     saltadas += 1
                     continue
                 try:
-                    archivo = FILETOFINDQT(ruta, [None] * 4, 0,
-                                           [self.opt_fecha.isChecked(), True, True, True, True, False],
-                                           tags=tags)
+                    archivo = motor.emparejar(ruta, tags)
                 except Exception as e:
                     print(f"Error procesando {ruta}: {e}")
                     no_encontrados.append(ruta)
                     continue
-                archivo.categoria = categoria_de(archivo)
-                archivo.estado_guardado = None
-                coincidencias = getattr(archivo, "coincidencias", None)
-                hay = coincidencias is not None and not coincidencias.empty
-                # Solo se marca la sugerida; una perfecta ya está bien y nunca viene marcada para cambiar
-                archivo.seleccion = archivo.coincidencia_preferida if hay and archivo.categoria == "preferida" else None
                 self.archivos.append(archivo)
                 if self.opt_guardar_coinc.isChecked():
                     fav = archivo.get_coincidencia_favorita()
@@ -548,41 +508,7 @@ class tango_tags_qt_ventana(QMainWindow):
                 + "\n".join(no_encontrados[:15]) + ("\n…" if len(no_encontrados) > 15 else ""))
 
     def calcular_contexto_disco(self):
-        """
-        Para las canciones en las que hay que elegir: las demás canciones del mismo disco (álbum, o
-        carpeta si no hay álbum) ya identificadas dicen de qué años es el disco. Se marcan las opciones
-        que caen en ese rango (± 1 año). No se elige nada solo: 'Marcar por disco' lo hace a petición.
-        """
-        def disco_de(a):
-            album = texto(getattr(a.tags, "album", "")).strip()
-            return ("album", album.lower()) if album else ("carpeta", os.path.dirname(a.ruta_archivo))
-
-        anos_por_disco = {}
-        for a in self.archivos:
-            ano = None
-            if a.categoria == "perfecta":
-                ano = formatear_fecha(getattr(a.tags, "year", ""))[:4]
-            elif a.categoria == "preferida" and a.seleccion is not None:
-                ano = formatear_fecha(self.coincidencias(a).iloc[a.seleccion].get("fecha", ""))[:4]
-            if ano and not getattr(a, "motivo_fecha", ""):
-                anos_por_disco.setdefault(disco_de(a), []).append(int(ano))
-
-        for a in self.archivos:
-            a.disco = None
-            anos = anos_por_disco.get(disco_de(a), [])
-            if a.categoria != "dudosa" or len(anos) < 2:
-                continue
-            desde, hasta = min(anos), max(anos)
-            encajan = set()
-            for pos, (_, c) in enumerate(self.coincidencias(a).iterrows()):
-                f = formatear_fecha(c.get("fecha", ""))[:4]
-                if f and desde - 1 <= int(f) <= hasta + 1:
-                    encajan.add(pos)
-            if encajan:
-                tipo, nombre = disco_de(a)
-                donde = f"del álbum «{getattr(a.tags, 'album', '')}»" if tipo == "album" else "de la misma carpeta"
-                rango = f"{desde}" if desde == hasta else f"{desde}–{hasta}"
-                a.disco = {"encajan": encajan, "texto": f"las otras {len(anos)} canciones {donde} son de {rango}"}
+        contexto_disco(self.archivos)
 
     def marcar_por_disco(self):
         marcadas = 0
@@ -1030,7 +956,7 @@ class tango_tags_qt_ventana(QMainWindow):
     def editar_a_mano(self, archivo=None):
         """Formulario para escribir las tags de una canción a mano (con copia y deshacer)."""
         from src.ui.dialogo_editar import DialogoEditar
-        archivo = archivo if isinstance(archivo, FILETOFINDQT) else self.archivo_seleccionado()
+        archivo = archivo if isinstance(archivo, Cancion) else self.archivo_seleccionado()
         if archivo is None:
             QMessageBox.information(self, "Editar a mano", "Selecciona primero una canción en la tabla.")
             return
@@ -1090,14 +1016,7 @@ class tango_tags_qt_ventana(QMainWindow):
     # ------------------------------------------------------------------ aplicar tags
     def cambios_de(self, archivo):
         """(tags actuales, tags nuevas, solo lo que cambia) si se aplica la opción marcada."""
-        actuales = tags_actuales(archivo)
-        if archivo.seleccion is None or self.coincidencias(archivo).empty:
-            return actuales, {}, {}
-        nuevas = tags_desde_coincidencia(self.coincidencias(archivo).iloc[archivo.seleccion])
-        if actuales["composer"]:   # no perder lo que el archivo sabe y la base de datos no
-            nuevas["composer"] = combinar_compositor(actuales["composer"], nuevas["composer"])
-        # Solo se escriben los campos con valor nuevo y distinto
-        return actuales, nuevas, {k: v for k, v in nuevas.items() if v and v != actuales[k]}
+        return cambios_de(archivo)
 
     def aplicar_tags(self):
         cambios, sin_cambios = [], 0
@@ -1210,7 +1129,7 @@ class tango_tags_qt_ventana(QMainWindow):
     def buscar_en_bd(self, archivo=None):
         """Abre (o trae al frente) el buscador. Si se llama para una canción sin coincidencias, la busca ya."""
         from src.ui.buscador_bd import VentanaBuscador
-        para_cancion = isinstance(archivo, FILETOFINDQT)
+        para_cancion = isinstance(archivo, Cancion)
         if not para_cancion:
             archivo = self.archivo_seleccionado()
         if getattr(self, "buscador", None) is None:
