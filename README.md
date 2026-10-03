@@ -5,8 +5,27 @@ formato, y crea las diapos de las tandas.
 
 ## Arrancar
 
-- Doble clic en **`TangoTags.bat`** (necesita el `.venv` de este proyecto), o
+- Doble clic en **`TangoTags.bat`** o en el acceso directo `tangotags.vbs` del escritorio (necesitan el `.venv`
+  de este proyecto), o
 - **`dist\TangoTags\TangoTags.exe`** (no necesita Python; se genera con `crear_exe.bat`).
+
+## Mi biblioteca (la pestaña de inicio)
+
+Al abrir la app ves **toda tu música** (pestaña *📚 Mi biblioteca*), al día sola. A la izquierda, listas:
+
+| Lista | Qué hay |
+|---|---|
+| 🆕 **Nuevas** | Desde la última vez que abriste la app · últimos 7 días · últimos 30 días |
+| ✎ **Por revisar** | *Sugeridas* (hay una grabación clara) · *Hay que elegir* (y de ellas, *con fecha de CD*) · *Título / Artista no encontrado* · *Por comparar* |
+| 📚 **Toda la música** | Todas · Perfectas · No tocar · ☁ Solo en la nube (archivos de Dropbox sin descargar en ese ordenador) |
+| 🗂 **Colecciones** | Cada colección con su árbol de carpetas |
+
+Las «No tocar» no salen en *Por revisar*. La caja de arriba busca dentro de la lista (palabras sueltas, `1944`,
+`1940-1945`, `1940s`); clic en una cabecera para ordenar. **Revisar estas** (o doble clic, o Intro) lleva las
+seleccionadas —o toda la lista— a la pestaña *✎ Revisar*. Espacio escucha; clic derecho: abrir carpeta, «No tocar».
+
+Lo que haces (aplicar, editar, deshacer, «No tocar», mover duplicados) se ve en Mi biblioteca **al momento**
+(si son más de 40 canciones, en unos segundos: se hace en segundo plano).
 
 ## Cómo se usa
 
@@ -55,7 +74,7 @@ Clic derecho en la cabecera de cualquier tabla para ocultar/mostrar columnas; lo
 
 Columna **Tuya**: ✔ esa grabación está en tu colección, ≈ tienes ese tema por esa orquesta con otra fecha.
 Filtros **La tengo** / **Me falta** (p. ej. `di sarli rufino` + *Me falta* = lo que te falta de Di Sarli con
-Rufino). La ficha dice dónde la tienes y *Escuchar la mía*. Usa los datos de *Estado de la colección*.
+Rufino). La ficha dice dónde la tienes y *Escuchar la mía*. Usa los datos de Mi biblioteca.
 
 ### Revisar rápido con el teclado
 
@@ -82,11 +101,22 @@ canciones **movidas** (p. ej. de TIDAL Download a MUSICA) sin perder su fecha de
 
 La base de datos es local (`%LOCALAPPDATA%\TangoTags\biblioteca.sqlite`, una por ordenador) y es una
 caché: si se borra, se reconstruye. Tus decisiones (No tocar, grafías, correcciones, copias) siguen en Dropbox.
+Para no tener que reconstruirla nunca:
+
+- tras cada actualización se guarda una copia (`biblioteca.sqlite.copia`, menos de 1 s);
+- al abrir se comprueba; si estuviera dañada se aparta (`.dañada-FECHA`), se recupera la copia y avisa;
+- aunque abras la app dos veces, solo una actualiza la biblioteca;
+- si una carpeta raíz no está (Dropbox o un disco no disponibles) o «desaparece» de golpe más del 20 % de su
+  música, no se quita nada de la biblioteca.
+
+**En otro ordenador** (p. ej. el portátil, con Dropbox en `C:\Dropbox`): la primera vez la biblioteca se
+prepara sola leyendo las tags de toda la música (unos 30 minutos; un aviso arriba enseña el progreso y se
+puede usar la app mientras). Después, como siempre: segundos.
 
 ### Estado de la colección y duplicados
 
-*Archivo → Estado de la colección*: por carpeta, % revisadas, fechas completas/de CD/sin fecha, artistas en
-otro formato… (con caché: segundos). Doble clic en una carpeta para revisarla.
+*Archivo → Estado de la colección*: por colección, cuántas perfectas, sugeridas, por elegir, sin coincidencia…
+(sale de la biblioteca: al momento). Doble clic en una colección para revisarla.
 *Archivo → Duplicados*: copias de audio idéntico **dentro de cada colección**; se elige cuál conservar y el
 resto se **mueve** a `MUSICA/_duplicados` (nunca se borra; se puede deshacer).
 
@@ -125,14 +155,20 @@ La búsqueda del artista entiende `Orquesta / Cantor`, `Orquesta; Cantor`, `feat
 
 ## Configuración
 
-- `config.ini` → ruta de Dropbox (`music_path`).
+- `config.ini` → ruta de Dropbox (`music_path`). Como está dentro de Dropbox es el mismo en todos los
+  ordenadores: si esa ruta no existe en uno (p. ej. `D:\Dropbox` en el portátil, que lo tiene en `C:\Dropbox`),
+  la app usa la carpeta que dice el propio Dropbox. También se puede poner una por usuario de Windows en
+  `[UserPaths]`. Las rutas guardadas en un ordenador (copias para deshacer, playlists, duplicados movidos) se
+  traducen solas al otro.
 - `src/config/config.py` → datos por defecto de la milonga para las diapos, carpetas, etc.
 
 ## Estructura
 
 ```
 tangotags.py               arranque de la app
-src/ui/                    ventanas (principal, crear diapos)
+src/biblioteca/            Mi biblioteca: SQLite local, escáner incremental, emparejado en procesos aparte
+src/motor/emparejar.py     el motor que compara una canción con la base de datos de tango
+src/ui/                    ventanas (principal, Mi biblioteca, buscador, estado, duplicados, playlists, diapos)
 src/diapos/generador.py    creación del PowerPoint
 src/utils/                 formato de tags, búsqueda, historial, base de datos
 control_slides.py          control de diapos (también abre suelto / control_slides.exe)
