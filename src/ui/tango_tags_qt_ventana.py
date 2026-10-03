@@ -91,7 +91,9 @@ cambios en segundo plano; también con <i>Buscar cambios</i>). A la izquierda, l
 fecha de CD—, título o artista no encontrados), <b>Toda la música</b> y tus <b>Colecciones</b> con sus carpetas.
 Escribe en la caja para buscar dentro de la lista. <b>Revisar estas</b> (o doble clic, o Intro) las lleva a la
 pestaña <b>✎ Revisar</b>: las seleccionadas, o toda la lista si no hay selección. Espacio escucha;
-clic derecho: abrir carpeta, «No tocar».</p>
+clic derecho: abrir carpeta, «No tocar».
+Lo que haces (aplicar, editar, deshacer, «No tocar», mover duplicados) se ve aquí al momento
+(si son más de 40 canciones, en unos segundos).</p>
 <ol>
 <li><b>Cargar</b>: desde Mi biblioteca, o eligiendo canciones con <i>Archivos</i>, <i>Carpeta</i>,
 <i>Playlist</i> (.m3u) o <i>MusicBee</i> (archivo .mbl de la biblioteca).</li>
@@ -133,6 +135,8 @@ Si cargaste desde MusicBee, después haz en MusicBee <i>Herramientas → Volver 
 <p>Si un dato no se conoce en la base de datos, esa tag del archivo no se toca. El compositor se escribe siempre: <i>Musica: ? - Letra: ?</i> indica que la canción ya pasó por la base de datos.</p>
 """
 
+
+LIMITE_REFRESCAR = 40       # ~50 ms por canción; más que esto: la biblioteca se pone al día en segundo plano
 
 MENSAJE_INICIAL = ("<p style='font-size:15px; color:#555'>Empieza cargando canciones con los botones de "
                    "<b>① Cargar</b> (arriba a la izquierda),<br>o desde la pestaña <b>📚 Mi biblioteca</b> "
@@ -868,6 +872,7 @@ class tango_tags_qt_ventana(QMainWindow):
         siguiente = visibles[visibles.index(archivo) + 1] if archivo in visibles and visibles.index(archivo) + 1 < len(visibles) else None
         t = tags_actuales(archivo)
         no_tocar.marcar([(archivo.ruta_archivo, t["title"])])
+        self.vista_biblioteca.refrescar_no_tocar()
         self.archivos.remove(archivo)
         self.actualizar_contadores()
         self.rellenar_tabla()
@@ -972,6 +977,34 @@ class tango_tags_qt_ventana(QMainWindow):
         self.vista_biblioteca.cargar()
         if getattr(self, "_repetir_biblioteca", False):
             self.actualizar_biblioteca()
+
+    def refrescar_biblioteca(self, rutas):
+        """
+        Tras una acción tuya (aplicar, editar, deshacer, mover): esas canciones se releen y se vuelven a
+        comparar al momento, y Mi biblioteca lo enseña. Si son muchas, se hace en segundo plano.
+        """
+        rutas = list(dict.fromkeys(rutas))
+        if not rutas:
+            return
+        if len(rutas) > LIMITE_REFRESCAR:
+            self.actualizar_biblioteca()          # ve los archivos cambiados y los compara en procesos aparte
+            return
+        from src.motor.emparejar import version_reglas, resumen
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        try:
+            usar = self.opt_fecha.isChecked()
+            motor = Motor(usar_fecha=usar)
+            hecho = self.biblioteca.refrescar(rutas, emparejar=lambda r, t: resumen(motor.emparejar(r, t)),
+                                              version=version_reglas(usar))
+            self.vista_biblioteca.refrescar_rutas(hecho["rutas"])
+            self._indice_coleccion = self._indice_tengo = None
+            if getattr(self, "buscador", None) is not None:
+                self.buscador.tengo = None
+        except Exception as e:
+            print(f"No se pudo poner al día la biblioteca: {e}")
+            self.actualizar_biblioteca()
+        finally:
+            QApplication.restoreOverrideCursor()
 
     def editar_carpetas(self):
         from src.ui.dialogo_carpetas import DialogoCarpetas
@@ -1099,6 +1132,7 @@ class tango_tags_qt_ventana(QMainWindow):
             except Exception:
                 pass
             archivo.seleccion = None
+            self.refrescar_biblioteca([archivo.ruta_archivo])
             self.statusBar().showMessage("Tags guardadas a mano (Deshacer las devuelve).", 8000)
         else:
             QMessageBox.warning(self, "Editar a mano", "No se pudieron escribir las tags en el archivo.")
@@ -1185,6 +1219,7 @@ class tango_tags_qt_ventana(QMainWindow):
                 errores += 1
         self.terminar_progreso()
         self.rellenar_tabla()
+        self.refrescar_biblioteca([a.ruta_archivo for a, _, _, _ in cambios if a.estado_guardado])
 
         mensaje = f"Tags escritas en {escritos} archivo(s)."
         if escritos + errores < len(cambios):
@@ -1243,6 +1278,7 @@ class tango_tags_qt_ventana(QMainWindow):
                 except Exception:
                     pass
         self.rellenar_tabla()
+        self.refrescar_biblioteca(sorted(afectados))
         mensaje = f"Restauradas las tags de {restaurados} archivo(s)."
         if errores:
             mensaje += f"\n{len(errores)} no se pudieron restaurar:\n" + "\n".join(errores[:10])
@@ -1514,3 +1550,6 @@ class DialogoNoTocar(QDialog):
         if filas:
             no_tocar.desmarcar([self.df.iloc[f]["ruta"] for f in filas])
             self.rellenar()
+            vista = getattr(self.parent(), "vista_biblioteca", None)
+            if vista is not None:
+                vista.refrescar_no_tocar()

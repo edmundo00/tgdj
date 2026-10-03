@@ -183,6 +183,46 @@ class BibliotecaTest(unittest.TestCase):
             self.assertTrue(otra_vez)
 
 
+    # ---- al momento, tras una acción ----
+    def test_refrescar_tras_aplicar_mover_y_deshacer(self):
+        self.actualizar()
+        ruta = os.path.join(self.musica, "Edmundo", "Firpo", "Ojos negros.flac")
+        id_antes = self.bib.dataframe("ruta=?", (ruta,)).iloc[0]["id"]
+        resumen = lambda r, t: {"categoria": "perfecta", "sugerida": 3, "opciones": [3], "motivo_fecha": "",
+                                "cambios": {}, "_titulo": t[0]}
+        lector = lambda r: SimpleNamespace(title="Ojos negros (nuevo)", artist="Roberto Firpo", album="",
+                                           year="1940-01-01", genre="tango", composer="Musica: ? - Letra: ?")
+        # 1) aplicar tags: se relee y se recalcula el estado (ruta escrita con barras normales)
+        hecho = self.bib.refrescar([ruta.replace(os.sep, "/")], emparejar=resumen, version="v1", leer=lector)
+        self.assertEqual((hecho["actualizadas"], hecho["rutas"]), (1, [ruta]))
+        fila = self.bib.dataframe("ruta=?", (ruta,)).iloc[0]
+        self.assertEqual((fila["id"], fila["title"], fila["estado"], fila["version_reglas"]),
+                         (id_antes, "Ojos negros (nuevo)", "perfecta", "v1"))
+        self.assertNotIn(id_antes, [f[0] for f in self.bib.por_emparejar("v1")])   # no se vuelve a comparar
+        # 2) se mueve a _duplicados: sale de la biblioteca
+        destino = os.path.join(self.musica, "_duplicados", "Edmundo", "Firpo", "Ojos negros.flac")
+        os.makedirs(os.path.dirname(destino))
+        shutil.move(ruta, destino)
+        hecho = self.bib.refrescar([ruta, destino], emparejar=resumen, version="v1", leer=lector)
+        self.assertEqual((hecho["quitadas"], hecho["anadidas"]), (1, 0))   # _duplicados no es biblioteca
+        # 3) deshacer: vuelve, con su fecha de creación como llegada (no sale como "nueva")
+        shutil.move(destino, ruta)
+        hecho = self.bib.refrescar([ruta], emparejar=resumen, version="v1", leer=lector)
+        fila = self.bib.dataframe("ruta=?", (ruta,)).iloc[0]
+        self.assertEqual((hecho["anadidas"], fila["coleccion"], fila["estado"]), (1, "Edmundo", "perfecta"))
+        self.assertLessEqual(fila["visto_primera"], fila["creado"] + 1)
+        self.assertEqual(self.actualizar()["nuevas"], 0)               # la actualización normal está de acuerdo
+
+    def test_refrescar_ignora_lo_de_fuera(self):
+        self.actualizar()
+        fuera = os.path.join(self.dir, "otra", "x.mp3")
+        escribir(fuera, os.urandom(100))
+        variada = os.path.join(self.musica, "musica_variada_edmundo", "Pop.mp3")
+        hecho = self.bib.refrescar([fuera, variada], leer=leer_falso)
+        self.assertEqual((hecho["actualizadas"], hecho["anadidas"]), (0, 0))
+        self.assertEqual(self.bib.cuantos(), 2)
+
+
 class EmparejarTest(unittest.TestCase):
     """Nivel 3: estado de cada canción guardado y versión de reglas."""
 

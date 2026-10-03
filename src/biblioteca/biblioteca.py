@@ -276,6 +276,97 @@ class Biblioteca:
         with _ACTUALIZANDO:
             return self._actualizar(progreso, cancelado, leer, huella)
 
+    # ------------------------------------------------------------------ al momento, tras una acción tuya
+    def _ubicar(self, ruta):
+        """(raiz, coleccion, carpeta, ext) si la ruta es de la biblioteca (mismas reglas que recorrer); si no, None."""
+        ext = os.path.splitext(ruta)[1].lower()
+        if ext not in EXTENSIONES:
+            return None
+        for raiz, por_subcarpeta, excluir in raices_absolutas(self.config, self.base):
+            try:
+                rel = os.path.relpath(ruta, raiz)
+            except ValueError:          # otra unidad
+                continue
+            if rel.startswith(".."):
+                continue
+            partes = rel.split(os.sep)
+            if CARPETA_DUPLICADOS in partes[:-1] or (len(partes) > 1 and partes[0] in excluir):
+                return None
+            coleccion = (partes[0] if len(partes) > 1 else "(raíz)") if por_subcarpeta else os.path.basename(raiz)
+            return raiz, coleccion, os.path.dirname(ruta), ext
+        return None
+
+    def refrescar(self, rutas, emparejar=None, version="", leer=None):
+        """
+        Pone al día al momento unas canciones concretas tras una acción tuya (aplicar, editar, deshacer,
+        mover duplicados): vuelve a leer sus tags y, con emparejar(ruta, tags) -> resumen, recalcula su estado.
+        Las que ya no existen se quitan; las que aparecen dentro de la biblioteca (p. ej. al deshacer un
+        movimiento) se añaden con su fecha de creación como llegada.
+        Devuelve {"actualizadas", "quitadas", "anadidas", "rutas"} (rutas: como están guardadas).
+        """
+        from src.utils.utils import leer_tags
+        leer = leer or leer_tags
+        salida = dict(actualizadas=0, quitadas=0, anadidas=0, rutas=[])
+        con = self.conexion()
+        try:
+            for ruta in dict.fromkeys(os.path.normpath(r) for r in rutas):
+                fila = con.execute("SELECT id, ruta, bytes FROM archivos WHERE ruta=?", (ruta,)).fetchone() or \
+                    con.execute("SELECT id, ruta, bytes FROM archivos WHERE ruta=? COLLATE NOCASE", (ruta,)).fetchone()
+                try:
+                    st = os.stat(ruta)
+                except FileNotFoundError:
+                    if fila is not None:
+                        con.execute("DELETE FROM archivos WHERE id=?", (fila[0],))
+                        salida["quitadas"] += 1
+                        salida["rutas"].append(fila[1])
+                    continue
+                except OSError:
+                    continue
+                if fila is None:
+                    sitio = self._ubicar(ruta)
+                    if sitio is None:
+                        continue                    # no es de la biblioteca: nada que hacer
+                    raiz, coleccion, carpeta, ext = sitio
+                    ahora = time.time()
+                    cur = con.execute("""INSERT INTO archivos (ruta, raiz, coleccion, carpeta, ext, bytes, mtime, creado,
+                                         visto_primera, visto_ultima, en_nube, tags_leidas) VALUES (?,?,?,?,?,?,?,?,?,?,?,0)""",
+                                      (ruta, raiz, coleccion, carpeta, ext, st.st_size, int(st.st_mtime), st.st_ctime,
+                                       min(st.st_ctime, ahora), ahora, int(en_nube(st))))
+                    fila = (cur.lastrowid, ruta, st.st_size)
+                    salida["anadidas"] += 1
+                else:
+                    salida["actualizadas"] += 1
+                i, ruta_guardada, bytes_antes = fila
+                salida["rutas"].append(ruta_guardada)
+                nube = en_nube(st)
+                con.execute("""UPDATE archivos SET bytes=?, mtime=?, en_nube=?, visto_ultima=?,
+                               huella=CASE WHEN bytes=? THEN huella ELSE '' END WHERE id=?""",
+                            (st.st_size, int(st.st_mtime), int(nube), time.time(), st.st_size, i))
+                if nube:
+                    continue
+                try:
+                    t = leer(ruta_guardada)
+                    valores = dict((c, str(getattr(t, c, "") or "").strip()) for c in CAMPOS_TAGS)
+                    con.execute(f"UPDATE archivos SET {', '.join(c + '=?' for c in CAMPOS_TAGS)}, "
+                                "tags_leidas=1, error='' WHERE id=?", (*valores.values(), i))
+                except Exception as e:
+                    con.execute("UPDATE archivos SET tags_leidas=1, error=?, estado='' WHERE id=?", (str(e)[:200], i))
+                    continue
+                if emparejar is None:
+                    con.execute("UPDATE archivos SET estado='' WHERE id=?", (i,))     # lo hará la próxima actualización
+                    continue
+                tags = [valores["title"], valores["artist"], valores["year"], valores["genre"], valores["composer"],
+                        ruta_guardada, valores["album"]]
+                try:
+                    resultado = emparejar(ruta_guardada, tags)
+                except Exception as e:
+                    resultado = {"error": str(e)[:200]}
+                self.guardar_emparejados([(i, resultado)], version, con)
+            con.commit()
+        finally:
+            con.close()
+        return salida
+
     @staticmethod
     def _borrado_seguro(con, borrar, raices):
         """

@@ -240,6 +240,7 @@ class VentanaDuplicados(QWidget):
             registros.append(os.path.basename(registro))
         self.grupos = []
         self.pintar()
+        self.avisar_biblioteca(mover)
         mensaje = f"Movidos {movidos} archivos. Registro: {', '.join(registros)}"
         if errores:
             mensaje += f"\n\n{len(errores)} no se pudieron mover:\n" + "\n".join(f"{r}: {e}" for r, e in errores[:10])
@@ -254,11 +255,19 @@ class VentanaDuplicados(QWidget):
         if QMessageBox.question(self, "Deshacer", f"¿Devolver a su sitio los {n} archivos del último movimiento?") \
                 != QMessageBox.Yes:
             return
+        movidos = pd.read_csv(registro, sep=";", na_filter=False, dtype=str, encoding="utf-8-sig")["origen"].tolist()
         restaurados, errores = duplicados.deshacer(registro)
+        self.avisar_biblioteca(movidos)
         mensaje = f"Devueltos {restaurados} archivos a su sitio."
         if errores:
             mensaje += f"\n\n{len(errores)} con problemas:\n" + "\n".join(f"{r}: {e}" for r, e in errores[:10])
         (QMessageBox.warning if errores else QMessageBox.information)(self, "Deshacer", mensaje)
+
+    def avisar_biblioteca(self, rutas):
+        """La biblioteca (y Mi biblioteca) se enteran al momento de lo movido."""
+        refrescar = getattr(self.parent(), "refrescar_biblioteca", None)
+        if refrescar is not None:
+            refrescar(rutas)
 
     def abrir_carpeta(self):
         for raiz, _, _ in raices_absolutas(self.biblioteca.config):

@@ -196,12 +196,13 @@ class VistaBiblioteca(QWidget):
     def cargar(self):
         """Lee la biblioteca (rápido) y repinta listas y tabla, manteniendo la lista elegida."""
         df = self.biblioteca.dataframe()
-        if df.empty:
-            self.df = df
-            self.pintar_arbol()
-            self.filtrar()
-            return
-        marcadas = no_tocar.claves()
+        self.df = self._preparar(df) if not df.empty else df
+        self.pintar_arbol()
+        self.filtrar()
+
+    def _preparar(self, df, marcadas=None):
+        """Columnas que usa la vista (no tocar, carpeta relativa, subcarpeta, año…)."""
+        marcadas = no_tocar.claves() if marcadas is None else marcadas
         df["notocar"] = [no_tocar.esta(r, marcadas) for r in df["ruta"]] if marcadas else False
         df["carpeta_rel"] = [c[len(r):].lstrip(os.sep) if c.startswith(r) else c
                              for c, r in zip(df["carpeta"], df["raiz"])]
@@ -212,9 +213,44 @@ class VistaBiblioteca(QWidget):
                      for r, c in zip(df["carpeta_rel"], df["coleccion"])]
         df["visto_primera"] = df["visto_primera"].fillna(0)
         df["_ano"] = pd.to_numeric(df["year"].str[:4], errors="coerce")
-        self.df = df
+        if "_buscar" in self.df:
+            df["_buscar"] = self._texto_busqueda(df)
+        return df
+
+    @staticmethod
+    def _texto_busqueda(df):
+        return normalizar_serie(df["title"] + " | " + df["artist"] + " | " + df["album"] + " | " + df["composer"]
+                                + " | " + df["carpeta_rel"])
+
+    def refrescar_rutas(self, rutas):
+        """Tras una acción tuya: cambia solo esas filas (rápido) y repinta, sin perder la posición."""
+        if self.df.empty:
+            self.cargar()
+            return
+        rutas = list(dict.fromkeys(rutas))
+        nuevas = pd.concat([self.biblioteca.dataframe(f"ruta IN ({','.join('?' * len(lote))})", tuple(lote))
+                            for lote in (rutas[i:i + 500] for i in range(0, len(rutas), 500))] or [pd.DataFrame()],
+                           ignore_index=True)
+        resto = self.df[~self.df["ruta"].isin(rutas)]
+        if not nuevas.empty:
+            nuevas = self._preparar(nuevas)
+            resto = pd.concat([resto, nuevas[[c for c in resto.columns if c in nuevas]]], ignore_index=True)
+        self.df = resto.sort_values("id").reset_index(drop=True)
+        self.repintar()
+
+    def refrescar_no_tocar(self):
+        if self.df.empty:
+            return
+        marcadas = no_tocar.claves()
+        self.df["notocar"] = [no_tocar.esta(r, marcadas) for r in self.df["ruta"]] if marcadas else False
+        self.repintar()
+
+    def repintar(self):
+        """Repinta listas y tabla conservando la selección de lista y la posición de la tabla."""
+        barra = self.tabla.verticalScrollBar().value()
         self.pintar_arbol()
         self.filtrar()
+        self.tabla.verticalScrollBar().setValue(barra)
 
     def listas(self):
         """(clave, texto, máscara) de las listas inteligentes."""
@@ -328,9 +364,7 @@ class VistaBiblioteca(QWidget):
     def filtrar(self):
         texto = self.caja.text().strip()
         if texto and not self.df.empty and "_buscar" not in self.df:      # se prepara la primera vez que se busca
-            self.df["_buscar"] = normalizar_serie(self.df["title"] + " | " + self.df["artist"] + " | "
-                                                  + self.df["album"] + " | " + self.df["composer"] + " | "
-                                                  + self.df["carpeta_rel"])
+            self.df["_buscar"] = self._texto_busqueda(self.df)
         d = self.filas_lista()
         if texto and not d.empty:
             palabras, desde, hasta = interpretar_consulta(texto)
@@ -418,4 +452,4 @@ class VistaBiblioteca(QWidget):
             no_tocar.marcar(list(zip(df["ruta"], df["title"])))
         else:
             no_tocar.desmarcar(list(df["ruta"]))
-        self.cargar()
+        self.refrescar_no_tocar()
