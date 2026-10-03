@@ -7,6 +7,7 @@ set COMPILAR=%LOCALAPPDATA%\TangoTags_compilacion
 ".venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --windowed --name TangoTags ^
     --exclude-module tkinter ^
     --hidden-import control_slides ^
+    --hidden-import src.biblioteca.trabajador ^
     --collect-submodules av ^
     --distpath "%COMPILAR%\dist" --workpath "%COMPILAR%\build" ^
     tangotags.py
