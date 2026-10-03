@@ -50,6 +50,11 @@ class BibliotecaTest(unittest.TestCase):
         self.assertEqual(sorted(df["coleccion"]), ["Edmundo", "Eduardo"])
         self.assertEqual(set(df["title"]), {"Ojos negros", "La taba"})
         self.assertTrue((df["creado"] > 0).all())
+        self.assertTrue((df["visto_primera"] == df["creado"]).all())   # al construir: llegada = creación
+        escribir(os.path.join(self.bandeja, "Nueva.mp3"), os.urandom(4000))
+        self.actualizar()
+        nueva = self.bib.dataframe("ruta LIKE ?", ("%Nueva.mp3",)).iloc[0]
+        self.assertGreaterEqual(nueva["visto_primera"], nueva["creado"])  # después: llegada = cuando se vio
 
     def test_segunda_vez_no_lee_nada(self):
         self.actualizar()

@@ -365,6 +365,9 @@ class Biblioteca:
             con.executemany("DELETE FROM archivos WHERE ruta=?", [(r,) for r in borrar])
             informe["borradas"] = len(borrar)
 
+            # Biblioteca vacía (primera vez o reconstruida): la llegada es la fecha de creación del archivo,
+            # para que 'nuevas' no sean todas
+            construyendo = not guardado
             for r in nuevas:
                 if r in movidas:
                     continue
@@ -373,7 +376,7 @@ class Biblioteca:
                 con.execute("""INSERT INTO archivos (ruta, raiz, coleccion, carpeta, ext, bytes, mtime, creado,
                                visto_primera, visto_ultima, en_nube, tags_leidas) VALUES (?,?,?,?,?,?,?,?,?,?,?,0)""",
                             (r, raiz, coleccion, carpeta, ext, st.st_size, int(st.st_mtime), st.st_ctime,
-                             ahora, ahora, int(nube)))
+                             min(st.st_ctime, ahora) if construyendo else ahora, ahora, int(nube)))
             informe["nuevas"] = len(nuevas) - len(movidas)
 
             for r, (i, b, m) in guardado.items():
