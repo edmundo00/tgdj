@@ -19,7 +19,7 @@ from PyQt5.QtWidgets import (
     QMainWindow, QAction, QToolBar, QTableWidget, QTableWidgetItem, QVBoxLayout, QHBoxLayout,
     QWidget, QLabel, QHeaderView, QDialog, QPushButton, QFileDialog, QLineEdit, QCheckBox,
     QFrame, QMessageBox, QProgressBar, QApplication, QStyle, QToolButton, QDialogButtonBox,
-    QAbstractItemView, QInputDialog,
+    QAbstractItemView, QInputDialog, QTabWidget,
 )
 
 import re
@@ -85,9 +85,16 @@ CATEGORIAS = {
 
 TEXTO_AYUDA = """
 <h3>Cómo se usa TangoTags</h3>
+<p><b>📚 Mi biblioteca</b> (primera pestaña): toda tu música, al día solo (al abrir la app se buscan
+cambios en segundo plano; también con <i>Buscar cambios</i>). A la izquierda, listas:
+<b>Nuevas</b> (desde la última vez, 7 o 30 días), <b>Por revisar</b> (sugeridas, hay que elegir —con
+fecha de CD—, título o artista no encontrados), <b>Toda la música</b> y tus <b>Colecciones</b> con sus carpetas.
+Escribe en la caja para buscar dentro de la lista. <b>Revisar estas</b> (o doble clic, o Intro) las lleva a la
+pestaña <b>✎ Revisar</b>: las seleccionadas, o toda la lista si no hay selección. Espacio escucha;
+clic derecho: abrir carpeta, «No tocar».</p>
 <ol>
-<li><b>Cargar</b>: elige canciones con <i>Archivos</i>, <i>Carpeta</i>, <i>Playlist</i> (.m3u)
-o <i>MusicBee</i> (archivo .mbl de la biblioteca).</li>
+<li><b>Cargar</b>: desde Mi biblioteca, o eligiendo canciones con <i>Archivos</i>, <i>Carpeta</i>,
+<i>Playlist</i> (.m3u) o <i>MusicBee</i> (archivo .mbl de la biblioteca).</li>
 <li><b>Revisar</b>: a la izquierda están las tags actuales del archivo; a la derecha las
 coincidencias encontradas en la base de datos, <u>ya con el formato final</u>.
 Los colores indican cuánto se parece cada campo
@@ -113,7 +120,7 @@ Si cargaste desde MusicBee, después haz en MusicBee <i>Herramientas → Volver 
 </ol>
 <p><b>Teclado</b> en la tabla: 1–9 elegir · 0 ninguna · Espacio escuchar · S siguiente por decidir · X no tocar.</p>
 <p><b>Archivo</b>: Estado de la colección, Duplicados, Grafías de nombres, Canciones «No tocar», Historial de cambios.</p>
-<p>Al cargar se <b>saltan las canciones ya revisadas</b> (compositor con formato
+<p>Al cargar con los botones de Cargar se <b>saltan las canciones ya revisadas</b> (compositor con formato
 <i>Musica: … - Letra: …</i>). Se puede desactivar en <i>Opciones</i>.
 <i>Cancelar</i> (abajo a la derecha) para una carga o una escritura larga.</p>
 <h4>Formato de las tags</h4>
@@ -128,7 +135,8 @@ Si cargaste desde MusicBee, después haz en MusicBee <i>Herramientas → Volver 
 
 
 MENSAJE_INICIAL = ("<p style='font-size:15px; color:#555'>Empieza cargando canciones con los botones de "
-                   "<b>① Cargar</b> (arriba a la izquierda).<br>Menú <b>Ayuda</b> para ver cómo funciona.</p>")
+                   "<b>① Cargar</b> (arriba a la izquierda),<br>o desde la pestaña <b>📚 Mi biblioteca</b> "
+                   "con <b>Revisar estas</b>.<br>Menú <b>Ayuda</b> para ver cómo funciona.</p>")
 
 class tango_tags_qt_ventana(QMainWindow):
     def __init__(self):
@@ -156,7 +164,7 @@ class tango_tags_qt_ventana(QMainWindow):
         self.mensaje_inicial.setAlignment(Qt.AlignCenter)
         layout.addWidget(self.mensaje_inicial, 1)
         self.tabla.hide()
-        self.setCentralWidget(central)
+        self.pagina_revisar = central
 
         self.reproductor = Reproductor(self)
         self.reproductor.cambiado.connect(self.pintar_sonando)
@@ -168,6 +176,21 @@ class tango_tags_qt_ventana(QMainWindow):
         self._hilo_biblioteca = None
         self._biblioteca = None
         self.celdas_audio = {}      # (fila, col) -> (clave, ruta, descripción, fondo)
+
+        # Dos pestañas: toda tu música (portada) y la tabla de etiquetado
+        from src.ui.vista_biblioteca import VistaBiblioteca
+        self.vista_biblioteca = VistaBiblioteca(self, self.biblioteca, self.reproductor,
+                                                revisar=self.revisar_desde_biblioteca,
+                                                actualizar=self.actualizar_biblioteca)
+        self.pestanas = QTabWidget()
+        self.pestanas.setDocumentMode(True)
+        self.pestanas.setStyleSheet("QTabBar::tab{padding:7px 22px; font-size:11pt;} "
+                                    "QTabBar::tab:selected{font-weight:bold;}")
+        self.pestanas.addTab(self.vista_biblioteca, "📚  Mi biblioteca")
+        self.pestanas.addTab(self.pagina_revisar, "✎  Revisar")
+        self.pestanas.setTabToolTip(0, "Toda tu música: nuevas, por revisar, colecciones…")
+        self.pestanas.setTabToolTip(1, "Las canciones cargadas para etiquetar")
+        self.setCentralWidget(self.pestanas)
 
         self.progress_bar = QProgressBar()
         self.progress_bar.setMaximumWidth(300)
@@ -442,16 +465,24 @@ class tango_tags_qt_ventana(QMainWindow):
         rutas = [(fila[-1], fila) for fila in biblioteca[columnas].values.tolist()]
         self.procesar_archivos(rutas, origen=ruta)
 
-    def procesar_archivos(self, rutas_y_tags, origen):
-        """rutas_y_tags: lista de (ruta, tags de MusicBee o None para leerlas del archivo)."""
+    def procesar_archivos(self, rutas_y_tags, origen, saltar=None, respetar_no_tocar=None):
+        """
+        rutas_y_tags: lista de (ruta, tags de MusicBee o None para leerlas del archivo).
+        saltar / respetar_no_tocar: None = lo que digan las Opciones (la biblioteca ya elige qué mandar).
+        """
+        self.pestanas.setCurrentWidget(self.pagina_revisar)
         self.borrar_todo()
+        if saltar is None:
+            saltar = self.opt_saltar.isChecked()
+        if respetar_no_tocar is None:
+            respetar_no_tocar = self.opt_no_tocar.isChecked()
         utils.guardar_residuos = self.opt_guardar_resid.isChecked()
         residuos.clear()
         no_encontrados = []
         favoritas = []
         saltadas = 0
         ocultas_no_tocar = 0
-        marcadas_no_tocar = no_tocar.claves() if self.opt_no_tocar.isChecked() else set()
+        marcadas_no_tocar = no_tocar.claves() if respetar_no_tocar else set()
 
         motor = Motor(usar_fecha=self.opt_fecha.isChecked())
         self.empezar_progreso(len(rutas_y_tags))
@@ -470,7 +501,7 @@ class tango_tags_qt_ventana(QMainWindow):
                     continue
                 if tags is None:
                     tags = leer_tags_lista(ruta)
-                if self.opt_saltar.isChecked() and tags is not None and ya_revisada(tags[4]):
+                if saltar and tags is not None and ya_revisada(tags[4]):
                     saltadas += 1
                     continue
                 try:
@@ -875,7 +906,8 @@ class tango_tags_qt_ventana(QMainWindow):
         return self._biblioteca
 
     def iniciar_biblioteca(self):
-        """Al arrancar: apunta la sesión (para 'nuevas desde la última vez') y se pone al día en segundo plano."""
+        """Al arrancar: enseña lo que ya se sabía, apunta la sesión y se pone al día en segundo plano."""
+        self.vista_biblioteca.cargar()
         self.actualizar_biblioteca(empezar_sesion=True)
 
     def actualizar_biblioteca(self, empezar_sesion=False):
@@ -918,6 +950,7 @@ class tango_tags_qt_ventana(QMainWindow):
             self.buscador.tengo = None
         if getattr(self, "ventana_estado", None) is not None and self.ventana_estado.isVisible():
             self.ventana_estado.cargar()
+        self.vista_biblioteca.cargar()
         if getattr(self, "_repetir_biblioteca", False):
             self.actualizar_biblioteca()
 
@@ -962,15 +995,25 @@ class tango_tags_qt_ventana(QMainWindow):
         self.ventana_duplicados.show()
         self.ventana_duplicados.raise_()
 
-    def revisar_filas(self, df, origen):
+    def revisar_desde_biblioteca(self, df, nombre):
+        """'Revisar estas' en Mi biblioteca: se carga exactamente lo elegido (sin saltar las ya revisadas;
+        las «No tocar» solo si se eligieron a propósito, p. ej. desde su lista)."""
+        if df.empty:
+            return
+        solo_no_tocar = bool(df["notocar"].all()) if "notocar" in df else False
+        self.revisar_filas(df, origen=nombre, saltar=False, respetar_no_tocar=not solo_no_tocar)
+
+    def revisar_filas(self, df, origen, saltar=None, respetar_no_tocar=None):
         """Carga en la tabla canciones de la biblioteca usando las tags que ya tiene (sin volver a leerlas)."""
+        # Las que están solo en la nube y sin tags leídas se dejan (abrirlas obligaría a descargarlas)
+        df = df[~((df["en_nube"] == 1) & (df["tags_leidas"] == 0))]
         filas = df.sort_values("ruta")
         rutas_y_tags = [(r["ruta"], [r["title"], r["artist"], r["year"], r["genre"], r["composer"], r["ruta"],
                                      r["album"]]) if r["tags_leidas"] and not r["error"] else (r["ruta"], None)
                         for r in filas.to_dict("records")]
         self.raise_()
         self.activateWindow()
-        self.procesar_archivos(rutas_y_tags, origen=origen)
+        self.procesar_archivos(rutas_y_tags, origen=origen, saltar=saltar, respetar_no_tocar=respetar_no_tocar)
 
     def revisar_coleccion(self, nombre):
         self.revisar_filas(self.biblioteca.dataframe("coleccion=? AND en_nube=0", (nombre,)), origen=nombre)
