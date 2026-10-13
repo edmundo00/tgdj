@@ -13,7 +13,7 @@ from src.config.config import m3u_start_path, presentations_start_path, default_
 from src.diapos.generador import (
     leer_playlist, agrupar_tandas, crear_presentacion, duracion_texto, nombre_archivo, compositor_para_diapo,
 )
-from src.diapos import bpm, caracter
+from src.diapos import bpm, caracter, historial
 from src.diapos.revision import (
     revisar, horas_de_inicio, segundos_de_inicio, energia, bpm_tanda, ERROR, AVISO, AUTO, LIBRE, PATRONES, MINUTOS_SIN_MILONGA,
 )
@@ -28,6 +28,19 @@ def _texto_bpm(valor):
         return ""
 
 
+def _texto_actividad(valor):
+    """Para las cortinas: tranquila / media / animada (según la actividad medida del audio)."""
+    try:
+        valor = float(valor)
+    except (TypeError, ValueError):
+        return ""
+    if valor != valor:
+        return ""
+    if valor < bpm.CORTINA_TRANQUILA:
+        return "tranquila"
+    return "animada" if valor > bpm.CORTINA_ANIMADA else "media"
+
+
 class VentanaDiapos(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -38,6 +51,7 @@ class VentanaDiapos(QDialog):
         self.tandas = []
         self.faltan = []
         self.avisos = []
+        self.historial = []
         self.playlist = None
 
         lay = QVBoxLayout(self)
@@ -209,6 +223,7 @@ class VentanaDiapos(QDialog):
             QApplication.restoreOverrideCursor()
         self.playlist = ruta
         self.faltan = faltan
+        self.historial = historial.anteriores(ruta)
         self.tandas = agrupar_tandas(canciones)
         self.etiqueta_playlist.setText(f"<b>{os.path.basename(ruta)}</b> — {len(canciones)} canciones")
         self.rellenar_tandas()
@@ -225,24 +240,24 @@ class VentanaDiapos(QDialog):
             cache = bpm.CacheBpm()
         except Exception:
             return
-        pendientes = []
+        pendientes = []          # (fila, índice, columna): BPM en las tandas, actividad en las cortinas
         for fila, tanda in enumerate(self.tandas):
-            if tanda.es_cortina:
-                continue
-            tanda.canciones["bpm"] = None
+            columna = "actividad" if tanda.es_cortina else "bpm"
+            tanda.canciones[columna] = None
             for idx, c in tanda.canciones.iterrows():
-                encontrado, valor = cache.guardado(c["ruta"], c["genre"])
+                encontrado, valor = cache.guardado(c["ruta"], bpm.ACTIVIDAD if tanda.es_cortina else c["genre"])
                 if encontrado:
-                    tanda.canciones.at[idx, "bpm"] = valor
+                    tanda.canciones.at[idx, columna] = valor
                 else:
-                    pendientes.append((fila, idx))
+                    pendientes.append((fila, idx, columna))
         if pendientes:
             self.progreso.setMaximum(len(pendientes))
             self.progreso.setFormat("Calculando BPM… %v de %m")
             self.progreso.show()
-            for n, (fila, idx) in enumerate(pendientes, 1):
+            for n, (fila, idx, columna) in enumerate(pendientes, 1):
                 c = self.tandas[fila].canciones.loc[idx]
-                self.tandas[fila].canciones.at[idx, "bpm"] = cache.bpm(c["ruta"], c["genre"])
+                valor = cache.actividad(c["ruta"]) if columna == "actividad" else cache.bpm(c["ruta"], c["genre"])
+                self.tandas[fila].canciones.at[idx, columna] = valor
                 self.progreso.setValue(n)
                 QApplication.processEvents()
             self.progreso.hide()
@@ -281,7 +296,7 @@ class VentanaDiapos(QDialog):
         """Revisa la playlist, colorea las filas con problemas y llena la lista de la revisión."""
         d = self.datos()
         self.avisos = revisar(self.tandas, self.faltan, d["inicio"], d["fin"], patron=self.patron.currentData(),
-                              minutos_sin_milonga=self.sin_milonga.value())
+                              minutos_sin_milonga=self.sin_milonga.value(), historial=self.historial)
         por_fila = {}
         for a in self.avisos:
             if a.fila is not None:
@@ -364,7 +379,9 @@ class VentanaDiapos(QDialog):
         self.tabla_canciones.setRowCount(len(df))
         for i, (_, c) in enumerate(df.iterrows()):
             for col, v in enumerate([c["title"], c["artist"], c["ano"], compositor_para_diapo(c["composer"]),
-                                     convertir_segundos(c["duration"]), _texto_bpm(c.get("bpm"))]):
+                                     convertir_segundos(c["duration"]),
+                                     _texto_actividad(c.get("actividad")) if "actividad" in c
+                                     else _texto_bpm(c.get("bpm"))]):
                 it = QTableWidgetItem(str(v))
                 it.setToolTip(f"{v}\n\n{c['ruta']}")
                 self.tabla_canciones.setItem(i, col, it)

@@ -16,7 +16,8 @@ from datetime import datetime, timedelta
 from unidecode import unidecode
 
 from src.config.config import carpeta_portatil
-from src.diapos import caracter
+from src.diapos import bpm, caracter
+from src.diapos import historial as historial_mod
 from src.diapos.generador import compositor_para_diapo, es_cumparsita
 from src.utils.buscar_artista import normalizar_nombre
 
@@ -39,6 +40,7 @@ AUTO, LIBRE = "auto", "libre"
 # Si la orquesta no está en la tabla de carácter: las que exigen mucho a la pista
 DIFICILES = {"pugliese", "salgan", "piazzolla", "gobbi", "basso"}
 SEGUIDAS_IGUAL_ENERGIA = 3     # tantas tandas seguidas muy tranquilas o muy enérgicas -> consejo
+CORTINA_MINIMA = 25            # segundos: una cortina más corta no da tiempo a despejar la pista
 TOLERANCIA_BPM = 0.10          # un tema más de un 10 % más rápido o lento que el resto de su tanda -> aviso
 BAJADA_BPM = 0.05              # la tanda "baja" si el último tema es un 5 % más lento que el primero
 REFERENCIA_BPM = {"tango": 120, "vals": 205, "milonga": 100}   # para comparar la energía de tandas
@@ -249,8 +251,11 @@ def _revisar_patron(generos, patron, nombre, cuando, en_zona_final):
 
 
 def revisar(tandas, faltan=(), inicio=None, fin=None, carpeta=carpeta_portatil, patron=AUTO,
-            minutos_sin_milonga=MINUTOS_SIN_MILONGA, archivo_caracter=None):
-    """patron: AUTO (detectarlo), LIBRE (no mirar) o una clave de PATRONES."""
+            minutos_sin_milonga=MINUTOS_SIN_MILONGA, archivo_caracter=None, historial=()):
+    """
+    patron: AUTO (detectarlo), LIBRE (no mirar) o una clave de PATRONES.
+    historial: milongas anteriores en el mismo sitio (historial.anteriores), para no repetir cortinas ni tandas.
+    """
     avisos = []
     nombre_carpeta = os.path.relpath(carpeta, os.path.dirname(os.path.dirname(carpeta))) if carpeta else ""
 
@@ -263,7 +268,10 @@ def revisar(tandas, faltan=(), inicio=None, fin=None, carpeta=carpeta_portatil, 
     def nombre(i):
         if i in numero:
             return f"Tanda {numero[i]}"
-        return "La Cumparsita" if tandas[i].es_cumparsita else "Cortina"
+        if tandas[i].es_cumparsita:
+            return "La Cumparsita"
+        antes = [numero[j] for j in range(i) if j in numero]
+        return f"Cortina tras la Tanda {antes[-1]}" if antes else "Cortina del principio"
 
     # --- Archivos: en el portátil, descargados, una sola vez
     vistas = {}
@@ -278,6 +286,9 @@ def revisar(tandas, faltan=(), inicio=None, fin=None, carpeta=carpeta_portatil, 
             clave = os.path.normcase(ruta)
             if clave in vistas and not t.es_cortina:
                 avisos.append(Aviso(ERROR, f"{nombre(i)}: «{c['title']}» ya suena en {nombre(vistas[clave])}", i))
+            elif clave in vistas:
+                avisos.append(Aviso(AVISO, f"{nombre(i)}: la cortina «{c['title']}» ya sonó ({nombre(vistas[clave])}); "
+                                           f"mejor no repetir cortinas en la noche", i))
             vistas.setdefault(clave, i)
 
     # --- Estructura: cortina entre tandas, nada de cortinas dobles
@@ -298,6 +309,28 @@ def revisar(tandas, faltan=(), inicio=None, fin=None, carpeta=carpeta_portatil, 
             if "cortina" not in t.genero:
                 avisos.append(Aviso(AVISO, f"«{t.canciones['title'].iloc[0]}» no tiene género de tango, vals ni "
                                            f"milonga: ¿es una cortina? (género: «{t.genero or 'vacío'}»)", i))
+
+    # --- Cortinas: cortas, que no suenen a tango, variadas
+    cortinas = [(i, c) for i, t in enumerate(tandas) if t.es_cortina for _, c in t.canciones.iterrows()]
+    orquestas_noche = {normalizar_nombre(t.orquesta) for _, t in reales if t.orquesta}
+    for i, c in cortinas:
+        if 0 < c["duration"] < CORTINA_MINIMA:
+            avisos.append(Aviso(AVISO, f"{nombre(i)}: «{c['title']}» dura solo {c['duration']:.0f} s; "
+                                       f"puede no dar tiempo a despejar la pista", i))
+        if normalizar_nombre(c["artist1"]) in orquestas_noche or caracter.buscar(c["artist1"], None, "",
+                                                                                   archivo_caracter):
+            avisos.append(Aviso(AVISO, f"{nombre(i)}: «{c['title']}» ({c['artist1']}) parece de tango; la cortina "
+                                       f"no debe sonar a tango, vals ni milonga, o la gente saldrá a bailar", i))
+    por_artista = {}
+    for i, c in cortinas:
+        por_artista.setdefault(normalizar_nombre(c["artist1"]), []).append((i, c))
+    for _, lista in por_artista.items():
+        if len(lista) >= 3 and lista[0][1]["artist1"]:
+            avisos.append(Aviso(INFO, f"{len(lista)} cortinas de {lista[0][1]['artist1']} en la noche: "
+                                      f"variar las cortinas ayuda a notar el cambio", lista[-1][0]))
+    for (i, c), (j, d) in zip(cortinas, cortinas[1:]):
+        if c["artist1"] and normalizar_nombre(c["artist1"]) == normalizar_nombre(d["artist1"]) and i != j:
+            avisos.append(Aviso(INFO, f"{nombre(j)}: dos cortinas seguidas de {d['artist1']}", j))
 
     # --- La Cumparsita: sola y al final (el último baile), nunca dentro de una tanda
     for i, t in enumerate(tandas):
@@ -441,6 +474,51 @@ def revisar(tandas, faltan=(), inicio=None, fin=None, carpeta=carpeta_portatil, 
                 avisos.append(Aviso(INFO, f"{nombre(milonga)}: esta milonga tiene menos energía ({ener[milonga]:.1f}) "
                                           f"que el vals de la {nombre(vals)} ({ener[vals]:.1f}); "
                                           f"la milonga suele ser el pico del ciclo", milonga))
+
+    # --- La cortina anuncia lo que viene: tranquila antes de mucha energía, o al revés -> consejo
+    for i, t in enumerate(tandas):
+        siguiente = i + 1
+        if not t.es_cortina or siguiente not in ener or "actividad" not in t.canciones:
+            continue
+        act = t.canciones["actividad"].iloc[-1]
+        e = ener[siguiente]
+        if act is None or act != act or e is None:
+            continue
+        g = _genero_corto(tandas[siguiente].genero)
+        if act < bpm.CORTINA_TRANQUILA and (e >= 4.5 or g == "milonga"):
+            que = "una milonga" if g == "milonga" else "una tanda con mucha energía"
+            avisos.append(Aviso(INFO, f"{nombre(i)}: «{t.canciones['title'].iloc[-1]}» es muy tranquila y viene "
+                                      f"{que} ({nombre(siguiente)}); una cortina más animada la anuncia mejor", i))
+        elif act > bpm.CORTINA_ANIMADA and e <= 2.5 and g != "milonga":
+            avisos.append(Aviso(INFO, f"{nombre(i)}: «{t.canciones['title'].iloc[-1]}» es muy animada y viene una "
+                                      f"tanda tranquila ({nombre(siguiente)}); una cortina más suave la anuncia mejor", i))
+
+    # --- Milongas anteriores en el mismo sitio: no repetir cortinas ni tandas
+    repetidas = []                                     # (fila, texto)
+    for i, t in reales:
+        claves_t = {historial_mod.clave(r) for r in t.canciones["ruta"]}
+        for m in historial:
+            comunes = len(claves_t & m.claves)
+            if comunes >= 2:
+                repetidas.append((i, f"{nombre(i)} ({t.orquesta}): {comunes} de sus {len(claves_t)} temas ya "
+                                     f"sonaron en {m.nombre} ({m.fecha_texto})"))
+                break
+    cortinas_repetidas = []
+    for i, c in cortinas:
+        clave_c = historial_mod.clave(c["ruta"])
+        m = next((m for m in historial if clave_c in m.claves), None)
+        if m is not None:
+            cortinas_repetidas.append((i, f"{nombre(i)}: la cortina «{c['title']}» ya sonó en {m.nombre} "
+                                          f"({m.fecha_texto})"))
+    if reales and len(repetidas) * 2 > len(reales):
+        # casi toda la noche repetida: un solo aviso
+        m = max(historial, key=lambda m: len({historial_mod.clave(r) for _, t in reales
+                                              for r in t.canciones["ruta"]} & m.claves))
+        avisos.append(Aviso(AVISO, f"Es casi la misma playlist que {m.nombre} ({m.fecha_texto}): se repiten "
+                                   f"{len(repetidas)} de {len(reales)} tandas y {len(cortinas_repetidas)} cortinas "
+                                   f"en el mismo sitio"))
+    else:
+        avisos += [Aviso(INFO, texto, i) for i, texto in repetidas + cortinas_repetidas]
 
     sin_tabla = list(dict.fromkeys(t.orquesta for i, t in reales if car[i] is None and t.orquesta))
     if sin_tabla:

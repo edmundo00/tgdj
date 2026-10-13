@@ -73,6 +73,12 @@ Al cargar la playlist en *Crear diapos* (vale la `.mbp` de MusicBee directamente
 - **Curva de la noche** (abajo a la derecha): una barra por tanda, altura = energía (tabla de carácter afinada con
   el BPM), color = tango / vals / milonga, la hora de inicio y una raya donde empieza el final sin milonga.
   Clic en una barra = ir a la tanda.
+- **Cortinas**: aviso si una cortina se repite en la noche, dura menos de 25 s o parece de tango (su artista es una
+  orquesta); info si hay 3 del mismo artista o dos seguidas. Se mide cuánto «se mueve» cada cortina (columna BPM de
+  las canciones: *tranquila / media / animada*, límites sacados de tus cortinas de 5 estrellas) y se aconseja si una
+  muy tranquila va antes de una milonga o de una tanda con mucha energía, o una muy animada antes de una tranquila.
+- **Milongas anteriores en el mismo sitio** (playlists `AAMMDD_Lugar` de la misma carpeta, último año): info de las
+  cortinas y tandas que ya sonaron allí; si casi toda la noche se repite, un solo aviso («Es casi la misma playlist…»).
 - **La Cumparsita** al final va sola (aunque no lleve cortina delante): su propia diapo, sin compararla con nada.
   Dentro de una tanda o a mitad de la noche: aviso.
 

@@ -21,7 +21,11 @@ SEGUNDOS = 30
 FRECUENCIA = 11025
 VENTANA, SALTO = 512, 128
 RANGOS = {"tango": (85, 170), "vals": (150, 300), "milonga": (70, 140)}
-VERSION = 2                     # subirla si cambia el cálculo: se recalcula todo
+VERSION = 2
+# Actividad de las cortinas (se guarda en la misma caché con tipo "actividad"). Límites sacados de los tercios
+# de las 145 cortinas de 5 estrellas de Edmundo (oct. 2026): Billie Eilish 3,8 … LISA «Rockstar» 22,3
+ACTIVIDAD = "actividad"
+CORTINA_TRANQUILA, CORTINA_ANIMADA = 8.3, 11.75                     # subirla si cambia el cálculo: se recalcula todo
 
 _lock = threading.Lock()
 
@@ -97,7 +101,22 @@ def pulso(muestras, frecuencia=FRECUENCIA, minimo=50, maximo=240):
 
 
 def tipo(genero):
+    if genero == ACTIVIDAD:
+        return ACTIVIDAD
     return "vals" if "vals" in (genero or "") else "milonga" if "milonga" in (genero or "") else "tango"
+
+
+def actividad(muestras, frecuencia=FRECUENCIA):
+    """Cuánto "se mueve" la música (media del flujo espectral): baja = tranquila, alta = animada."""
+    flujo, _ = flujo_espectral(muestras, frecuencia)
+    return round(float(flujo.mean()), 2) if len(flujo) else None
+
+
+def calcular_actividad(ruta):
+    try:
+        return actividad(leer_trozo(ruta))
+    except Exception:
+        return None
 
 
 def calcular(ruta, genero="tango"):
@@ -147,4 +166,11 @@ class CacheBpm:
         if not encontrado and calcular_si_falta:
             valor = calcular(ruta, genero)
             self.guardar(ruta, genero, valor)
+        return valor
+
+    def actividad(self, ruta, calcular_si_falta=True):
+        encontrado, valor = self.guardado(ruta, ACTIVIDAD)
+        if not encontrado and calcular_si_falta:
+            valor = calcular_actividad(ruta)
+            self.guardar(ruta, ACTIVIDAD, valor)
         return valor
