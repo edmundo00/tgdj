@@ -79,6 +79,19 @@ Al cargar la playlist en *Crear diapos* (vale la `.mbp` de MusicBee directamente
   muy tranquila va antes de una milonga o de una tanda con mucha energía, o una muy animada antes de una tranquila.
 - **Milongas anteriores en el mismo sitio** (playlists `AAMMDD_Lugar` de la misma carpeta, último año): info de las
   cortinas y tandas que ya sonaron allí; si casi toda la noche se repite, un solo aviso («Es casi la misma playlist…»).
+- **Proponer cambios** (botones junto a la playlist). **Todo sale solo de `MUSICA\Edmundo`** (lo que hay en el
+  portátil) y de tu biblioteca de MusicBee (estrellas); por defecto solo 5 estrellas. En cada propuesta: ▶ Escuchar
+  (en una tanda, cada clic pasa al tema siguiente) y *Usar*.
+  - *Cambiar tema…* (elige antes el tema en la lista de abajo): misma orquesta, género y época (±8 años), primero
+    el mismo cantor; nada que ya suene esa noche.
+  - *Cambiar tanda…*: tandas de 3 temas de la misma orquesta, cantor y época; sin orquestas que suenen a menos de
+    4 tandas; primero las de energía parecida, las orquestas que no suenan esa noche y las que más 5 estrellas
+    tienen; las difíciles no se proponen en el primer tercio.
+  - *Cambiar cortina…*: cortinas que no suenan esa noche ni sonaron en ese sitio el último año; primero las que
+    encajan con la tanda que viene (animada antes de una milonga, tranquila antes de algo tranquilo).
+    *Medir las no medidas* calcula cómo es cada cortina (~0,2 s cada una, se guarda).
+  - *↶ Deshacer* y *Guardar playlist…*: un `.m3u` nuevo (por defecto `…_revisada.m3u` junto a la original, que
+    nunca se sobrescribe). Si creas la presentación con cambios sin guardar, pregunta antes.
 - **La Cumparsita** al final va sola (aunque no lleve cortina delante): su propia diapo, sin compararla con nada.
   Dentro de una tanda o a mitad de la noche: aviso.
 

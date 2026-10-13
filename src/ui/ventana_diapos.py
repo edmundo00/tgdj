@@ -1,23 +1,26 @@
 """Ventana para crear la presentación de las tandas a partir de una playlist."""
 import os
 
+import pandas as pd
 from PyQt5.QtCore import Qt, QDate, QTime, QSettings
 from PyQt5.QtGui import QColor, QFont
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QLineEdit, QDateEdit, QTimeEdit, QPushButton,
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QFileDialog, QMessageBox, QSplitter,
-    QApplication, QProgressBar, QListWidget, QListWidgetItem, QWidget, QComboBox, QSpinBox,
+    QApplication, QProgressBar, QListWidget, QListWidgetItem, QWidget, QComboBox, QSpinBox, QProgressDialog,
 )
 
 from src.config.config import m3u_start_path, presentations_start_path, default_milonga_data
 from src.diapos.generador import (
     leer_playlist, agrupar_tandas, crear_presentacion, duracion_texto, nombre_archivo, compositor_para_diapo,
 )
-from src.diapos import bpm, caracter, historial
+from src.diapos import bpm, caracter, catalogo, historial
 from src.diapos.revision import (
-    revisar, horas_de_inicio, segundos_de_inicio, energia, bpm_tanda, ERROR, AVISO, AUTO, LIBRE, PATRONES, MINUTOS_SIN_MILONGA,
+    revisar, horas_de_inicio, segundos_de_inicio, energia, bpm_tanda, ERROR, AVISO, AUTO, LIBRE, PATRONES,
+    MINUTOS_SIN_MILONGA,
 )
 from src.ui.curva_noche import CurvaNoche
+from src.ui.dialogo_propuesta import DialogoPropuesta
 from src.utils.utils import convertir_segundos
 
 
@@ -52,6 +55,8 @@ class VentanaDiapos(QDialog):
         self.faltan = []
         self.avisos = []
         self.historial = []
+        self.cambios = []
+        self.guardada = True
         self.playlist = None
 
         lay = QVBoxLayout(self)
@@ -120,6 +125,24 @@ class VentanaDiapos(QDialog):
         self.etiqueta_playlist = QLabel("<i>Ninguna playlist cargada</i>")
         fila.addWidget(self.boton_playlist)
         fila.addWidget(self.etiqueta_playlist, 1)
+        # Cambios: propuestas solo de MUSICA\Edmundo; se guardan en un .m3u nuevo
+        self.boton_tema = QPushButton("Cambiar tema…")
+        self.boton_tema.setToolTip("Otro tema de la misma orquesta, cantor y época para el tema elegido abajo")
+        self.boton_tema.clicked.connect(self.cambiar_tema)
+        self.boton_tanda = QPushButton("Cambiar tanda…")
+        self.boton_tanda.setToolTip("Otra tanda de 3 temas de tus 5 estrellas (sin orquestas que suenen cerca)")
+        self.boton_tanda.clicked.connect(self.cambiar_tanda)
+        self.boton_cortina = QPushButton("Cambiar cortina…")
+        self.boton_cortina.setToolTip("Otra cortina que no suene esta noche ni haya sonado en este sitio")
+        self.boton_cortina.clicked.connect(self.cambiar_cortina)
+        self.boton_deshacer = QPushButton("↶ Deshacer")
+        self.boton_deshacer.clicked.connect(self.deshacer)
+        self.boton_guardar = QPushButton("Guardar playlist…")
+        self.boton_guardar.setToolTip("Guarda la playlist con los cambios en un .m3u (no toca la original)")
+        self.boton_guardar.clicked.connect(self.guardar_playlist)
+        for b in (self.boton_tema, self.boton_tanda, self.boton_cortina, self.boton_deshacer, self.boton_guardar):
+            b.setEnabled(False)
+            fila.addWidget(b)
         lay.addLayout(fila)
 
         # --- Vista previa: tandas arriba, canciones de la tanda seleccionada abajo
@@ -225,14 +248,246 @@ class VentanaDiapos(QDialog):
         self.faltan = faltan
         self.historial = historial.anteriores(ruta)
         self.tandas = agrupar_tandas(canciones)
-        self.etiqueta_playlist.setText(f"<b>{os.path.basename(ruta)}</b> — {len(canciones)} canciones")
+        self.cambios = []                  # playlists anteriores (planas) para deshacer
+        self.guardada = True
+        self.poner_etiqueta()
         self.rellenar_tandas()
         self.boton_crear.setEnabled(bool(self.tandas))
+        for b in (self.boton_tema, self.boton_tanda, self.boton_cortina, self.boton_guardar):
+            b.setEnabled(bool(self.tandas))
+        self.boton_deshacer.setEnabled(False)
         if faltan:
             QMessageBox.warning(self, "Canciones no encontradas",
                                 f"{len(faltan)} canción(es) de la playlist no existen y no saldrán en las diapos:\n\n"
                                 + "\n".join(faltan[:15]))
         self.calcular_bpm()
+
+    # ------------------------------------------------------------------ cambios en la playlist
+    def poner_etiqueta(self):
+        n = sum(len(t.canciones) for t in self.tandas)
+        texto = f"<b>{os.path.basename(self.playlist)}</b> — {n} canciones"
+        if self.cambios:
+            texto += (f" — <span style='background:#fff3c4'>&nbsp;{len(self.cambios)} cambio(s)"
+                      + (" sin guardar" if not self.guardada else "") + "&nbsp;</span>")
+        self.etiqueta_playlist.setText(texto)
+
+    def _plana(self):
+        return pd.concat([t.canciones for t in self.tandas], ignore_index=True)
+
+    def _inicio_fila(self, fila):
+        return sum(len(t.canciones) for t in self.tandas[:fila])
+
+    def _fila_tanda(self):
+        filas = self.tabla_tandas.selectionModel().selectedRows()
+        return filas[0].row() if filas else None
+
+    def _catalogo(self):
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        try:
+            return catalogo.catalogo()
+        except Exception as e:
+            QMessageBox.critical(self, "Biblioteca de MusicBee", f"No se pudo leer la biblioteca de MusicBee:\n{e}")
+            return None
+        finally:
+            QApplication.restoreOverrideCursor()
+
+    def _reproductor(self):
+        r = getattr(self.parent(), "reproductor", None)
+        if r is None:
+            try:
+                import pygame
+                if not pygame.mixer.get_init():
+                    pygame.mixer.init()
+                from src.ui.reproductor import Reproductor
+                r = self._reproductor_propio = getattr(self, "_reproductor_propio", None) or Reproductor(self)
+            except Exception:
+                return None
+        return r
+
+    def _aplicar(self, plana, fila):
+        """Pone la playlist nueva (plana), recalcula todo y vuelve a la fila."""
+        self.cambios.append(self._plana())
+        self.guardada = False
+        self.tandas = agrupar_tandas(plana)
+        self.rellenar_tandas()
+        self.calcular_bpm()
+        self.poner_etiqueta()
+        self.boton_deshacer.setEnabled(True)
+        if fila is not None and fila < len(self.tandas):
+            self.ir_a_fila(fila)
+
+    @staticmethod
+    def _fila_cancion(c):
+        return {k: c[k] for k in ("ruta", "title", "artist", "artist1", "artist2", "year", "ano", "genre",
+                                  "composer", "duration")}
+
+    def cambiar_tema(self):
+        fila = self._fila_tanda()
+        if fila is None or self.tandas[fila].es_cortina:
+            QMessageBox.information(self, "Cambiar tema", "Elige una tanda en la tabla de arriba "
+                                                          "(para las cortinas está «Cambiar cortina…»).")
+            return
+        k = self.tabla_canciones.currentRow()
+        if k < 0:
+            QMessageBox.information(self, "Cambiar tema", "Elige en la lista de abajo el tema que quieres cambiar.")
+            return
+        cat = self._catalogo()
+        if cat is None:
+            return
+        actual = self.tandas[fila].canciones.iloc[k]
+        propuestas = {}
+
+        def obtener(solo_5):
+            p = propuestas[solo_5] = catalogo.proponer_temas(cat, self.tandas, fila, k, solo_5)
+            filas = [[c["title"], c["artist2"] or "instrumental", c["ano"], "★" * int(c["estrellas"]), c["motivo"],
+                      convertir_segundos(c["duration"])] for _, c in p.iterrows()]
+            return ["Título", "Cantor", "Año", "Estrellas", "", "Duración"], filas, [[r] for r in p["ruta"]]
+
+        d = DialogoPropuesta(self, "Cambiar tema",
+                             f"Para cambiar <b>«{actual['title']}»</b> ({actual['artist']}, {actual['ano']}): temas de "
+                             f"la misma orquesta, género y época que no suenan esta noche, solo de MUSICA\\Edmundo.",
+                             obtener, self._reproductor())
+        if d.exec_() != QDialog.Accepted or d.elegida is None:
+            return
+        nueva = propuestas[d.solo_5.isChecked()].iloc[d.elegida]
+        plana = self._plana()
+        plana.loc[self._inicio_fila(fila) + k, list(self._fila_cancion(nueva))] = list(self._fila_cancion(nueva).values())
+        self._aplicar(plana, fila)
+
+    def cambiar_tanda(self):
+        fila = self._fila_tanda()
+        if fila is None or self.tandas[fila].es_cortina or self.tandas[fila].es_cumparsita:
+            QMessageBox.information(self, "Cambiar tanda", "Elige una tanda en la tabla de arriba.")
+            return
+        cat = self._catalogo()
+        if cat is None:
+            return
+        tanda = self.tandas[fila]
+        propuestas = {}
+
+        def obtener(solo_5):
+            p = propuestas[solo_5] = catalogo.proponer_tandas(cat, self.tandas, fila, solo_5)
+            filas = [[t.orquesta, t.cantor, t.anos, t.motivo or "—", " · ".join(t.canciones["title"])] for t in p]
+            return ["Orquesta", "Cantor", "Años", "Carácter", "Temas"], filas, [list(t.canciones["ruta"]) for t in p]
+
+        d = DialogoPropuesta(self, "Cambiar tanda",
+                             f"Para cambiar la tanda de <b>{tanda.titulo_orquesta}</b> ({tanda.subtitulo}): tandas de "
+                             f"{tanda.genero or 'tango'} de 3 temas (misma orquesta, cantor y época), primero las de "
+                             f"energía parecida, sin orquestas que suenen cerca, solo de MUSICA\\Edmundo. "
+                             f"▶ va pasando por sus temas.", obtener, self._reproductor())
+        if d.exec_() != QDialog.Accepted or d.elegida is None:
+            return
+        nueva = propuestas[d.solo_5.isChecked()][d.elegida].canciones
+        plana = self._plana()
+        inicio = self._inicio_fila(fila)
+        filas_nuevas = pd.DataFrame([self._fila_cancion(c) for _, c in nueva.iterrows()])
+        plana = pd.concat([plana.iloc[:inicio], filas_nuevas, plana.iloc[inicio + len(tanda.canciones):]],
+                          ignore_index=True)
+        self._aplicar(plana, fila)
+
+    def cambiar_cortina(self):
+        fila = self._fila_tanda()
+        if fila is None or not self.tandas[fila].es_cortina:
+            QMessageBox.information(self, "Cambiar cortina", "Elige una cortina en la tabla de arriba.")
+            return
+        cat = self._catalogo()
+        if cat is None:
+            return
+        k = max(self.tabla_canciones.currentRow(), 0)
+        siguiente = self.tandas[fila + 1] if fila + 1 < len(self.tandas) else None
+        quiero = "media"
+        if siguiente is not None and not siguiente.es_cortina:
+            e = energia(siguiente, caracter.de_tanda(siguiente))
+            if bpm.tipo(siguiente.genero) == "milonga" or (e is not None and e >= 4.5):
+                quiero = "animada"
+            elif e is not None and e <= 2.5:
+                quiero = "tranquila"
+        orden_actividad = {"tranquila": 0, "media": 1, "animada": 2}
+        propuestas = {}
+
+        def obtener(solo_5):
+            p = catalogo.proponer_cortinas(cat, self.tandas, fila, self.historial, solo_5).copy()
+            cache = bpm.CacheBpm()
+            p["actividad"] = [cache.guardado(r, bpm.ACTIVIDAD)[1] for r in p["ruta"]]
+            p["como"] = p["actividad"].map(_texto_actividad)
+            # primero las que encajan con lo que viene; luego las demás (las no medidas al final)
+            p["_orden"] = p["como"].map(lambda c: abs(orden_actividad[c] - orden_actividad[quiero])
+                                        if c in orden_actividad else 9)
+            p = propuestas[solo_5] = p.sort_values(["_orden", "artist"]).reset_index(drop=True)
+            filas = [[c["title"], c["artist"], c["como"] or "sin medir", convertir_segundos(c["duration"])]
+                     for _, c in p.iterrows()]
+            return ["Título", "Artista", "Cómo es", "Duración"], filas, [[r] for r in p["ruta"]]
+
+        texto_siguiente = (f"antes de <b>{siguiente.titulo_orquesta}</b> ({siguiente.genero})"
+                           if siguiente is not None and not siguiente.es_cortina else "")
+        d = DialogoPropuesta(self, "Cambiar cortina",
+                             f"Cortinas que no suenan esta noche ni sonaron en este sitio el último año, solo de "
+                             f"MUSICA\\Edmundo. {texto_siguiente}: van primero las <b>{quiero}s</b>. "
+                             f"«Medir» calcula cómo es cada cortina (~0,2 s cada una, se guarda).",
+                             obtener, self._reproductor())
+        medir = QPushButton("Medir las no medidas")
+        medir.clicked.connect(lambda: self._medir_cortinas(d, propuestas))
+        d.layout().itemAt(d.layout().count() - 1).layout().insertWidget(1, medir)
+        if d.exec_() != QDialog.Accepted or d.elegida is None:
+            return
+        nueva = propuestas[d.solo_5.isChecked()].iloc[d.elegida]
+        plana = self._plana()
+        posicion = self._inicio_fila(fila) + min(k, len(self.tandas[fila].canciones) - 1)
+        plana.loc[posicion, list(self._fila_cancion(nueva))] = list(self._fila_cancion(nueva).values())
+        self._aplicar(plana, fila)
+
+    def _medir_cortinas(self, dialogo, propuestas):
+        p = propuestas.get(dialogo.solo_5.isChecked())
+        if p is None:
+            return
+        cache = bpm.CacheBpm()
+        rutas = [r for r, c in zip(p["ruta"], p["como"]) if not c]
+        progreso = QProgressDialog("Midiendo cortinas…", "Parar", 0, len(rutas), dialogo)
+        progreso.setWindowModality(Qt.WindowModal)
+        for n, r in enumerate(rutas, 1):
+            if progreso.wasCanceled():
+                break
+            cache.actividad(r)
+            progreso.setValue(n)
+            QApplication.processEvents()
+        progreso.close()
+        dialogo.rellenar()
+
+    def deshacer(self):
+        if not self.cambios:
+            return
+        fila = self._fila_tanda()
+        plana = self.cambios.pop()
+        self.guardada = False
+        self.tandas = agrupar_tandas(plana)
+        self.rellenar_tandas()
+        self.calcular_bpm()
+        self.poner_etiqueta()
+        self.boton_deshacer.setEnabled(bool(self.cambios))
+        if fila is not None and fila < len(self.tandas):
+            self.ir_a_fila(fila)
+
+    def guardar_playlist(self):
+        base, _ = os.path.splitext(os.path.basename(self.playlist))
+        destino, _ = QFileDialog.getSaveFileName(
+            self, "Guardar playlist con los cambios", os.path.join(os.path.dirname(self.playlist),
+                                                                   f"{base}_revisada.m3u"),
+            "Playlist (*.m3u)")
+        if not destino:
+            return
+        if os.path.normcase(os.path.abspath(destino)) == os.path.normcase(os.path.abspath(self.playlist)):
+            QMessageBox.warning(self, "Guardar", "Elige otro nombre: la playlist original no se sobrescribe.")
+            return
+        try:
+            with open(destino, "w", encoding="utf-8-sig", newline="\r\n") as f:
+                f.write("\n".join(self._plana()["ruta"]) + "\n")
+        except OSError as e:
+            QMessageBox.critical(self, "Guardar", f"No se pudo guardar:\n{e}")
+            return
+        self.guardada = True
+        self.poner_etiqueta()
+        QMessageBox.information(self, "Guardada", f"Playlist guardada en:\n{destino}\n\n"
+                                                  f"Para verla en MusicBee, arrástrala a la lista de playlists.")
 
     def calcular_bpm(self):
         """BPM de las canciones de las tandas: los guardados al momento, los nuevos (~0,2 s cada uno) con barra."""
@@ -391,7 +646,15 @@ class VentanaDiapos(QDialog):
         if not d["milonga"]:
             QMessageBox.warning(self, "Falta el nombre", "Escribe el nombre de la milonga.")
             return
-        errores = [a.texto for a in self.avisos if a.nivel == ERROR]
+        if self.cambios and not self.guardada:
+            r = QMessageBox.question(self, "Cambios sin guardar",
+                                     "La playlist tiene cambios sin guardar. ¿Guardarla antes de crear la presentación?",
+                                     QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel, QMessageBox.Yes)
+            if r == QMessageBox.Cancel:
+                return
+            if r == QMessageBox.Yes:
+                self.guardar_playlist()
+        errores =[a.texto for a in self.avisos if a.nivel == ERROR]
         if errores and QMessageBox.question(
                 self, "La playlist tiene errores",
                 f"La revisión encontró {len(errores)} error(es):\n\n" + "\n".join(errores[:10])
