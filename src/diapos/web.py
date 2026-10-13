@@ -135,7 +135,9 @@ def nombre_lista(datos):
 def qr_svg(texto):
     """Código QR en SVG (para meterlo dentro del .html: se ve sin internet)."""
     import segno
-    return segno.make(texto, error="m").svg_inline(scale=4, border=2, dark="#120c08", light="#f6efe4")
+    # sin tamaño fijo (solo viewBox) para que se escale entero sin recortarse; negro sobre blanco y el margen
+    # blanco de 4 módulos que los lectores necesitan
+    return segno.make(texto, error="m").svg_inline(omitsize=True, border=4, dark="#000", light="#fff")
 
 
 def crear_lista(tandas, datos, destino):
@@ -317,10 +319,10 @@ PLANTILLA = r"""<!doctype html>
   .vals .eq i { background:var(--vals); } .milonga .eq i { background:var(--milonga); }
   @keyframes latido { from { transform:scaleY(.15); } to { transform:scaleY(1); } }
   body.pausado .eq i { animation-play-state:paused; }
-  #qr { position:fixed; left:1.2vw; top:1.2vh; display:flex; flex-direction:column; align-items:center; gap:.4vh;
-    padding:.6vh; border-radius:.8vh; background:#f6efe4; opacity:.85; }
-  #qr svg { width:max(72px, 11vh); height:auto; display:block; }
-  #qr span { font:600 max(9px, 1.1vh) system-ui, sans-serif; color:#120c08; }
+  #qr { position:fixed; left:1vw; top:1vh; display:flex; flex-direction:column; align-items:center; gap:2px;
+    padding:4px 4px 3px; border-radius:6px; background:#fff; z-index:5; }
+  #qr svg { width:max(120px, 18vh); height:max(120px, 18vh); display:block; shape-rendering:crispEdges; }
+  #qr span { font:600 max(10px, 1.3vh) system-ui, sans-serif; color:#000; }
   #hora { position:fixed; right:1.6vw; top:1.2vh; font:500 max(14px, 1.5vw) system-ui, sans-serif;
     color:rgba(246,239,228,.45); letter-spacing:.05em; }
   .vals li.ahora { border-left-color:var(--vals); } .milonga li.ahora { border-left-color:var(--milonga); }
@@ -701,8 +703,10 @@ async function vivo() {
 function pantallaCompleta() {
   const el = document.documentElement;
   if (document.fullscreenElement || document.webkitFullscreenElement) {
+    quiereCompleta = false;                 // salió a propósito: no volver a entrar con el primer toque
     (document.exitFullscreen || document.webkitExitFullscreen).call(document);
   } else {
+    quiereCompleta = true;
     (el.requestFullscreen || el.webkitRequestFullscreen || (() => {})).call(el);
   }
   despierta();
@@ -767,6 +771,17 @@ function despertarOido() {
   }
 }
 document.addEventListener("pointerdown", despertarOido, true);
+// Pantalla completa: los navegadores no dejan entrar sola al abrir, así que entra con el primer toque
+// (salvo que se haya salido a propósito con el botón ⛶)
+let quiereCompleta = true;
+document.addEventListener("pointerup", e => {
+  if (e.target.closest && e.target.closest("#b-completa, #ayuda")) return;     // esos ya lo gestionan
+  const ya = document.fullscreenElement || document.webkitFullscreenElement;
+  if (quiereCompleta && !ya) {
+    const el = document.documentElement;
+    try { (el.requestFullscreen || el.webkitRequestFullscreen).call(el).catch?.(() => {}); } catch (e) {}
+  }
+}, true);
 // Tocar la diapo: a la derecha (2/3 de la pantalla) avanza, a la izquierda retrocede
 document.addEventListener("click", e => {
   despierta(); mostrarBotones();
