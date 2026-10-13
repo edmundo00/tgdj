@@ -49,10 +49,15 @@ Al cargar la playlist en *Crear diapos* (vale la `.mbp` de MusicBee directamente
 - ❌ **Errores**: canciones fuera de `MUSICA\Edmundo` (no estarán en el portátil) o que no existen, falta una
   cortina entre tandas, el mismo archivo o tema dos veces en una tanda. Si hay errores, pregunta antes de crear.
 - ⚠ **Avisos**: tandas que no son de 3–4 temas, mezcla de orquestas, de instrumentales y cantadas o de cantores,
-  años separados más de 5, sin año, cortinas dobles, vals y milonga sin tango en medio, la misma orquesta o
+  años separados más de 8, sin año, cortinas dobles, vals y milonga sin tango en medio, la misma orquesta o
   cantor a menos de 4 tandas, un tema que suena dos veces en la noche, archivos solo en la nube, que la música
   no quepa en el horario.
 - ℹ **Info**: minutos libres, pocas instrumentales, Pugliese en el primer tercio, temas sin compositor en la diapo.
+- **Patrón de bloques** (arriba en la ventana): *Detectarlo* averigua cuál sigues —2-1-2-1 (T-T-V-T-T-M), 3-1-3-1,
+  4-1-4-1 o 2-1-1-1 (T-T-V-T-M)— y avisa donde se rompe («aquí tocaría milonga», «otra vez vals»); también se
+  puede elegir uno o *Libre*. Empezar con más tangos para calentar no es error. **Sin milonga los últimos 40 min**
+  (se puede cambiar; 0 = no mirar). Abrir con una orquesta difícil (Pugliese, Salgán…) o ponerla en el primer
+  tercio sale como consejo. Todo son consejos: nunca impide crear la presentación.
 
 Menú **Ayuda → Cómo se usa** (F1) tiene la misma explicación dentro de la app.
 Si cargas desde MusicBee, después de aplicar haz en MusicBee *Herramientas → Volver a leer tags*.

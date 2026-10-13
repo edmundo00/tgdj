@@ -22,10 +22,21 @@ from src.utils.buscar_artista import normalizar_nombre
 ERROR, AVISO, INFO = "error", "aviso", "info"
 
 TEMAS_POR_TANDA = (3, 4)
-MAX_ANOS_EN_TANDA = 5          # más años de diferencia dentro de una tanda -> aviso
+MAX_ANOS_EN_TANDA = 8          # más años de diferencia dentro de una tanda -> aviso
 DISTANCIA_ORQUESTA = 4         # la misma orquesta / cantor a menos de estas tandas -> aviso
-MAX_TANGOS_SEGUIDOS = 4
 SEGUNDOS_CORTINA = 60          # lo mismo que estima la ventana de diapos
+MINUTOS_SIN_MILONGA = 40       # al final de la noche no se ponen milongas
+
+# Patrones de bloques: tandas de tango entre cada vals o milonga (el ciclo se repite)
+PATRONES = {
+    "2-1-2-1": ((2,), "T-T-V-T-T-M"),
+    "3-1-3-1": ((3,), "T-T-T-V-T-T-T-M"),
+    "4-1-4-1": ((4,), "T-T-T-T-V-T-T-T-T-M"),
+    "2-1-1-1": ((2, 1), "T-T-V-T-M"),
+}
+AUTO, LIBRE = "auto", "libre"
+# Orquestas que exigen mucho a la pista: ni para abrir ni en el primer tercio (hasta tener la tabla de carácter)
+DIFICILES = {"pugliese", "salgan", "piazzolla", "gobbi", "basso"}
 _EN_NUBE = 0x400000 | 0x1000   # Dropbox "solo en la nube" (como en la biblioteca)
 
 
@@ -94,7 +105,122 @@ def horas_de_inicio(tandas, inicio):
     return horas
 
 
-def revisar(tandas, faltan=(), inicio=None, fin=None, carpeta=carpeta_portatil):
+def segundos_de_inicio(tandas):
+    """Segundos desde el principio a los que empieza cada fila."""
+    t, salida = 0.0, []
+    for tanda in tandas:
+        salida.append(t)
+        t += SEGUNDOS_CORTINA * len(tanda.canciones) if tanda.es_cortina else tanda.duracion
+    return salida
+
+
+def _es_dificil(orquesta):
+    palabras = set(normalizar_nombre(orquesta).split())
+    return bool(palabras & DIFICILES)
+
+
+def _tramos(generos):
+    """[(filas de tango, fila de la alternativa, 'vals'|'milonga'), …] y las filas de tango del final."""
+    tramos, tangos = [], []
+    for fila, g in generos:
+        if g == "tango":
+            tangos.append(fila)
+        else:
+            tramos.append((tangos, fila, g))
+            tangos = []
+    return tramos, tangos
+
+
+def _desajustes(tramos, ciclo, desfase):
+    """Tramos cuyo número de tangos no es el del patrón: [(k, esperado)]. El primero puede ser más largo."""
+    errores = []
+    for k, (tangos, _, _) in enumerate(tramos):
+        esperado = ciclo[(k + desfase) % len(ciclo)]
+        if not tangos or (k == 0 and len(tangos) >= esperado):
+            continue
+        if len(tangos) != esperado:
+            errores.append((k, esperado))
+    return errores
+
+
+def detectar_patron(generos):
+    """El patrón de PATRONES que mejor encaja: (nombre, desfase) o None si hay pocas tandas o no sigue ninguno."""
+    tramos, _ = _tramos(generos)
+    if len(tramos) < 2:
+        return None
+    mejor = None
+    for nombre, (ciclo, _) in PATRONES.items():
+        for desfase in range(len(ciclo)):
+            fallos = len(_desajustes(tramos, ciclo, desfase))
+            if mejor is None or fallos < mejor[0]:
+                mejor = (fallos, nombre, desfase)
+    fallos, nombre, desfase = mejor
+    return (nombre, desfase) if fallos <= len(tramos) // 2 else None
+
+
+def dibujo_noche(generos):
+    """'TTV TTM TTV TT' (un grupo por cada vals o milonga)."""
+    letras = "".join({"tango": "T", "vals": "V", "milonga": "M"}[g] for _, g in generos)
+    return re.sub(r"([VM])", r"\1 ", letras).strip()
+
+
+def _revisar_patron(generos, patron, nombre, cuando, en_zona_final):
+    avisos = []
+    tramos, cola = _tramos(generos)
+    if patron == LIBRE or not generos:
+        return avisos
+    if patron == AUTO:
+        detectado = detectar_patron(generos)
+        if detectado is None:
+            if len(tramos) >= 2:
+                avisos.append(Aviso(INFO, f"No sigues un patrón fijo de bloques ({dibujo_noche(generos)}): "
+                                          f"a la pista le ayuda saber qué viene"))
+            return avisos
+        patron, desfase = detectado
+        como = "detectado"
+    else:
+        desfase = min(range(len(PATRONES[patron][0])),
+                      key=lambda d: len(_desajustes(tramos, PATRONES[patron][0], d)))
+        como = "elegido"
+    ciclo, dibujo = PATRONES[patron]
+    avisos.append(Aviso(INFO, f"Patrón {como}: {patron} ({dibujo}). Tu noche: {dibujo_noche(generos)}"))
+
+    def toca(k):
+        if k > 0:
+            return "milonga" if tramos[k - 1][2] == "vals" else "vals"
+        return "vals o milonga"
+
+    for k, esperado in _desajustes(tramos, ciclo, desfase):
+        tangos, alt, g = tramos[k]
+        if len(tangos) < esperado:
+            if not en_zona_final(alt):
+                avisos.append(Aviso(AVISO, f"{nombre(alt)}: {g}{cuando(alt)} tras solo {len(tangos)} tanda(s) de "
+                                           f"tango; en tu patrón {patron} son {esperado}", alt))
+        else:
+            fila = tangos[esperado]
+            if not en_zona_final(fila):
+                avisos.append(Aviso(AVISO, f"{nombre(fila)}{cuando(fila)}: en tu patrón {patron} aquí tocaría "
+                                           f"{toca(k)} (van {len(tangos)} tandas de tango seguidas)", fila))
+    if tramos and len(tramos[0][0]) > ciclo[desfase % len(ciclo)]:
+        avisos.append(Aviso(INFO, f"Empiezas con {len(tramos[0][0])} tandas de tango antes del primer "
+                                  f"{tramos[0][2]}: está bien para calentar la pista", tramos[0][1]))
+    for k in range(1, len(tramos)):
+        tangos, alt, g = tramos[k]
+        if tangos and g == tramos[k - 1][2]:
+            avisos.append(Aviso(AVISO, f"{nombre(alt)}: otra vez {g}{cuando(alt)}; la anterior ({nombre(tramos[k - 1][1])}) "
+                                       f"también lo fue, tocaría {toca(k)}", alt))
+    if tramos and cola:
+        esperado = ciclo[(len(tramos) + desfase) % len(ciclo)]
+        if len(cola) > esperado and not en_zona_final(cola[esperado]):
+            avisos.append(Aviso(AVISO, f"{nombre(cola[esperado])}{cuando(cola[esperado])}: en tu patrón {patron} aquí "
+                                       f"tocaría {toca(len(tramos))} (van {len(cola)} tandas de tango seguidas)",
+                                cola[esperado]))
+    return avisos
+
+
+def revisar(tandas, faltan=(), inicio=None, fin=None, carpeta=carpeta_portatil, patron=AUTO,
+            minutos_sin_milonga=MINUTOS_SIN_MILONGA):
+    """patron: AUTO (detectarlo), LIBRE (no mirar) o una clave de PATRONES."""
     avisos = []
     nombre_carpeta = os.path.relpath(carpeta, os.path.dirname(os.path.dirname(carpeta))) if carpeta else ""
 
@@ -187,13 +313,28 @@ def revisar(tandas, faltan=(), inicio=None, fin=None, carpeta=carpeta_portatil):
     for (i, g1), (j, g2) in zip(generos, generos[1:]):
         if g1 != "tango" and g2 != "tango":
             avisos.append(Aviso(AVISO, f"{nombre(i)} ({g1}) y {nombre(j)} ({g2}) seguidas, sin tango en medio", j))
-    seguidos = 0
-    for i, g in generos:
-        seguidos = seguidos + 1 if g == "tango" else 0
-        if seguidos == MAX_TANGOS_SEGUIDOS + 1:
-            avisos.append(Aviso(INFO, f"{seguidos} tandas de tango seguidas hasta la {nombre(i)}", i))
     if generos and generos[0][1] != "tango":
-        avisos.append(Aviso(INFO, f"Empieza con {generos[0][1]}", generos[0][0]))
+        avisos.append(Aviso(INFO, f"Empieza con {generos[0][1]}: lo normal es abrir con tango", generos[0][0]))
+
+    # --- Patrón de bloques y final de la noche
+    empieza = segundos_de_inicio(tandas)
+    fin_musica = sum(SEGUNDOS_CORTINA * len(t.canciones) if t.es_cortina else t.duracion for t in tandas)
+    zona_final = fin_musica - minutos_sin_milonga * 60 if minutos_sin_milonga else float("inf")
+    horas = horas_de_inicio(tandas, inicio) if inicio else [""] * len(tandas)
+
+    def cuando(i):
+        return f" ({horas[i]})" if horas[i] else ""
+
+    avisos += _revisar_patron(generos, patron, nombre, cuando, lambda i: empieza[i] >= zona_final)
+    if minutos_sin_milonga:
+        for i, g in generos:
+            if g == "milonga" and empieza[i] >= zona_final:
+                avisos.append(Aviso(AVISO, f"{nombre(i)}: milonga{cuando(i)} en los últimos {minutos_sin_milonga} min; "
+                                           f"al final mejor tango o vals, que los cuerpos ya están cansados", i))
+
+    if reales and _es_dificil(reales[0][1].orquesta):
+        avisos.append(Aviso(INFO, f"Abrir con {reales[0][1].orquesta} puede costar a quien llega: mejor algo rítmico "
+                                  f"y fácil (Canaro años 30, Donato, D'Arienzo, Firpo, OTV…)", reales[0][0]))
 
     for n, (i, t) in enumerate(reales):
         for m in range(n + 1, min(n + DISTANCIA_ORQUESTA, len(reales))):
@@ -215,9 +356,10 @@ def revisar(tandas, faltan=(), inicio=None, fin=None, carpeta=carpeta_portatil):
 
     if len(reales) >= 6:
         tercio = reales[:len(reales) // 3]
-        for i, t in tercio:
-            if "pugliese" in normalizar_nombre(t.orquesta):
-                avisos.append(Aviso(INFO, f"Pugliese muy pronto ({nombre(i)}): mejor en el último tercio", i))
+        for i, t in tercio[1:] if _es_dificil(reales[0][1].orquesta) else tercio:
+            if _es_dificil(t.orquesta):
+                avisos.append(Aviso(INFO, f"{t.orquesta} muy pronto ({nombre(i)}): exige mucho a la pista, "
+                                          f"mejor en el último tercio", i))
         instrumentales = sum(1 for _, t in reales if not any(c.strip() for c in t.canciones["artist2"]))
         if instrumentales * 3 < len(reales):
             avisos.append(Aviso(INFO, f"Pocas tandas instrumentales: {instrumentales} de {len(reales)}"))

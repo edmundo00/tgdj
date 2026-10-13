@@ -9,7 +9,7 @@ from src.diapos.revision import revisar, horas_de_inicio, ERROR, AVISO, INFO
 from src.utils.musicbee_playlist import leer_mbp
 
 
-class RevisionTest(unittest.TestCase):
+class Base(unittest.TestCase):
     def setUp(self):
         self.dir = tempfile.mkdtemp()
         self.edmundo = os.path.join(self.dir, "MUSICA", "Edmundo")
@@ -39,6 +39,9 @@ class RevisionTest(unittest.TestCase):
     def textos(self, avisos, nivel=None):
         return [a.texto for a in avisos if nivel is None or a.nivel == nivel]
 
+
+
+class RevisionTest(Base):
     def test_playlist_bien_hecha_sin_errores_ni_avisos(self):
         filas = (self.tanda("Juan D'Arienzo") + [self.cortina()] + self.tanda("Carlos di Sarli / Alberto Podestá")
                  + [self.cortina()] + self.tanda("Francisco Canaro", genero="tango vals") + [self.cortina()]
@@ -123,6 +126,64 @@ class RevisionTest(unittest.TestCase):
         tandas, avisos = self.revisar(filas, inicio="21:00", fin="21:10")
         self.assertTrue(any("sobran" in t for t in self.textos(avisos, AVISO)))
         self.assertEqual(horas_de_inicio(tandas, "21:00"), ["21:00", "21:09", "21:10"])
+
+
+class PatronTest(Base):
+    GENEROS = {"T": "tango", "V": "tango vals", "M": "tango milonga"}
+
+    def noche(self, letras, primera="Juan D'Arienzo"):
+        """'TTVTTM' -> playlist con cortinas; cada tanda de una orquesta distinta."""
+        filas = []
+        for n, letra in enumerate(letras.replace(" ", "")):
+            if filas:
+                filas.append(self.cortina(f"c{n}"))
+            orquesta = primera if n == 0 else f"Orquesta {n}"
+            filas += self.tanda(orquesta, genero=self.GENEROS[letra])
+        return filas
+
+    def test_detecta_el_patron(self):
+        from src.diapos.revision import detectar_patron, _genero_corto
+        for letras, esperado in (("TTVTTMTTVTTM", "2-1-2-1"), ("TTTVTTTMTTTV", "3-1-3-1"),
+                                 ("TTTTVTTTTMTTTTV", "4-1-4-1"), ("TTVTMTTVTM", "2-1-1-1")):
+            tandas = agrupar_tandas(pd.DataFrame(self.noche(letras)))
+            generos = [(i, _genero_corto(t.genero)) for i, t in enumerate(tandas) if not t.es_cortina]
+            self.assertEqual(detectar_patron(generos)[0], esperado, letras)
+
+    def test_patron_bien_seguido_sin_avisos_de_patron(self):
+        _, avisos = self.revisar(self.noche("TTVTTMTTVTTM"), minutos_sin_milonga=0)
+        self.assertFalse([t for t in self.textos(avisos, AVISO) if "patrón" in t or "otra vez" in t])
+        self.assertTrue(any("Patrón detectado: 2-1-2-1" in t for t in self.textos(avisos, INFO)))
+
+    def test_aqui_tocaria_milonga(self):
+        _, avisos = self.revisar(self.noche("TTVTTMTTVTTTM"), minutos_sin_milonga=0)
+        self.assertIn("Tanda 12: en tu patrón 2-1-2-1 aquí tocaría milonga (van 3 tandas de tango seguidas)",
+                      self.textos(avisos, AVISO))
+
+    def test_dos_valses_seguidos_en_el_ciclo(self):
+        _, avisos = self.revisar(self.noche("TTVTTVTTMTTV"), minutos_sin_milonga=0)
+        self.assertTrue(any("otra vez vals" in t and "tocaría milonga" in t for t in self.textos(avisos, AVISO)))
+
+    def test_calentamiento_largo_es_solo_info(self):
+        _, avisos = self.revisar(self.noche("TTTTVTTMTTVTTM"), minutos_sin_milonga=0)
+        self.assertFalse([t for t in self.textos(avisos, AVISO) if "patrón" in t])
+        self.assertTrue(any("calentar" in t for t in self.textos(avisos, INFO)))
+
+    def test_patron_elegido_y_libre(self):
+        _, avisos = self.revisar(self.noche("TTVTTMTTVTTM"), patron="3-1-3-1", minutos_sin_milonga=0)
+        self.assertTrue(any("patrón 3-1-3-1" in t for t in self.textos(avisos, AVISO)))
+        _, avisos = self.revisar(self.noche("TTVTTVTTTTM"), patron="libre", minutos_sin_milonga=0)
+        self.assertFalse([t for t in self.textos(avisos) if "atrón" in t or "otra vez" in t])
+
+    def test_sin_milonga_al_final(self):
+        # cada tanda 9 min + 1 de cortina: la milonga 6 empieza en el minuto 50 de 59
+        _, avisos = self.revisar(self.noche("TTVTTM"), inicio="21:00", minutos_sin_milonga=40)
+        self.assertTrue(any("milonga (21:50) en los últimos 40 min" in t for t in self.textos(avisos, AVISO)))
+        _, avisos = self.revisar(self.noche("TTVTTM"), minutos_sin_milonga=0)
+        self.assertFalse(any("últimos" in t for t in self.textos(avisos)))
+
+    def test_abrir_con_pugliese(self):
+        _, avisos = self.revisar(self.noche("TTVTTM", primera="Osvaldo Pugliese"), minutos_sin_milonga=0)
+        self.assertTrue(any("Abrir con Osvaldo Pugliese" in t for t in self.textos(avisos, INFO)))
 
 
 class LeerMbpTest(unittest.TestCase):

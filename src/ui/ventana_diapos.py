@@ -6,14 +6,16 @@ from PyQt5.QtGui import QColor, QFont
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QLineEdit, QDateEdit, QTimeEdit, QPushButton,
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QFileDialog, QMessageBox, QSplitter,
-    QApplication, QProgressBar, QListWidget, QListWidgetItem, QWidget,
+    QApplication, QProgressBar, QListWidget, QListWidgetItem, QWidget, QComboBox, QSpinBox,
 )
 
 from src.config.config import m3u_start_path, presentations_start_path, default_milonga_data
 from src.diapos.generador import (
     leer_playlist, agrupar_tandas, crear_presentacion, duracion_texto, nombre_archivo, compositor_para_diapo,
 )
-from src.diapos.revision import revisar, horas_de_inicio, ERROR, AVISO
+from src.diapos.revision import (
+    revisar, horas_de_inicio, ERROR, AVISO, AUTO, LIBRE, PATRONES, MINUTOS_SIN_MILONGA,
+)
 from src.utils.utils import convertir_segundos
 
 
@@ -45,6 +47,29 @@ class VentanaDiapos(QDialog):
             t.setMaximumWidth(90)
             t.timeChanged.connect(self.actualizar_duracion)
         self.duracion = QLabel()
+        # Reglas de la revisión (se recuerdan)
+        self.patron = QComboBox()
+        self.patron.addItem("Detectarlo", AUTO)
+        for clave, (_, dibujo) in PATRONES.items():
+            self.patron.addItem(f"{clave}  ({dibujo})", clave)
+        self.patron.addItem("Libre (no mirar)", LIBRE)
+        guardado = self.patron.findData(self.settings.value("diapos_patron", AUTO))
+        self.patron.setCurrentIndex(max(guardado, 0))
+        self.patron.currentIndexChanged.connect(self.cambiar_reglas)
+        self.sin_milonga = QSpinBox()
+        self.sin_milonga.setRange(0, 120)
+        self.sin_milonga.setSingleStep(5)
+        self.sin_milonga.setSuffix(" min")
+        self.sin_milonga.setValue(int(self.settings.value("diapos_sin_milonga", MINUTOS_SIN_MILONGA)))
+        self.sin_milonga.setToolTip("Al final de la noche no se ponen milongas (0 = no mirar)")
+        self.sin_milonga.valueChanged.connect(self.cambiar_reglas)
+        reglas = QHBoxLayout()
+        reglas.addWidget(QLabel("<b>Patrón de bloques:</b>"))
+        reglas.addWidget(self.patron)
+        reglas.addSpacing(20)
+        reglas.addWidget(QLabel("<b>Sin milonga los últimos</b>"))
+        reglas.addWidget(self.sin_milonga)
+        reglas.addStretch(1)
         datos.addWidget(QLabel("<b>Milonga:</b>"), 0, 0)
         datos.addWidget(self.nombre, 0, 1, 1, 6)
         datos.addWidget(QLabel("<b>Fecha:</b>"), 0, 7)
@@ -56,6 +81,7 @@ class VentanaDiapos(QDialog):
         datos.addWidget(self.duracion, 1, 4, 1, 2)
         datos.setColumnStretch(6, 1)
         lay.addLayout(datos)
+        lay.addLayout(reglas)
 
         fila = QHBoxLayout()
         self.boton_playlist = QPushButton("① Elegir playlist…")
@@ -135,6 +161,12 @@ class VentanaDiapos(QDialog):
         if self.tandas:
             self.revisar()
 
+    def cambiar_reglas(self):
+        self.settings.setValue("diapos_patron", self.patron.currentData())
+        self.settings.setValue("diapos_sin_milonga", self.sin_milonga.value())
+        if self.tandas:
+            self.revisar()
+
     def elegir_playlist(self):
         ruta, _ = QFileDialog.getOpenFileName(
             self, "Elegir playlist", self.settings.value("dir_playlist_diapos", m3u_start_path) or m3u_start_path,
@@ -183,7 +215,8 @@ class VentanaDiapos(QDialog):
     def revisar(self):
         """Revisa la playlist, colorea las filas con problemas y llena la lista de la revisión."""
         d = self.datos()
-        self.avisos = revisar(self.tandas, self.faltan, d["inicio"], d["fin"])
+        self.avisos = revisar(self.tandas, self.faltan, d["inicio"], d["fin"], patron=self.patron.currentData(),
+                              minutos_sin_milonga=self.sin_milonga.value())
         por_fila = {}
         for a in self.avisos:
             if a.fila is not None:

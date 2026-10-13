@@ -119,7 +119,8 @@ Si cargaste desde MusicBee, después haz en MusicBee <i>Herramientas → Volver 
 <li><b>Diapos</b>: <i>Crear diapos</i> genera la presentación de las tandas a partir de una playlist
 (.m3u o la .mbp de MusicBee), con vista previa y una <b>revisión</b> antes de crearla: que todo esté en
 MUSICA/Edmundo (lo que hay en el portátil), cortinas entre tandas, 3–4 temas, mismo cantor y años cercanos,
-orquestas o cantores repetidos muy cerca, vals y milonga seguidos, temas repetidos y la duración
+orquestas o cantores repetidos muy cerca, vals y milonga seguidos, temas repetidos y la duración,
+el patrón de bloques (T-T-V-T-T-M…: lo detecta y avisa donde se rompe) y sin milonga al final
 (rojo = error, amarillo = aviso);
 <i>Control diapos</i> va pasando las diapos durante la milonga.</li>
 </ol>
