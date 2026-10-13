@@ -21,11 +21,15 @@ SEGUNDOS = 30
 FRECUENCIA = 11025
 VENTANA, SALTO = 512, 128
 RANGOS = {"tango": (85, 170), "vals": (150, 300), "milonga": (70, 140)}
-VERSION = 2
+VERSION = 2                     # subirla si cambia el cálculo: se recalcula todo
 # Actividad de las cortinas (se guarda en la misma caché con tipo "actividad"). Límites sacados de los tercios
 # de las 145 cortinas de 5 estrellas de Edmundo (oct. 2026): Billie Eilish 3,8 … LISA «Rockstar» 22,3
 ACTIVIDAD = "actividad"
-CORTINA_TRANQUILA, CORTINA_ANIMADA = 8.3, 11.75                     # subirla si cambia el cálculo: se recalcula todo
+CORTINA_TRANQUILA, CORTINA_ANIMADA = 8.3, 11.75
+# Volumen (dB del centro del tema) y silencio al principio y al final (s): otros tipos en la misma caché
+VOLUMEN, SILENCIO_INICIO, SILENCIO_FIN = "volumen", "silencio_inicio", "silencio_fin"
+SEGUNDOS_BORDE = 12             # se miran 12 s del principio y del final
+UMBRAL_SILENCIO = -45           # dB: por debajo es silencio (el soplido de los 78 queda por debajo)
 
 _lock = threading.Lock()
 
@@ -46,13 +50,14 @@ def _clave(ruta):
     return relativa.replace("/", "\\").lower(), tamano
 
 
-def leer_trozo(ruta, segundos=SEGUNDOS, frecuencia=FRECUENCIA):
-    """Muestras mono float32 del centro del tema."""
+def leer_trozo(ruta, segundos=SEGUNDOS, frecuencia=FRECUENCIA, donde="centro"):
+    """Muestras mono float32 de `segundos` del tema: del "centro", del "principio" o del "final"."""
     import av
     with av.open(ruta) as contenedor:
         stream = contenedor.streams.audio[0]
         duracion = float(contenedor.duration or 0) / av.time_base
-        inicio = max(0.0, duracion / 2 - segundos / 2)
+        inicio = {"centro": duracion / 2 - segundos / 2, "principio": 0.0, "final": duracion - segundos}[donde]
+        inicio = max(0.0, inicio)
         if inicio > 1:
             contenedor.seek(int(inicio * av.time_base))
         remuestreo = av.AudioResampler(format="flt", layout="mono", rate=frecuencia)
@@ -101,8 +106,8 @@ def pulso(muestras, frecuencia=FRECUENCIA, minimo=50, maximo=240):
 
 
 def tipo(genero):
-    if genero == ACTIVIDAD:
-        return ACTIVIDAD
+    if genero in (ACTIVIDAD, VOLUMEN, SILENCIO_INICIO, SILENCIO_FIN):
+        return genero
     return "vals" if "vals" in (genero or "") else "milonga" if "milonga" in (genero or "") else "tango"
 
 
@@ -117,6 +122,37 @@ def calcular_actividad(ruta):
         return actividad(leer_trozo(ruta))
     except Exception:
         return None
+
+
+def nivel(muestras):
+    """Volumen medio (dB respecto al máximo digital): -10 fuerte, -20 flojo."""
+    if not len(muestras):
+        return None
+    return round(float(20 * np.log10(np.sqrt(np.mean(muestras.astype(np.float64) ** 2)) + 1e-9)), 1)
+
+
+def _segundos_de_silencio(muestras, frecuencia=FRECUENCIA, desde_el_final=False):
+    """Segundos seguidos por debajo de UMBRAL_SILENCIO al principio (o al final) de las muestras."""
+    paso = frecuencia // 20                                     # ventanas de 50 ms
+    n = len(muestras) // paso
+    if not n:
+        return 0.0
+    ventanas = muestras[:n * paso].astype(np.float64).reshape(n, paso)
+    niveles = 20 * np.log10(np.sqrt((ventanas ** 2).mean(axis=1)) + 1e-9)
+    sonido = np.where(niveles > UMBRAL_SILENCIO)[0]
+    if not len(sonido):
+        return round(n * 0.05, 2)
+    return round((n - 1 - sonido[-1]) * 0.05 if desde_el_final else sonido[0] * 0.05, 2)
+
+
+def silencios(ruta):
+    """(segundos de silencio al principio, al final)."""
+    try:
+        inicio = _segundos_de_silencio(leer_trozo(ruta, SEGUNDOS_BORDE, donde="principio"))
+        fin = _segundos_de_silencio(leer_trozo(ruta, SEGUNDOS_BORDE, donde="final"), desde_el_final=True)
+        return inicio, fin
+    except Exception:
+        return None, None
 
 
 def calcular(ruta, genero="tango"):
@@ -174,3 +210,40 @@ class CacheBpm:
             valor = calcular_actividad(ruta)
             self.guardar(ruta, ACTIVIDAD, valor)
         return valor
+
+    def medidas(self, ruta, genero="tango", es_cortina=False, calcular_si_falta=True):
+        """
+        Todo lo que hace falta de una canción, leyendo el audio solo si falta algo (y una vez para todo):
+        tandas: {"bpm", "volumen", "silencio_inicio", "silencio_fin"}; cortinas: {"actividad", "volumen"}.
+        """
+        tipos = [ACTIVIDAD, VOLUMEN] if es_cortina else [genero, VOLUMEN, SILENCIO_INICIO, SILENCIO_FIN]
+        nombres = ["actividad", "volumen"] if es_cortina else ["bpm", "volumen", "silencio_inicio", "silencio_fin"]
+        guardados = [self.guardado(ruta, t) for t in tipos]
+        valores = [v for _, v in guardados]
+        if calcular_si_falta and not all(e for e, _ in guardados):
+            centro = None
+            if not (guardados[0][0] and guardados[1][0]):
+                try:
+                    centro = leer_trozo(ruta)
+                except Exception:
+                    centro = np.zeros(0, dtype=np.float32)
+            for n, (tipo_, (encontrado, _)) in enumerate(zip(tipos, guardados)):
+                if encontrado:
+                    continue
+                if tipo_ == ACTIVIDAD:
+                    valor = actividad(centro)
+                elif tipo_ == VOLUMEN:
+                    valor = nivel(centro)
+                elif tipo_ == SILENCIO_INICIO:
+                    valor, valores[3] = silencios(ruta)
+                    self.guardar(ruta, SILENCIO_FIN, valores[3])
+                    guardados[3] = (True, valores[3])
+                elif tipo_ == SILENCIO_FIN:
+                    valor = silencios(ruta)[1]
+                else:
+                    bajo, alto = RANGOS[tipo(genero)]
+                    bruto = pulso(centro, minimo=bajo, maximo=alto - 0.25) if len(centro) else None
+                    valor = round(bruto) if bruto else None
+                self.guardar(ruta, tipo_, valor)
+                valores[n] = valor
+        return dict(zip(nombres, valores))

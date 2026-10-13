@@ -91,7 +91,7 @@ def leer_playlist(ruta_m3u):
             "ruta": ruta, "title": t.title or os.path.splitext(os.path.basename(ruta))[0],
             "artist": t.artist or "", "artist1": orquesta, "artist2": cantor,
             "year": t.year or "", "ano": fecha[:4], "genre": (t.genre or "").strip().lower(),
-            "composer": t.composer or "", "duration": float(t.duration or 0),
+            "composer": t.composer or "", "duration": float(t.duration or 0), "bitrate": float(t.bitrate or 0),
         })
     return pd.DataFrame(filas), faltan
 

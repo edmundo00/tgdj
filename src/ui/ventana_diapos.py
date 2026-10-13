@@ -165,9 +165,11 @@ class VentanaDiapos(QDialog):
         h.setSectionResizeMode(3, QHeaderView.Stretch)
         self.tabla_tandas.itemSelectionChanged.connect(self.mostrar_canciones)
 
-        self.tabla_canciones = QTableWidget(0, 6)
+        self.tabla_canciones = QTableWidget(0, 7)
         self.tabla_canciones.setHorizontalHeaderLabels(["Título", "Artista", "Año", "Compositor (en la diapo)", "Duración",
-                                                        "BPM"])
+                                                        "BPM", "Volumen"])
+        self.tabla_canciones.horizontalHeaderItem(6).setToolTip(
+            "Volumen medio del centro del tema; entre paréntesis, la diferencia con el resto de la tanda")
         self.tabla_canciones.verticalHeader().hide()
         self.tabla_canciones.setEditTriggers(QAbstractItemView.NoEditTriggers)
         h = self.tabla_canciones.horizontalHeader()
@@ -175,6 +177,7 @@ class VentanaDiapos(QDialog):
         h.setSectionResizeMode(2, QHeaderView.ResizeToContents)
         h.setSectionResizeMode(4, QHeaderView.ResizeToContents)
         h.setSectionResizeMode(5, QHeaderView.ResizeToContents)
+        h.setSectionResizeMode(6, QHeaderView.ResizeToContents)
 
         # --- Revisión: lo que conviene mirar antes de crear la presentación (clic = ir a la tanda)
         self.lista_revision = QListWidget()
@@ -502,29 +505,31 @@ class VentanaDiapos(QDialog):
                                                   f"Para verla en MusicBee, arrástrala a la lista de playlists.")
 
     def calcular_bpm(self):
-        """BPM de las canciones de las tandas: los guardados al momento, los nuevos (~0,2 s cada uno) con barra."""
+        """Medidas del audio de cada canción (BPM, volumen, silencios; en las cortinas actividad y volumen):
+        las guardadas al momento, las nuevas (~0,3 s cada canción, una sola vez) con barra."""
         try:
             cache = bpm.CacheBpm()
         except Exception:
             return
-        pendientes = []          # (fila, índice, columna): BPM en las tandas, actividad en las cortinas
+        pendientes = []          # (fila, índice) de las canciones a las que les falta alguna medida
         for fila, tanda in enumerate(self.tandas):
-            columna = "actividad" if tanda.es_cortina else "bpm"
-            tanda.canciones[columna] = None
             for idx, c in tanda.canciones.iterrows():
-                encontrado, valor = cache.guardado(c["ruta"], bpm.ACTIVIDAD if tanda.es_cortina else c["genre"])
-                if encontrado:
-                    tanda.canciones.at[idx, columna] = valor
-                else:
-                    pendientes.append((fila, idx, columna))
+                medidas = cache.medidas(c["ruta"], c["genre"], tanda.es_cortina, calcular_si_falta=False)
+                for nombre, valor in medidas.items():
+                    tanda.canciones.loc[idx, nombre] = valor
+                if any(cache.guardado(c["ruta"], t)[0] is False for t in
+                       ((bpm.ACTIVIDAD, bpm.VOLUMEN) if tanda.es_cortina
+                        else (c["genre"], bpm.VOLUMEN, bpm.SILENCIO_INICIO))):
+                    pendientes.append((fila, idx))
         if pendientes:
             self.progreso.setMaximum(len(pendientes))
-            self.progreso.setFormat("Calculando BPM… %v de %m")
+            self.progreso.setFormat("Midiendo el audio (BPM, volumen, silencios)… %v de %m")
             self.progreso.show()
-            for n, (fila, idx, columna) in enumerate(pendientes, 1):
-                c = self.tandas[fila].canciones.loc[idx]
-                valor = cache.actividad(c["ruta"]) if columna == "actividad" else cache.bpm(c["ruta"], c["genre"])
-                self.tandas[fila].canciones.at[idx, columna] = valor
+            for n, (fila, idx) in enumerate(pendientes, 1):
+                tanda = self.tandas[fila]
+                c = tanda.canciones.loc[idx]
+                for nombre, valor in cache.medidas(c["ruta"], c["genre"], tanda.es_cortina).items():
+                    tanda.canciones.loc[idx, nombre] = valor
                 self.progreso.setValue(n)
                 QApplication.processEvents()
             self.progreso.hide()
@@ -642,13 +647,23 @@ class VentanaDiapos(QDialog):
         filas = self.tabla_tandas.selectionModel().selectedRows()
         if not filas:
             return
-        df = self.tandas[filas[0].row()].canciones
+        tanda = self.tandas[filas[0].row()]
+        df = tanda.canciones
+        volumenes = [v for v in df.get("volumen", []) if v is not None and v == v]
+        medio = sorted(volumenes)[len(volumenes) // 2] if volumenes else None
         self.tabla_canciones.setRowCount(len(df))
         for i, (_, c) in enumerate(df.iterrows()):
+            volumen = c.get("volumen")
+            if volumen is None or volumen != volumen:
+                texto_volumen = ""
+            elif tanda.es_cortina or medio is None:
+                texto_volumen = f"{volumen:.0f} dB"
+            else:
+                texto_volumen = f"{volumen:.0f} dB ({volumen - medio:+.0f})"
             for col, v in enumerate([c["title"], c["artist"], c["ano"], compositor_para_diapo(c["composer"]),
                                      convertir_segundos(c["duration"]),
-                                     _texto_actividad(c.get("actividad")) if "actividad" in c
-                                     else _texto_bpm(c.get("bpm"))]):
+                                     _texto_actividad(c.get("actividad")) if tanda.es_cortina
+                                     else _texto_bpm(c.get("bpm")), texto_volumen]):
                 it = QTableWidgetItem(str(v))
                 it.setToolTip(f"{v}\n\n{c['ruta']}")
                 self.tabla_canciones.setItem(i, col, it)

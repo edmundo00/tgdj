@@ -73,6 +73,11 @@ Al cargar la playlist en *Crear diapos* (vale la `.mbp` de MusicBee directamente
 - **Curva de la noche** (abajo a la derecha): una barra por tanda, altura = energía (tabla de carácter afinada con
   el BPM), color = tango / vals / milonga, la hora de inicio y una raya donde empieza el final sin milonga.
   Clic en una barra = ir a la tanda.
+- **Volumen, silencios y calidad** (se miden con el BPM, una sola vez por canción; columna *Volumen* en las canciones
+  con la diferencia respecto a su tanda). **Nunca se toca el archivo** (nada de normalizar): es para saber dónde
+  ajustar la ganancia. Aviso si un tema se aparta más de 4 dB del resto de su tanda, si empieza con más de 3 s de
+  silencio o acaba con más de 8 (hueco en la pista); info si una tanda suena 6 dB más alta o baja que la anterior,
+  si las cortinas suenan de media mucho más fuerte que las tandas, o si un tema es un MP3 de menos de 192 kbps.
 - **Cortinas**: aviso si una cortina se repite en la noche, dura menos de 25 s o parece de tango (su artista es una
   orquesta); info si hay 3 del mismo artista o dos seguidas. Se mide cuánto «se mueve» cada cortina (columna BPM de
   las canciones: *tranquila / media / animada*, límites sacados de tus cortinas de 5 estrellas) y se aconseja si una

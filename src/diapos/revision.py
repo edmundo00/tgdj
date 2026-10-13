@@ -40,7 +40,12 @@ AUTO, LIBRE = "auto", "libre"
 # Si la orquesta no está en la tabla de carácter: las que exigen mucho a la pista
 DIFICILES = {"pugliese", "salgan", "piazzolla", "gobbi", "basso"}
 SEGUIDAS_IGUAL_ENERGIA = 3     # tantas tandas seguidas muy tranquilas o muy enérgicas -> consejo
-CORTINA_MINIMA = 25            # segundos: una cortina más corta no da tiempo a despejar la pista
+DIFERENCIA_VOLUMEN = 4         # dB: un tema que se aparta más del resto de su tanda -> aviso (ajustar la ganancia)
+SALTO_VOLUMEN_TANDAS = 6       # dB: una tanda mucho más alta o baja que la anterior -> consejo
+SILENCIO_INICIO_MAX = 3        # s de silencio al principio de un tema -> aviso
+SILENCIO_FIN_MAX = 8           # s de silencio al final (los discos de 78 suelen tener 2-6) -> aviso
+BITRATE_MINIMO = 192           # kbps: un MP3 por debajo -> consejo
+CORTINA_MINIMA = 25           # segundos: una cortina más corta no da tiempo a despejar la pista
 TOLERANCIA_BPM = 0.10          # un tema más de un 10 % más rápido o lento que el resto de su tanda -> aviso
 BAJADA_BPM = 0.05              # la tanda "baja" si el último tema es un 5 % más lento que el primero
 REFERENCIA_BPM = {"tango": 120, "vals": 205, "milonga": 100}   # para comparar la energía de tandas
@@ -128,11 +133,22 @@ def _dificultad(tanda, car):
     return 3 if set(normalizar_nombre(tanda.orquesta).split()) & DIFICILES else 1
 
 
+def medidas_de(tanda, columna):
+    """Una medida del audio de cada canción de la tanda (None si no se midió)."""
+    if columna not in tanda.canciones:
+        return [None] * len(tanda.canciones)
+    salida = []
+    for v in tanda.canciones[columna]:
+        try:
+            salida.append(float(v) if v is not None and v == v else None)
+        except (TypeError, ValueError):
+            salida.append(None)
+    return salida
+
+
 def bpms(tanda):
     """BPM de cada canción de la tanda (None si no se calculó)."""
-    if "bpm" not in tanda.canciones:
-        return [None] * len(tanda.canciones)
-    return [float(v) if v is not None and v == v and v else None for v in tanda.canciones["bpm"]]
+    return [v or None for v in medidas_de(tanda, "bpm")]
 
 
 def bpm_tanda(tanda):
@@ -457,6 +473,51 @@ def revisar(tandas, faltan=(), inicio=None, fin=None, carpeta=carpeta_portatil, 
             avisos.append(Aviso(INFO, f"{nombre(i)}: la tanda baja, cierra con el tema más lento "
                                       f"(«{t.canciones['title'].iloc[-1]}», {valores[-1]:.0f} BPM); "
                                       f"suele funcionar mejor que suba o se mantenga", i))
+
+    # --- Volumen, silencios y calidad (medidos del audio). Nunca se toca el archivo (nada de normalizar):
+    #     es para saber dónde ajustar la ganancia
+    medios = {}
+    for i, t in reales:
+        vols = medidas_de(t, "volumen")
+        conocidos = [v for v in vols if v is not None]
+        if conocidos:
+            medios[i] = sorted(conocidos)[len(conocidos) // 2]
+        if len(conocidos) >= 2:
+            k = max(range(len(vols)), key=lambda n: abs(vols[n] - medios[i]) if vols[n] is not None else -1)
+            diferencia = vols[k] - medios[i]
+            if abs(diferencia) > DIFERENCIA_VOLUMEN:
+                como = "más fuerte" if diferencia > 0 else "más flojo"
+                avisos.append(Aviso(AVISO, f"{nombre(i)}: «{t.canciones['title'].iloc[k]}» suena {abs(diferencia):.0f} dB "
+                                           f"{como} que el resto de la tanda: ajusta la ganancia", i))
+        titulos = list(t.canciones["title"])
+        for n, (sil_ini, sil_fin) in enumerate(zip(medidas_de(t, "silencio_inicio"), medidas_de(t, "silencio_fin"))):
+            if sil_ini is not None and sil_ini > SILENCIO_INICIO_MAX:
+                avisos.append(Aviso(AVISO, f"{nombre(i)}: «{titulos[n]}» empieza con {sil_ini:.0f} s de silencio: "
+                                           f"quedará un hueco en la pista", i))
+            if sil_fin is not None and sil_fin > SILENCIO_FIN_MAX:
+                ultimo = n == len(titulos) - 1
+                avisos.append(Aviso(INFO if ultimo else AVISO,
+                                    f"{nombre(i)}: «{titulos[n]}» acaba con {sil_fin:.0f} s de silencio"
+                                    + ("" if ultimo else ": quedará un hueco antes del tema siguiente"), i))
+    for (i, _), (j, _) in zip(reales, reales[1:]):
+        if i in medios and j in medios and abs(medios[j] - medios[i]) > SALTO_VOLUMEN_TANDAS:
+            como = "más alta" if medios[j] > medios[i] else "más baja"
+            avisos.append(Aviso(INFO, f"{nombre(j)}: suena {abs(medios[j] - medios[i]):.0f} dB {como} que la "
+                                      f"anterior: prepara la ganancia durante la cortina", j))
+    vol_cortinas = [v for t in tandas if t.es_cortina for v in medidas_de(t, "volumen") if v is not None]
+    if vol_cortinas and medios:
+        diferencia = sum(vol_cortinas) / len(vol_cortinas) - sum(medios.values()) / len(medios)
+        if diferencia > SALTO_VOLUMEN_TANDAS:
+            avisos.append(Aviso(INFO, f"Las cortinas suenan de media {diferencia:.0f} dB más fuerte que las tandas: "
+                                      f"bájalas con el fader"))
+    for i, t in enumerate(tandas):
+        if "bitrate" not in t.canciones:
+            continue
+        for (_, c), kbps in zip(t.canciones.iterrows(), medidas_de(t, "bitrate")):
+            extension = os.path.splitext(c["ruta"])[1].lower()
+            if kbps and extension in (".mp3", ".m4a", ".wma", ".aac", ".ogg") and kbps < BITRATE_MINIMO:
+                avisos.append(Aviso(INFO, f"{nombre(i)}: «{c['title']}» es un {extension[1:].upper()} de {kbps:.0f} kbps: "
+                                          f"si tienes una versión mejor (FLAC), sonará mejor", i))
 
     # --- Energía en cada bloque: de menos a más, y la milonga por encima del vals
     ener = {i: energia(t, car[i]) for i, t in reales}
