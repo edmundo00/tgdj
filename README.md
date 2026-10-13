@@ -92,6 +92,12 @@ Al cargar la playlist en *Crear diapos* (vale la `.mbp` de MusicBee directamente
     *Medir las no medidas* calcula cómo es cada cortina (~0,2 s cada una, se guarda).
   - *↶ Deshacer* y *Guardar playlist…*: un `.m3u` nuevo (por defecto `…_revisada.m3u` junto a la original, que
     nunca se sobrescribe). Si creas la presentación con cambios sin guardar, pregunta antes.
+- **Reserva…**: tres tandas preparadas por si hacen falta, cada una con su cortina delante, que no repiten nada de
+  la noche ni orquesta entre ellas (solo `MUSICA\Edmundo`, 5 estrellas, primero la época de oro):
+  *vals de cumpleaños* (festivo, de una orquesta que no tiene vals esa noche), *tango rítmico extra* (si sobra
+  tiempo o hay que despertar la pista) y *tango tranquilo para el final* (sin las orquestas de las últimas tandas).
+  La cortina: animada delante del vals y del rítmico, tranquila delante del final (de las ya medidas).
+  ▶ Escuchar, *Otra opción*, *Otra cortina* y *Guardar reserva…* (`…_reserva.m3u` junto a la playlist).
 - **La Cumparsita** al final va sola (aunque no lleve cortina delante): su propia diapo, sin compararla con nada.
   Dentro de una tanda o a mitad de la noche: aviso.
 

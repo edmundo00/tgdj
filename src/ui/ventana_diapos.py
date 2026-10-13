@@ -21,6 +21,7 @@ from src.diapos.revision import (
 )
 from src.ui.curva_noche import CurvaNoche
 from src.ui.dialogo_propuesta import DialogoPropuesta
+from src.ui.dialogo_reserva import DialogoReserva
 from src.utils.utils import convertir_segundos
 
 
@@ -140,7 +141,12 @@ class VentanaDiapos(QDialog):
         self.boton_guardar = QPushButton("Guardar playlist…")
         self.boton_guardar.setToolTip("Guarda la playlist con los cambios en un .m3u (no toca la original)")
         self.boton_guardar.clicked.connect(self.guardar_playlist)
-        for b in (self.boton_tema, self.boton_tanda, self.boton_cortina, self.boton_deshacer, self.boton_guardar):
+        self.boton_reserva = QPushButton("Reserva…")
+        self.boton_reserva.setToolTip("Tandas de reserva (vals de cumpleaños, tango extra, tango para el final) "
+                                      "que no repiten nada de la noche, en un .m3u aparte")
+        self.boton_reserva.clicked.connect(self.abrir_reserva)
+        for b in (self.boton_tema, self.boton_tanda, self.boton_cortina, self.boton_deshacer, self.boton_guardar,
+                  self.boton_reserva):
             b.setEnabled(False)
             fila.addWidget(b)
         lay.addLayout(fila)
@@ -253,7 +259,7 @@ class VentanaDiapos(QDialog):
         self.poner_etiqueta()
         self.rellenar_tandas()
         self.boton_crear.setEnabled(bool(self.tandas))
-        for b in (self.boton_tema, self.boton_tanda, self.boton_cortina, self.boton_guardar):
+        for b in (self.boton_tema, self.boton_tanda, self.boton_cortina, self.boton_guardar, self.boton_reserva):
             b.setEnabled(bool(self.tandas))
         self.boton_deshacer.setEnabled(False)
         if faltan:
@@ -452,6 +458,12 @@ class VentanaDiapos(QDialog):
             QApplication.processEvents()
         progreso.close()
         dialogo.rellenar()
+
+    def abrir_reserva(self):
+        cat = self._catalogo()
+        if cat is None:
+            return
+        DialogoReserva(self, cat, self.tandas, self.historial, self.playlist, self._reproductor()).exec_()
 
     def deshacer(self):
         if not self.cambios:

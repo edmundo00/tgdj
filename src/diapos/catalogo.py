@@ -23,6 +23,7 @@ from src.utils.formato_tags import formatear_fecha
 MAX_ANOS = 8                    # como en la revisión: misma época = menos de 8 años de diferencia
 DISTANCIA_ORQUESTA = 4          # no proponer una orquesta que ya suena a menos de 4 tandas
 TEMAS_POR_TANDA = 3
+ANO_EPOCA_DE_ORO = 1965         # para las reservas, primero lo grabado hasta entonces
 
 _cache = {"clave": None, "df": None}
 
@@ -145,6 +146,7 @@ class TandaPropuesta:
     energia: float = None
     motivo: str = ""
     dificultad: int = 1
+    caracter: str = ""
 
     @property
     def anos(self):
@@ -152,19 +154,12 @@ class TandaPropuesta:
         return "" if not a else (str(a[0]) if a[0] == a[-1] else f"{a[0]}–{a[-1]}")
 
 
-def proponer_tandas(cat, tandas, fila, solo_5=True, maximo=25, archivo_caracter=None):
-    """Tandas de 3 temas (misma orquesta, cantor, género y época) para sustituir la tanda `fila`.
-    No propone orquestas que ya suenan a menos de DISTANCIA_ORQUESTA tandas."""
-    tanda = tandas[fila]
-    genero = _tipo(tanda.genero)
-    reales = [i for i, t in enumerate(tandas) if not t.es_cortina and not t.es_cumparsita]
-    pos = reales.index(fila) if fila in reales else 0
-    cerca = {normalizar_nombre(tandas[i].orquesta) for i in reales[max(0, pos - DISTANCIA_ORQUESTA + 1):
-                                                                   pos + DISTANCIA_ORQUESTA] if i != fila}
-    car_actual = caracter.de_tanda(tanda, archivo_caracter)
+def _tandas_posibles(cat, tandas, genero, excluir_orquestas=(), solo_5=True, archivo_caracter=None):
+    """Todas las tandas de 3 temas (misma orquesta, cantor, género y época) que se pueden formar con lo que no
+    suena esa noche. Devuelve (propuestas, {orquesta normalizada: cuántos temas tiene})."""
     libres = _libres(cat, tandas)
     if libres.empty:
-        return []
+        return [], {}
     c = libres[libres["genre"].map(_tipo) == genero]
     c = c[c["genre"].map(es_tanda)]
     if solo_5:
@@ -174,7 +169,7 @@ def proponer_tandas(cat, tandas, fila, solo_5=True, maximo=25, archivo_caracter=
     c = c[c["_ano"].notna()]
     c["_orq"] = c["artist1"].map(normalizar_nombre)
     c["_cantor"] = c["artist2"].map(_personas)
-    c = c[~c["_orq"].isin(cerca) & (c["_orq"] != "")]
+    c = c[~c["_orq"].isin(set(excluir_orquestas)) & (c["_orq"] != "")]
     propuestas = []
     for (_, _), g in c.groupby(["_orq", "_cantor"]):
         g = g.sort_values("_ano").drop_duplicates(subset=["title"])
@@ -194,12 +189,25 @@ def proponer_tandas(cat, tandas, fila, solo_5=True, maximo=25, archivo_caracter=
         propuestas.append(TandaPropuesta(
             primera["artist1"], primera["artist2"] or "instrumental", genero,
             trio.drop(columns=["_ano", "_orq", "_cantor"]).reset_index(drop=True),
-            car.energia if car else None, car.texto if car else "", car.dificultad if car else 1))
+            car.energia if car else None, car.texto if car else "", car.dificultad if car else 1,
+            car.caracter if car else ""))
+    return propuestas, c.groupby("_orq").size().to_dict()      # cuántos temas tiene de cada orquesta
+
+
+def proponer_tandas(cat, tandas, fila, solo_5=True, maximo=25, archivo_caracter=None):
+    """Tandas de 3 temas (misma orquesta, cantor, género y época) para sustituir la tanda `fila`.
+    No propone orquestas que ya suenan a menos de DISTANCIA_ORQUESTA tandas."""
+    tanda = tandas[fila]
+    genero = _tipo(tanda.genero)
+    reales = [i for i, t in enumerate(tandas) if not t.es_cortina and not t.es_cumparsita]
+    pos = reales.index(fila) if fila in reales else 0
+    cerca = {normalizar_nombre(tandas[i].orquesta) for i in reales[max(0, pos - DISTANCIA_ORQUESTA + 1):
+                                                                   pos + DISTANCIA_ORQUESTA] if i != fila}
+    car_actual = caracter.de_tanda(tanda, archivo_caracter)
+    propuestas, favoritas = _tandas_posibles(cat, tandas, genero, cerca, solo_5, archivo_caracter)
     ref = car_actual.energia if car_actual else 3
     primer_tercio = pos < len(reales) / 3
-
     en_la_noche = {normalizar_nombre(tandas[i].orquesta) for i in reales}
-    favoritas = c.groupby("_orq").size().to_dict()          # cuántos temas tiene de esa orquesta
 
     def orden(p):
         dificil_pronto = primer_tercio and p.dificultad >= 3
@@ -219,5 +227,84 @@ def proponer_cortinas(cat, tandas, fila, historial=(), solo_5=True):
         c = c[c["estrellas"] >= 5]
     ya = set().union(*(m.claves for m in historial)) if historial else set()
     c = c[~c["ruta"].map(historial_mod.clave).isin(ya)]
-    c = c[c["ruta"].map(os.path.exists)]
-    return c.sort_values(["artist", "title"]).reset_index(drop=True)
+    c = c[c["ruta"].map(os.path.exists)].copy()
+    # al final las dudosas: sin artista o con "tango", "vals" o "milonga" en el título (pueden confundir a la pista)
+    c["_dudosa"] = (c["artist"].str.strip() == "") | c["title"].str.lower().str.contains(r"tango|vals|milonga")
+    return c.sort_values(["_dudosa", "artist", "title"]).drop(columns="_dudosa").reset_index(drop=True)
+
+
+# Tandas de reserva: (clave, para qué, género). Se eligen sin repetir orquesta entre ellas.
+RESERVAS = [
+    ("cumple", "Vals de cumpleaños", "vals"),
+    ("ritmica", "Tango rítmico extra (si sobra tiempo o hay que despertar la pista)", "tango"),
+    ("final", "Tango tranquilo para el final", "tango"),
+]
+
+
+def opciones_reserva(cat, tandas, clave, solo_5=True, archivo_caracter=None, maximo=15):
+    """Opciones para una reserva (la mejor primero). No repiten nada de la noche; el vals no es de una orquesta
+    que ya tiene vals esa noche; los tangos no son de las orquestas de las últimas tandas."""
+    genero = next(g for c, _, g in RESERVAS if c == clave)
+    reales = [t for t in tandas if not t.es_cortina and not t.es_cumparsita]
+    if clave == "cumple":
+        excluir = {normalizar_nombre(t.orquesta) for t in reales if _tipo(t.genero) == "vals"}
+    else:
+        excluir = {normalizar_nombre(t.orquesta) for t in reales[-DISTANCIA_ORQUESTA:]}
+    propuestas, favoritas = _tandas_posibles(cat, tandas, genero, excluir, solo_5, archivo_caracter)
+    en_la_noche = {normalizar_nombre(t.orquesta) for t in reales}
+
+    def orden(p):
+        e = p.energia if p.energia is not None else 3
+        orq = normalizar_nombre(p.orquesta)
+        anos = [a for a in map(_ano, p.canciones["ano"]) if a]
+        moderna = bool(anos) and min(anos) > ANO_EPOCA_DE_ORO      # grabaciones actuales, al final
+        if clave == "cumple":                       # festivo: mucha energía y fácil
+            meta = (-e, p.dificultad)
+        elif clave == "ritmica":
+            meta = (p.caracter != "ritmico", -e, p.dificultad)
+        else:                                       # final: melódico o lírico, tranquilo
+            meta = (p.caracter not in ("melodico", "lirico"), abs(e - 2.5))
+        return (moderna,) + meta + (orq in en_la_noche, -favoritas.get(orq, 0), p.orquesta)
+    return sorted(propuestas, key=orden)[:maximo]
+
+
+def reserva(cat, tandas, historial=(), solo_5=True, archivo_caracter=None, actividad=None):
+    """
+    Para cada reserva, (opciones, índice de la elegida) sin repetir orquesta entre ellas; las cortinas posibles
+    (de artistas distintos) y cuál va delante de cada reserva: animada antes del vals de cumpleaños y del tango
+    rítmico, tranquila antes del tango del final (según la actividad ya medida; las no medidas, en su orden).
+    actividad(ruta) -> valor o None (por defecto, la caché de bpm sin calcular nada nuevo).
+    """
+    elegidas, usadas = {}, set()
+    for clave, _, _ in RESERVAS:
+        opciones = opciones_reserva(cat, tandas, clave, solo_5, archivo_caracter)
+        indice = next((n for n, p in enumerate(opciones) if normalizar_nombre(p.orquesta) not in usadas), None)
+        if indice is not None:
+            usadas.add(normalizar_nombre(opciones[indice].orquesta))
+        elegidas[clave] = (opciones, indice)
+    cortinas = proponer_cortinas(cat, tandas, None, historial, solo_5)
+    cortinas = cortinas.drop_duplicates(subset=["artist"]).reset_index(drop=True)
+    if actividad is None:
+        from src.diapos import bpm
+        cache = bpm.CacheBpm()
+        actividad = lambda ruta: cache.guardado(ruta, bpm.ACTIVIDAD)[1]       # noqa: E731
+    from src.diapos.bpm import CORTINA_TRANQUILA, CORTINA_ANIMADA
+    medida = [actividad(r) for r in cortinas["ruta"]]
+    cortina_de, ocupadas = {}, set()
+    for clave, _, _ in RESERVAS:
+        libres = [n for n in range(len(cortinas)) if n not in ocupadas]
+        if not libres:
+            break
+        animada = clave != "final"
+        # la que mejor encaja de las medidas (nunca una tranquila antes de algo animado, ni al revés);
+        # si no hay, una sin medir; y si tampoco, cualquiera
+        encajan = [n for n in libres if medida[n] is not None
+                   and (medida[n] >= CORTINA_TRANQUILA if animada else medida[n] <= CORTINA_ANIMADA)]
+        sin_medir = [n for n in libres if medida[n] is None]
+        if encajan:
+            n = max(encajan, key=lambda k: medida[k] if animada else -medida[k])
+        else:
+            n = (sin_medir or libres)[0]
+        cortina_de[clave] = n
+        ocupadas.add(n)
+    return elegidas, cortinas, cortina_de

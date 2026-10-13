@@ -10,7 +10,7 @@ from tests.utils.caracter_test import tabla_temporal
 from tests.utils.revision_test import Base
 
 
-class CatalogoTest(Base):
+class CatalogoBase(Base):
     """Las propuestas salen del catálogo (aquí uno inventado con archivos de verdad en una carpeta temporal)."""
 
     def setUp(self):
@@ -39,6 +39,9 @@ class CatalogoTest(Base):
                  + self.tanda("Enrique Rodríguez / Armando Moreno", anos=(1942, 1943, 1943)))
         return agrupar_tandas(pd.DataFrame(filas))
 
+
+
+class CatalogoTest(CatalogoBase):
     def test_proponer_tema(self):
         self.en_catalogo("Francisco Canaro / Ernesto Famá", "Qué importa", 1939)
         self.en_catalogo("Francisco Canaro / Roberto Maida", "Ciego", 1935)
@@ -75,6 +78,33 @@ class CatalogoTest(Base):
         self.assertIn("School Day", list(p["title"]))
         self.assertNotIn("Despechá", list(p["title"]))
         self.assertNotIn(nueva["ruta"], [c for t in tandas for c in t.canciones["ruta"]])
+
+
+class ReservaTest(CatalogoBase):
+    def test_reserva(self):
+        for orquesta, genero, ano in (("Juan D'Arienzo", "tango vals", 1940),            # ya tiene vals esa noche
+                                      ("Ricardo Tanturi / Alberto Castillo", "tango vals", 1941),
+                                      ("Sexteto Cristal", "tango vals", 2018),           # moderna: después
+                                      ("Juan D'Arienzo", "tango", 1937),
+                                      ("Miguel Caló", "tango", 1943),
+                                      ("Lucio Demare", "tango", 1943)):
+            for n in range(3):
+                self.en_catalogo(orquesta, f"{orquesta} {genero} {n}", ano + n % 2, genero)
+        animada = self.en_catalogo("Rosalía", "Despechá", 2022, "cortina entera")
+        tranquila = self.en_catalogo("Billie Eilish", "What Was I Made For?", 2023, "cortina entera")
+        self.en_catalogo("", "Tango fake news", 2020, "cortina entera")                  # dudosa: al final
+        medidas = {animada["ruta"]: 21.0, tranquila["ruta"]: 3.8}
+        elegidas, cortinas, cortina_de = catalogo.reserva(self.cat(), self.noche(), archivo_caracter=self.tabla,
+                                                          actividad=medidas.get)
+        elegida = {k: ops[i].orquesta for k, (ops, i) in elegidas.items()}
+        self.assertEqual(elegida["cumple"], "Ricardo Tanturi")
+        # D'Arienzo suena en las últimas tandas de la noche: no se propone para alargarla
+        self.assertNotIn("Juan D'Arienzo", (elegida["ritmica"], elegida["final"]))
+        self.assertEqual(elegida["final"], "Lucio Demare")              # lírico, energía 2
+        self.assertEqual(len(set(elegida.values())), 3)                 # sin repetir orquesta
+        self.assertEqual(cortinas["title"].iloc[cortina_de["cumple"]], "Despechá")
+        self.assertEqual(cortinas["title"].iloc[cortina_de["final"]], "What Was I Made For?")
+        self.assertEqual(cortinas["title"].iloc[-1], "Tango fake news")
 
 
 if __name__ == "__main__":
