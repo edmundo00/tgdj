@@ -18,3 +18,4 @@ segno       # código QR de la presentación web (lleva a la lista de la noche)
 
 # solo para crear el .exe (crear_exe.bat)
 pyinstaller
+sounddevice # Pinchar: salida de sonido (motor en proceso aparte)
