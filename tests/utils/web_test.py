@@ -73,6 +73,9 @@ class ListaYQrTest(Base):
         self.assertIn('id="qr"', html)
         self.assertIn("<svg", html)
         self.assertNotIn("__QR__", html)
+        self.assertIn("mírala en casa", html)                   # en el sótano no hay internet
+        for cosa in ('id="listo"', 'id="b-ensayo"', 'id="tinte"', "getBattery", "PLANTILLAS", "data-punto"):
+            self.assertIn(cosa, html)
 
 
 def mixxx_falso(ruta, canciones):
@@ -104,6 +107,60 @@ class MixxxTest(unittest.TestCase):
         self.assertEqual(r, {"texto": "Juan D'Arienzo - Dos", "ruta": r"D:\Dropbox\TDJ\MUSICA\Edmundo\dos.flac"})
         self.assertEqual(proyectar.que_suena(os.path.join(dir_, "a"), os.path.join(dir_, "b")),
                          {"texto": "", "ruta": ""})
+
+    def test_historial_de_la_noche(self):
+        dir_ = tempfile.mkdtemp()
+        db = os.path.join(dir_, "mixxxdb.sqlite")
+        # Mixxx guarda en UTC: en Barcelona en octubre (UTC+2) las 21:05 son las 19:05
+        mixxx_falso(db, [("A", "Antes", "D:/m/antes.flac", "2026-10-13 15:00:00"),
+                         ("A", "Uno", "D:/m/uno.flac", "2026-10-13 19:05:00"),
+                         ("A", "Uno", "D:/m/uno.flac", "2026-10-13 19:05:30"),       # cargado dos veces
+                         ("A", "Dos", "D:/m/dos.flac", "2026-10-13 19:08:00"),
+                         ("A", "Uno", "D:/m/uno.flac", "2026-10-13 22:10:00")])      # después de medianoche
+        utc = datetime.timezone.utc
+        desde = datetime.datetime(2026, 10, 13, 18, 0, tzinfo=utc)
+        hasta = datetime.datetime(2026, 10, 14, 0, 0, tzinfo=utc)
+        self.assertEqual(proyectar.historial_mixxx(desde, hasta, db),
+                         [r"D:\m\uno.flac", r"D:\m\dos.flac", r"D:\m\uno.flac"])
+
+
+class PublicarTest(unittest.TestCase):
+    def test_publicar_en_un_repositorio(self):
+        import subprocess
+        from src.diapos import publicar
+        dir_ = tempfile.mkdtemp()
+        quien = dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t", GIT_COMMITTER_NAME="t",
+                     GIT_COMMITTER_EMAIL="t@t")
+        remoto = os.path.join(dir_, "remoto.git")
+        subprocess.run(["git", "init", "--bare", "-q", "-b", "main", remoto], check=True)
+        semilla = os.path.join(dir_, "semilla")
+        subprocess.run(["git", "clone", "-q", remoto, semilla], check=True, capture_output=True)
+        with open(os.path.join(semilla, "README.md"), "w") as f:
+            f.write("x")
+        for args in (["add", "."], ["commit", "-qm", "x"], ["push", "-q", "origin", "HEAD:main"]):
+            subprocess.run(["git", *args], cwd=semilla, check=True, env=quien)
+        noche = os.path.join(dir_, "261013-milonga-mia.html")
+        lista = os.path.join(dir_, "261013-milonga-mia-lista.html")
+        for ruta, titulo in ((noche, "Milonga Mia · 13 de octubre"), (lista, "lista")):
+            with open(ruta, "w", encoding="utf-8") as f:
+                f.write(f"<title>{titulo}</title>")
+        copia = os.path.join(dir_, "copia")
+        antes = dict(os.environ)
+        os.environ.update(quien)
+        try:
+            url = publicar.publicar([noche, lista], "prueba", carpeta=copia, remoto=remoto)
+            publicar.publicar([noche], "otra vez, sin cambios", carpeta=copia, remoto=remoto)   # no falla
+        finally:
+            os.environ.clear()
+            os.environ.update(antes)
+        self.assertTrue(url.endswith("/261013-milonga-mia.html"))
+        indice = open(os.path.join(copia, "index.html"), encoding="utf-8").read()
+        self.assertIn("Milonga Mia · 13 de octubre", indice)
+        self.assertIn('href="261013-milonga-mia-lista.html"', indice)
+        subidos = subprocess.run(["git", "ls-tree", "--name-only", "main"], cwd=remoto, capture_output=True,
+                                 text=True).stdout.split()
+        self.assertEqual(sorted(subidos), ["261013-milonga-mia-lista.html", "261013-milonga-mia.html", "README.md",
+                                           "index.html"])
 
 
 if __name__ == "__main__":

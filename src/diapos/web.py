@@ -337,7 +337,7 @@ def crear_web(tandas, datos, destino, reconocer=True, progreso=None, url_lista=N
     """
     lista, imagenes = diapos(tandas, datos)
     try:
-        qr = (f'<div id="qr" title="{url_lista}">{qr_svg(url_lista)}<span>La lista de esta noche</span></div>'
+        qr = (f'<div id="qr" title="{url_lista}">{qr_svg(url_lista)}<span>La música de hoy</span><span>escanéala y mírala en casa</span></div>'
               if url_lista else "")
     except Exception:
         qr = ""
@@ -375,6 +375,13 @@ PLANTILLA = r"""<!doctype html>
     font-family: Georgia, "Palatino Linotype", "Book Antiqua", serif; }
   #fondo { position:fixed; inset:-2vw; background:#0d0907 url("__FONDO__") center/cover no-repeat;
     filter:brightness(.28) blur(6px) saturate(.8); }
+  #fondo { transition:filter 1.5s ease; }
+  #tinte { position:fixed; inset:0; pointer-events:none; opacity:0; transition:opacity 1.5s ease; }
+  body[data-genero="tango"] #tinte { opacity:1; background:radial-gradient(ellipse at 22% 50%, rgba(217,164,65,.14), transparent 65%); }
+  body[data-genero="vals"] #tinte { opacity:1; background:radial-gradient(ellipse at 22% 50%, rgba(111,191,138,.2), transparent 65%); }
+  body[data-genero="milonga"] #tinte { opacity:1; background:radial-gradient(ellipse at 22% 50%, rgba(224,120,74,.26), transparent 72%); }
+  body[data-genero="milonga"] #fondo { filter:brightness(.36) blur(6px) saturate(1.15); }
+  body[data-genero="vals"] #fondo { filter:brightness(.3) blur(6px) saturate(.9) hue-rotate(-12deg); }
   #velo { position:fixed; inset:0; background:linear-gradient(90deg, rgba(13,9,7,.35), rgba(13,9,7,.75) 45%, rgba(13,9,7,.85)); }
   #diapo { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; padding:4vh 5vw 120px;
     box-sizing:border-box; transition:opacity .35s ease; }
@@ -428,6 +435,7 @@ PLANTILLA = r"""<!doctype html>
   #qr { display:none; }
   body[data-tipo="portada"] #qr, body[data-tipo="cortina"] #qr { display:flex; }   /* no tapar a los músicos */
   #qr span { font:600 max(10px, 1.3vh) system-ui, sans-serif; color:#000; }
+  #qr span + span { font-weight:400; font-size:max(9px, 1.1vh); }
   #hora { position:fixed; right:1.6vw; top:1.2vh; font:500 max(14px, 1.5vw) system-ui, sans-serif;
     color:rgba(246,239,228,.45); letter-spacing:.05em; }
   .vals li.ahora { border-left-color:var(--vals); } .milonga li.ahora { border-left-color:var(--milonga); }
@@ -449,8 +457,11 @@ PLANTILLA = r"""<!doctype html>
   .proxima .sub { font-size:1.8vw; font-style:italic; color:var(--suave); }
   #firma { position:fixed; left:2vw; bottom:1.6vh; font:400 1.1vw system-ui, sans-serif; color:rgba(246,239,228,.45); }
   #estado { position:fixed; right:1.5vw; bottom:1.6vh; font:400 1vw system-ui, sans-serif; color:rgba(246,239,228,.45); }
-  #estado b { display:inline-block; width:.9vw; height:.9vw; border-radius:50%; background:#777; margin-right:.5vw; vertical-align:-.1vw; }
-  #estado.vivo b { background:#46d36b; box-shadow:0 0 1vw #46d36b; }
+  #estado b { display:inline-block; width:max(11px, .9vw); height:max(11px, .9vw); border-radius:50%; background:#777;
+    margin-right:.5vw; vertical-align:-.1vw; }
+  #estado[data-punto="verde"] b { background:#46d36b; box-shadow:0 0 1vw #46d36b; }      /* sabe dónde está */
+  #estado[data-punto="amarillo"] b { background:#e0b341; }                              /* va por tiempo */
+  #estado[data-punto="rojo"] b { background:#e05a5a; box-shadow:0 0 1vw #e05a5a; }      /* sin micrófono */
   body.quieto { cursor:none; }
   #reproductor { position:fixed; left:16px; right:16px; bottom:88px; display:flex; align-items:center;
     gap:12px; font:600 max(15px, 1.4vw) system-ui, sans-serif; color:var(--suave); transition:opacity .4s; }
@@ -489,6 +500,25 @@ PLANTILLA = r"""<!doctype html>
     background:rgba(13,9,7,.95); border:1px solid var(--tango); font:500 18px system-ui, sans-serif; display:none;
     max-width:88vw; line-height:1.4; }
   #aviso.visible { display:block; }
+  #aviso.grande { font-size:max(24px, 2.6vw); padding:20px 30px; background:#3a0f0c; border:2px solid #e05a5a; }
+  #listo { position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:12;
+    background:rgba(8,5,4,.94); font:400 max(16px, 1.6vw) system-ui, sans-serif; color:var(--texto); }
+  #listo.visible { display:flex; }
+  #listo > div { width:min(760px, 92vw); }
+  #listo h3 { font:700 max(26px, 2.8vw) Georgia, serif; color:var(--tango); margin:0 0 2vh; }
+  #listo ul { list-style:none; margin:0; padding:0; }
+  #listo li { display:flex; align-items:baseline; gap:.6em; flex-wrap:wrap; margin:0 0 1.4vh; padding:0; border:0; color:var(--texto); }
+  #listo li b { flex:0 0 1.4em; font-size:1.3em; text-align:center; }
+  #listo li.si b { color:#46d36b; } #listo li.no b { color:#e05a5a; } #listo li.medio b { color:#e0b341; }
+  #listo li small { flex-basis:100%; margin-left:2.4em; color:var(--suave); font-size:.85em; }
+  #listo .cerrar { margin-top:3vh; text-align:center; color:var(--tango); font-weight:600; }
+  #cinta { position:fixed; left:50%; top:1.2vh; transform:translateX(-50%); z-index:9; display:none; gap:12px; align-items:center;
+    padding:6px 8px 6px 18px; border-radius:99px; background:#7d5bb5; font:700 max(15px, 1.4vw) system-ui, sans-serif; }
+  body.ensayo #cinta { display:flex; }
+  #cinta button { font:600 16px system-ui, sans-serif; height:44px; padding:0 16px; border-radius:99px; border:0;
+    background:#120c08; color:var(--texto); cursor:pointer; }
+  #pedir-opciones { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
+  #pedir #pedir-opciones button { font-size:16px; height:48px; min-width:0; padding:0 14px; }
   .mensaje { margin:3vh auto 0; max-width:70vw; padding:1.6vh 2vw; border-radius:1.2vw; background:rgba(217,164,65,.15);
     border:1px solid rgba(217,164,65,.4); font:500 max(16px, 2vw) system-ui, sans-serif; color:var(--texto); }
   .chip.ultima { background:#e05a5a; color:#fff; margin-left:.8vw; }
@@ -517,12 +547,12 @@ PLANTILLA = r"""<!doctype html>
   }
 </style></head>
 <body>
-<div id="fondo"></div><div id="velo"></div>
+<div id="fondo"></div><div id="velo"></div><div id="tinte"></div>
 <div id="diapo"></div>
 <div id="firma">© __FIRMA__</div>
 <div id="hora"></div>
 __QR__
-<div id="estado" title="Verde: sigue al ordenador en vivo. Si no, por tiempo: toca al empezar cada tanda"><b></b><span>por tiempo · toca al empezar cada tanda</span></div>
+<div id="estado" title="Verde: sabe lo que suena (en vivo o por el micrófono). Amarillo: va por tiempo. Rojo: el micrófono no funciona"><b></b><span>por tiempo · toca al empezar cada tanda</span></div>
 <div id="reproductor" class="apagado">
   <span id="t-lleva">0:00</span>
   <div id="pista" title="Toca o arrastra para poner el tema en su punto"><div id="relleno"></div></div>
@@ -541,18 +571,24 @@ __QR__
   <button id="b-bloqueo">🔓 Bloquear toques<small>tocar la pantalla no pasa diapos</small></button>
   <button id="b-simple">Simple<small>una diapo por tanda</small></button>
   <button id="b-micro">🎤 Reconocer canción<small>escucha y corrige solo; si no, sigue el reloj</small></button>
+  <button id="b-listo">✓ Comprobar<small>¿micrófono, sin internet, batería…?</small></button>
+  <button id="b-ensayo">🎬 Ensayo rápido<small>toda la noche en ~3 min, para repasarla</small></button>
   <button id="b-ayuda">? Ayuda<small>cómo funciona</small></button>
   <button id="b-completa">⛶ Pantalla completa</button>
   <button id="b-cerrar">✕ Cerrar</button>
 </div></div>
 <div id="pedir"><div>
   <div id="pedir-texto"></div>
+  <div id="pedir-opciones"></div>
   <input id="pedir-valor" type="text" autocomplete="off">
   <div class="fila"><button id="pedir-no">Cancelar</button><button id="pedir-si">Aceptar</button></div>
 </div></div>
 <div id="cumple"><div class="que">¡Feliz cumpleaños!</div><div class="quien" id="cumple-quien"></div>
   <div class="baila">Un vals para celebrarlo</div></div>
 <div id="aviso"></div>
+<div id="listo"><div><h3>¿Todo listo?</h3><ul id="listo-cosas"></ul>
+  <p class="cerrar" id="listo-cerrar">Toca una vez para activar lo que falta (pantalla completa, micrófono…)</p></div></div>
+<div id="cinta">🎬 ENSAYO ×60 <button id="b-fin-ensayo">■ Terminar</button></div>
 <div id="tandas"></div>
 <div id="ayuda"><div>
   <h3>Cómo funciona</h3>
@@ -562,7 +598,8 @@ __QR__
     <li>Mejor: cuando empieza el <b>primer tema</b> de la tanda, <b>toca la pantalla una vez</b> (en la parte derecha). Si la cortina va a durar más, ⏸ Pausa.</li>
     <li>Los temas avanzan <b>solos</b> según su duración (la barrita dorada de abajo) y al acabar la tanda vuelve a la cortina.</li>
   </ol>
-  <p><b>Botones</b> (abajo, grandes; se apagan solos y vuelven al tocar): <b>◀</b> anterior · <b>⏸ Pausa</b> / <b>▶ Seguir</b> (para el reloj: si hablan, cortina larga…) · <b>▶</b> siguiente · <b>≡ Tandas</b> ir directo a una tanda si te pierdes · <b>⋯ Más</b>: 🎂 cumpleaños con confeti · 💬 mensaje en las cortinas · 🔓 bloquear toques (tocar la pantalla sin querer no pasa nada) · Simple (una diapo por tanda) · 🎤 reconocer canción (la tablet escucha y corrige sola si oye otra cosa o va desfasada; el reloj sigue mandando, y si no hay micrófono no pasa nada) · ? ayuda · ⛶ pantalla completa.</p>
+  <p><b>Botones</b> (abajo, grandes; se apagan solos y vuelven al tocar): <b>◀</b> anterior · <b>⏸ Pausa</b> / <b>▶ Seguir</b> (para el reloj: si hablan, cortina larga…) · <b>▶</b> siguiente · <b>≡ Tandas</b> ir directo a una tanda si te pierdes · <b>⋯ Más</b>: 🎂 cumpleaños con confeti · 💬 mensaje en las cortinas · 🔓 bloquear toques (tocar la pantalla sin querer no pasa nada) · Simple (una diapo por tanda) · 🎤 reconocer canción (la tablet escucha y corrige sola si oye otra cosa o va desfasada; el reloj sigue mandando, y si no hay micrófono no pasa nada) · ✓ comprobar (micrófono, sin internet, batería…) · 🎬 ensayo rápido (la noche entera en unos 3 minutos, para repasarla en casa) · ? ayuda · ⛶ pantalla completa.</p>
+  <p><b>Punto de abajo a la derecha:</b> 🟢 sabe lo que suena · 🟡 va por tiempo · 🔴 el micrófono no funciona (sigue por tiempo).</p>
   <p><b>Reproductor</b> (encima de los botones): lo que lleva el tema, lo que queda y lo que dura. Si no cuadra con Mixxx, <b>toca o arrastra la barra</b> hasta el punto en que va el tema (por ejemplo, si en Mixxx va por 1:30, ponla en 1:30).</p>
   <p>En la cortina se ve cuándo empezará sola la tanda. Si se cierra o se recarga, al abrirla vuelve a la misma diapo.</p>
   <p>Tocar la pantalla: a la <b>derecha</b> avanza, en el <b>tercio izquierdo</b> retrocede. En un ordenador: flechas, espacio, F = pantalla completa.</p>
@@ -670,7 +707,11 @@ function duracionDe(n) {
   return 0;
 }
 
-const ahora = () => (pausado ? enPausa : Date.now());
+// 🎬 Ensayo rápido: el reloj corre VELOCIDAD veces más deprisa (la noche entera en unos minutos)
+const VELOCIDAD = 60;
+let ensayo = false, baseReal = 0, baseEnsayo = 0;
+const reloj = () => ensayo ? baseEnsayo + (Date.now() - baseReal) * VELOCIDAD : Date.now();
+const ahora = () => (pausado ? enPausa : reloj());
 const lleva = () => Math.max(0, Math.min(largo, ahora() - inicio));      // ms que lleva sonando
 
 // Cada cuarto de segundo: pasar a la siguiente si toca (poniéndose al día si el navegador se durmió)
@@ -678,7 +719,7 @@ function tic() {
   for (let vueltas = 0; vueltas < 60 && largo && !pausado; vueltas++) {
     const hueco = DIAPOS[destino].tipo === "tema" ? PAUSA * 1000 : 0;
     const fin = inicio + largo + hueco;              // cuándo empieza lo siguiente
-    if (Date.now() < fin) break;
+    if (reloj() < fin) break;
     ir(paso(destino, 1), fin);
   }
   pintarReloj();
@@ -715,8 +756,8 @@ function buscarEnBarra(e) {
 
 // ⏸ / ▶: para el reloj y lo sigue donde se quedó
 function pausa() {
-  if (pausado) { inicio += Date.now() - enPausa; pausado = false; }
-  else { enPausa = Date.now(); pausado = true; }
+  if (pausado) { inicio += reloj() - enPausa; pausado = false; }
+  else { enPausa = reloj(); pausado = true; }
   document.getElementById("b-pausa").textContent = pausado ? "▶ Seguir" : "⏸ Pausa";
   document.body.classList.toggle("pausado", pausado);
   pintarReloj();
@@ -728,20 +769,27 @@ function ir(n, desde) {
   if (simple && DIAPOS[n].tipo === "tema" && DIAPOS[n].actual > 0) n -= DIAPOS[n].actual;   // la de la tanda
   if (n === destino && document.getElementById("diapo").innerHTML) return;
   destino = n;
-  guarda("diapo", n);
+  if (!ensayo) guarda("diapo", n);
   inicio = desde !== undefined ? desde : ahora();
   largo = duracionDe(n);
   pintarReloj();
   const caja = document.getElementById("diapo");
   caja.classList.add("oculta");
   setTimeout(() => { if (destino !== n) return;
-                     actual = n; document.body.dataset.tipo = DIAPOS[n].tipo; caja.innerHTML = pintar(DIAPOS[n]); caja.classList.remove("oculta");
-                     history.replaceState(null, "", "#" + n); }, 180);
+                     actual = n; document.body.dataset.tipo = DIAPOS[n].tipo;
+                     document.body.dataset.genero = DIAPOS[n].tipo === "cortina" ? "" : (DIAPOS[n].genero || "");
+                     caja.innerHTML = pintar(DIAPOS[n]); caja.classList.remove("oculta");
+                     if (!ensayo) history.replaceState(null, "", "#" + n); }, 180);
 }
 
 // Que la pantalla de la tablet no se apague (si el navegador lo permite)
+let pantallaDespierta = null;
 async function despierta() {
-  try { if ("wakeLock" in navigator) await navigator.wakeLock.request("screen"); } catch (e) {}
+  try {
+    if ("wakeLock" in navigator && (!pantallaDespierta || pantallaDespierta.released)) {
+      pantallaDespierta = await navigator.wakeLock.request("screen");
+    }
+  } catch (e) {}
 }
 document.addEventListener("visibilitychange", () => { if (!document.hidden) despierta(); });
 
@@ -795,7 +843,7 @@ async function vivo() {
     if (!r.ok || !(r.headers.get("content-type") || "").includes("json")) throw new Error("sin servidor");
     const j = await r.json();
     hayServidor = true;
-    estado.className = "vivo"; estado.querySelector("span").textContent = "en vivo";
+    estado.querySelector("span").textContent = "en vivo";
     if (!enVivo) { enVivo = true; largo = 0; pintarReloj(); }      // con conexión manda el ordenador, no el reloj
     const id = (j.ruta || "") + "|" + (j.texto || "");
     if (j.texto && id !== ultimoTexto) {
@@ -807,7 +855,6 @@ async function vivo() {
   } catch (e) {
     if (hayServidor === null) { hayServidor = false; return; }      // nunca hubo servidor: no insistir
     // había servidor y se ha perdido la conexión: vuelve el reloj
-    estado.className = "";
     if (!reconociendo) estado.querySelector("span").textContent = "por tiempo · toca al empezar cada tanda";
     if (enVivo) { enVivo = false; inicio = ahora(); largo = duracionDe(destino); }
   }
@@ -851,8 +898,13 @@ panel("mas").addEventListener("click", e => {          // tocar fuera de los bot
 const cerrarMas = () => panel("mas").classList.remove("visible");
 boton("b-cerrar", cerrarMas);
 boton("b-cumple", () => { cerrarMas(); pedir("¿Quién cumple años?", "", nombre => { if (nombre) cumple(nombre); }); });
+const PLANTILLAS = ["Última tanda 💃", "¡Gracias por venir! 🙏", "Un aplauso para la organización 👏",
+                    "Próxima milonga: ", "¡Feliz cumpleaños, !", "Sin mensaje"];
 boton("b-mensaje", () => { cerrarMas(); pedir("Mensaje para las cortinas (vacío = sin mensaje):", mensaje, texto => {
-  mensaje = texto; guarda("mensaje", texto); const n = destino, ini = inicio; destino = -1; ir(n, ini); }); });
+  mensaje = texto; guarda("mensaje", texto); const n = destino, ini = inicio; destino = -1; ir(n, ini); }, PLANTILLAS); });
+boton("b-listo", () => { cerrarMas(); abrirListo(); });
+boton("b-ensayo", () => { cerrarMas(); ensayar(true); });
+boton("b-fin-ensayo", () => ensayar(false));
 boton("b-micro", () => { cerrarMas(); activarReconocer(); });
 panel("cumple").addEventListener("click", e => { e.stopPropagation(); e.currentTarget.classList.remove("visible"); });
 panel("pedir").addEventListener("click", e => e.stopPropagation());
@@ -945,9 +997,21 @@ function ponerSimple(si) {
 setInterval(tic, 250);
 
 // Pedir un texto con un teclado en pantalla (cumpleaños, mensaje)
-function pedir(pregunta, valor, hecho) {
+function pedir(pregunta, valor, hecho, opciones = []) {
   const v = panel("pedir-valor");
   panel("pedir-texto").textContent = pregunta;
+  // plantillas: tocar una la pone en el cuadro (las que acaban en espacio o en ", !" esperan que se complete)
+  const caja = panel("pedir-opciones");
+  caja.innerHTML = opciones.map(o => `<button>${esc(o)}</button>`).join("");
+  caja.querySelectorAll("button").forEach((b, k) => b.onclick = e => {
+    e.stopPropagation();
+    const o = opciones[k];
+    v.value = o === "Sin mensaje" ? "" : o;
+    v.focus();
+    const hueco = o.indexOf(", !");
+    const pos = hueco >= 0 ? hueco + 2 : v.value.length;
+    v.setSelectionRange(pos, pos);
+  });
   v.value = valor || "";
   panel("pedir").classList.add("visible");
   setTimeout(() => v.focus(), 50);
@@ -976,10 +1040,11 @@ function cumple(nombre) {
   caja.classList.add("visible");
 }
 
-function aviso(texto) {
+function aviso(texto, grande = false) {
   const a = panel("aviso");
-  a.textContent = texto; a.classList.add("visible");
-  clearTimeout(aviso.t); aviso.t = setTimeout(() => a.classList.remove("visible"), Math.max(4000, texto.length * 80));
+  a.textContent = texto; a.classList.add("visible"); a.classList.toggle("grande", grande);
+  clearTimeout(aviso.t);
+  aviso.t = setTimeout(() => a.classList.remove("visible"), grande ? 20000 : Math.max(4000, texto.length * 80));
 }
 
 // 🎤 Ecualizador con el micrófono (opcional): si no hay permiso, siguen latiendo al BPM
@@ -1169,7 +1234,7 @@ function dondeVa(diapo, segundo) {
 // Las reglas: el reloj manda; el oído solo corrige si oye otra cosa (o el tema va desfasado)
 let reconociendo = false, oidas = [];
 function escuchar() {
-  if (!reconociendo || oido.lleno < oido.buf.length || pausado || enVivo) return;
+  if (!reconociendo || oido.lleno < oido.buf.length || pausado || enVivo || ensayo) return;
   const r = reconocer(huella(ultimosSegundos()));
   const estado = document.getElementById("estado").querySelector("span");
   if (!r || r.votos < 3) { estado.textContent = "🎤 escuchando…"; oidas = []; return; }
@@ -1187,6 +1252,7 @@ function escuchar() {
       if (Math.abs(desfase) > 2500) { inicio = ahora() - segundo * 1000; pintarReloj(); }
     }
     estado.textContent = `🎤 ✓ ${titulo || ""}`;
+    ultimoAcierto = Date.now();
     return;
   }
   // otra canción: saltar solo si se confirma (y más confirmaciones si es un salto raro)
@@ -1195,6 +1261,7 @@ function escuchar() {
   if (coherentes >= necesarias) {
     ir(diapo, ahora() - segundo * 1000);
     estado.textContent = `🎤 → ${titulo || ""}`;
+    ultimoAcierto = Date.now();
     oidas = [];
   }
 }
@@ -1228,11 +1295,12 @@ async function activarReconocer(automatico = false) {
       grabando = true;
       setInterval(escuchar, 4000);
     }
-    reconociendo = true; guarda("reconocer", true); ponerBotonMicro();
+    reconociendo = true; microFallo = false; guarda("reconocer", true); ponerBotonMicro();
     if (e.ctx.state === "suspended") estado.textContent = "🎤 toca la pantalla una vez para empezar a escuchar";
     else { estado.textContent = "🎤 escuchando…"; aviso("🎤 Escuchando: irá sola a lo que suene (el reloj sigue de respaldo)"); }
   } catch (err) {
     estado.textContent = "por tiempo · toca al empezar cada tanda";
+    microFallo = true;
     // decir por qué (para poder arreglarlo)
     let porque;
     if (!window.isSecureContext || !navigator.mediaDevices) {
@@ -1248,6 +1316,101 @@ async function activarReconocer(automatico = false) {
     }
     aviso("🎤 No se pudo usar el micrófono: " + porque + ". Sigue el reloj como siempre.");
   }
+}
+
+// ---------------------------------------------------------------- punto de estado (abajo a la derecha)
+// verde: sabe lo que suena (en vivo, o el micrófono lo ha reconocido hace poco); amarillo: por tiempo; rojo: el
+// micrófono no funciona
+let ultimoAcierto = 0, microFallo = false;
+function ponerPunto() {
+  document.getElementById("estado").dataset.punto =
+    enVivo || (reconociendo && Date.now() - ultimoAcierto < 45000) ? "verde"
+    : microFallo && Object.keys(HUELLAS).length ? "rojo" : "amarillo";
+}
+setInterval(ponerPunto, 1000);
+
+// ---------------------------------------------------------------- batería: avisar al 20 % y al 10 %
+let bateria = null, avisadaBateria = 1;
+function mirarBateria() {
+  if (!bateria || bateria.charging) { avisadaBateria = 1; return; }
+  const umbral = [0.1, 0.2].find(u => bateria.level <= u && avisadaBateria > u);
+  if (umbral !== undefined) {
+    avisadaBateria = umbral;
+    aviso(`🔋 La tablet tiene ${Math.round(bateria.level * 100)} % de batería: enchúfala`, true);
+  }
+}
+if (navigator.getBattery) {
+  navigator.getBattery().then(b => {
+    bateria = b;
+    b.addEventListener("levelchange", mirarBateria); b.addEventListener("chargingchange", mirarBateria);
+    mirarBateria();
+  }).catch(() => {});
+}
+
+// ---------------------------------------------------------------- ✓ ¿Todo listo? (al abrir y en ⋯ Más)
+async function comprobar() {
+  const cosas = [];
+  const pon = (ok, que, detalle = "") => cosas.push(
+    `<li class="${ok === true ? "si" : ok === false ? "no" : "medio"}"><b>${ok === true ? "✓" : ok === false ? "✗" : "!"}</b>` +
+    `<span>${que}</span>${detalle ? `<small>${detalle}</small>` : ""}</li>`);
+  // sin internet
+  if (location.protocol === "file:") pon(true, "Funciona sin internet", "abierta como archivo de este aparato");
+  else if (hayServidor) pon(true, "Conectada al portátil (en vivo)", "sigue sola a lo que suena en Mixxx");
+  else {
+    let guardada = false;
+    try { guardada = !!(await caches.match(location.pathname, {ignoreSearch: true})); } catch (e) {}
+    pon(guardada, guardada ? "Guardada para usar sin internet" : "Aún no está guardada para usar sin internet",
+        guardada ? "si se recarga o se cierra Chrome sin red, vuelve a abrir" : "ábrela una vez con wifi y recarga la página");
+  }
+  // micrófono
+  if (!Object.keys(HUELLAS).length) pon(null, "Sin reconocimiento por sonido", "esta presentación no lo lleva: va por tiempo");
+  else if (reconociendo && entrada && entrada.ctx.state === "running") {
+    const reciente = ultimoAcierto && Date.now() - ultimoAcierto < 60000;
+    pon(true, "Micrófono escuchando", reciente ? "ya ha reconocido lo que suena" : "aún no ha reconocido nada (normal si no suena música)");
+  } else if (reconociendo) pon(null, "Micrófono preparado", "toca la pantalla una vez para que empiece a escuchar");
+  else pon(false, "Micrófono apagado", microFallo ? "no se pudo usar: ⋯ Más → 🎤 dice por qué. Sigue el reloj" : "⋯ Más → 🎤 Reconocer canción");
+  // pantalla
+  const completa = !!(document.fullscreenElement || document.webkitFullscreenElement)
+    || matchMedia("(display-mode: fullscreen)").matches || matchMedia("(display-mode: standalone)").matches;
+  pon(completa, "Pantalla completa", completa ? "" : "se pone sola al tocar la pantalla");
+  const despierta_ = !!(pantallaDespierta && !pantallaDespierta.released);
+  pon(despierta_ ? true : null, despierta_ ? "La pantalla no se apagará" : "La pantalla podría apagarse sola",
+      despierta_ ? "" : "toca la pantalla una vez; si aun así se apaga, sube el tiempo en Ajustes → Pantalla");
+  // batería
+  if (bateria) {
+    const p = Math.round(bateria.level * 100);
+    pon(bateria.charging || p > 40 ? true : p > 20 ? null : false, `Batería ${p} %`,
+        bateria.charging ? "cargando" : p > 40 ? "sin enchufar: mejor enchúfala si puedes" : "¡enchúfala!");
+  }
+  // modo
+  pon(true, "Si algo falla, no pasa nada", "va por tiempo: toca la pantalla cuando empiece cada tanda");
+  panel("listo-cosas").innerHTML = cosas.join("");
+}
+let listoTocado = false;
+function abrirListo() {
+  listoTocado = false;
+  panel("listo-cerrar").textContent = "Toca una vez para activar lo que falta (pantalla completa, micrófono…)";
+  panel("listo").classList.add("visible");
+  comprobar();
+  clearInterval(abrirListo.t);
+  abrirListo.t = setInterval(() => panel("listo").classList.contains("visible") ? comprobar() : clearInterval(abrirListo.t), 1000);
+  clearTimeout(abrirListo.cierra);
+  abrirListo.cierra = setTimeout(() => panel("listo").classList.remove("visible"), 45000);   // no tapar la noche
+}
+panel("listo").addEventListener("click", e => {
+  e.stopPropagation(); despierta();
+  if (!listoTocado) { listoTocado = true; panel("listo-cerrar").textContent = "Toca otra vez para cerrar"; comprobar(); return; }
+  e.currentTarget.classList.remove("visible");
+});
+
+// ---------------------------------------------------------------- 🎬 ensayo rápido
+function ensayar(si) {
+  if (pausado) pausa();
+  ensayo = si; baseReal = baseEnsayo = Date.now();
+  document.body.classList.toggle("ensayo", si);
+  destino = -1;
+  if (si) { ir(paso(0, 1)); aviso("🎬 Ensayo: la noche pasa 60 veces más deprisa. ■ Terminar arriba"); }
+  else { ir(lee("diapo", 0)); aviso("Ensayo terminado: vuelve donde estaba"); }
 }
 
 // La hora, discreta en la esquina
@@ -1282,6 +1445,8 @@ if (window.isSecureContext && location.protocol.startsWith("http") && "serviceWo
 if (!lee("ayuda_vista", false)) {
   document.getElementById("ayuda").classList.add("visible");
   setTimeout(() => { document.getElementById("ayuda").classList.remove("visible"); guarda("ayuda_vista", true); }, 20000);
+} else {
+  setTimeout(abrirListo, 600);        // ¿todo listo? (da tiempo a que arranque el micrófono)
 }
 ponerBotonMicro();
 if (location.protocol === "file:" || !enVivo) {

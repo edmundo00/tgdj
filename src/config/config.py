@@ -149,6 +149,11 @@ m3u_start_path = os.path.join(dropbox_path, "TDJ", "playlists","trabajo")
 presentations_start_path = os.path.join(dropbox_path, "TDJ", "Presentacion")
 # Dónde se publican las presentaciones web (GitHub Pages): el QR de la presentación lleva a la lista de la noche
 url_presentaciones_web = "https://edmundo00.github.io/presentaciones-milonga/"
+# Su repositorio (el botón «Publicar en internet» sube ahí con git) y la copia local en este ordenador (fuera de
+# Dropbox: una carpeta .git sincronizada entre dos ordenadores se puede estropear)
+repo_presentaciones_web = "https://github.com/edmundo00/presentaciones-milonga.git"
+carpeta_repo_presentaciones = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")),
+                                           "TangoTags", "presentaciones-milonga")
 # Redes de cada milonga (para la lista de la noche: "díselo al organizador"); clave = nombre en minúsculas
 redes_milongas = {
     "milonga mia": "https://www.instagram.com/milongamia",

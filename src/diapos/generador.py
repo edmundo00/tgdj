@@ -73,8 +73,13 @@ def resolver_ruta(linea):
 
 def leer_playlist(ruta_m3u):
     """Playlist .m3u/.m3u8 o de MusicBee (.mbp) -> (DataFrame de canciones, lista de rutas que no existen)."""
-    filas, faltan = [], []
     lineas = leer_mbp(ruta_m3u) if ruta_m3u.lower().endswith(".mbp") else load_m3u_file_helper(ruta_m3u)
+    return leer_canciones(lineas)
+
+
+def leer_canciones(lineas):
+    """Rutas de archivos -> (DataFrame de canciones con sus etiquetas, lista de rutas que no existen)."""
+    filas, faltan = [], []
     for linea in lineas:
         ruta = resolver_ruta(linea)
         if not os.path.exists(ruta):

@@ -12,9 +12,9 @@ from PyQt5.QtWidgets import (
 
 from src.config.config import m3u_start_path, presentations_start_path, default_milonga_data, url_presentaciones_web
 from src.diapos.generador import (
-    leer_playlist, agrupar_tandas, crear_presentacion, duracion_texto, nombre_archivo, compositor_para_diapo,
+    leer_playlist, leer_canciones, agrupar_tandas, crear_presentacion, duracion_texto, nombre_archivo, compositor_para_diapo,
 )
-from src.diapos import bpm, caracter, catalogo, historial, proyectar, web
+from src.diapos import bpm, caracter, catalogo, historial, proyectar, publicar, web
 from src.diapos.revision import (
     revisar, horas_de_inicio, segundos_de_inicio, energia, bpm_tanda, ERROR, AVISO, AUTO, LIBRE, PATRONES,
     MINUTOS_SIN_MILONGA,
@@ -245,11 +245,21 @@ class VentanaDiapos(QDialog):
                                         "VirtualDJ; se puede abrir en este ordenador o en la tablet (misma red, "
                                         "sin internet)")
         self.boton_proyectar.clicked.connect(self.proyectar)
+        self.boton_publicar = QPushButton("🌐 Publicar en internet…")
+        self.boton_publicar.setToolTip("Sube a GitHub Pages la presentación web, su lista y la página con todas "
+                                       "tus milongas (hace falta internet)")
+        self.boton_publicar.clicked.connect(self.publicar_web)
+        self.boton_sono = QPushButton("Lista con lo que sonó…")
+        self.boton_sono.setToolTip("Después de la milonga: rehace la lista para la gente (la del QR) con lo que "
+                                   "sonó de verdad en Mixxx, y la publica")
+        self.boton_sono.clicked.connect(self.lista_lo_que_sono)
         cerrar = QPushButton("Cerrar")
         cerrar.clicked.connect(self.close)
         abajo.addWidget(self.boton_crear)
         abajo.addWidget(self.boton_web)
         abajo.addWidget(self.boton_proyectar)
+        abajo.addWidget(self.boton_publicar)
+        abajo.addWidget(self.boton_sono)
         abajo.addWidget(cerrar)
         lay.addLayout(abajo)
 
@@ -573,22 +583,101 @@ class VentanaDiapos(QDialog):
             self.progreso.hide()
             self.progreso.setFormat("%p%")
         self.settings.setValue("ultima_web", destino)
+        self.settings.setValue("ultima_web_carpeta", os.path.dirname(destino))
         if getattr(self, "proyector", None) is not None and self.proyector.activo:
             self.proyector.cambiar_html(destino)
         carpeta = os.path.dirname(destino)
-        publicar = (f"\n\nPara usar el micrófono en la tablet y que el QR funcione, sube a tu repositorio de "
-                    f"GitHub Pages ({url_presentaciones_web}):\n  · {os.path.basename(destino)}\n"
-                    f"  · {web.nombre_lista(d)}  (la lista ligera a la que lleva el QR)\n"
-                    f"  · {', '.join(extras)}  (para que funcione sin internet y se pueda añadir a la "
-                    f"pantalla de inicio; sw.js y los iconos solo hace falta subirlos una vez)\n"
-                    f"y en la tablet abre {url_presentaciones_web}{os.path.basename(destino)}"
-                    if url_presentaciones_web else "")
-        r = QMessageBox.question(self, "Presentación web creada",
-                                 f"Guardada en:\n{carpeta}{publicar}\n\n"
-                                 f"¿Proyectarla también desde este ordenador (modo en vivo con Mixxx)?",
-                                 QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        if r == QMessageBox.Yes:
+        caja = QMessageBox(QMessageBox.Information, "Presentación web creada",
+                           f"Guardada en:\n{carpeta}\n\nPara usar el micrófono en la tablet y que funcione el QR, "
+                           f"publícala en internet (luego en la tablet ábrela una vez con wifi).", parent=self)
+        boton_publicar = caja.addButton("🌐 Publicar en internet", QMessageBox.AcceptRole) if url_presentaciones_web else None
+        boton_proyectar = caja.addButton("📽 Proyectar en vivo aquí", QMessageBox.ActionRole)
+        caja.addButton("Cerrar", QMessageBox.RejectRole)
+        caja.exec_()
+        if caja.clickedButton() is boton_publicar:
+            self.publicar_web(destino)
+        elif caja.clickedButton() is boton_proyectar:
             self.proyectar(destino)
+
+    def _subir(self, archivos, titulo):
+        """Publica con git; devuelve la dirección o None si falla (y lo dice)."""
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        try:
+            return publicar.publicar(archivos, titulo)
+        except (publicar.ErrorPublicar, OSError) as e:
+            QMessageBox.critical(self, "No se pudo publicar", f"{e}\n\nLa presentación sigue guardada en tu "
+                                                               f"ordenador; prueba otra vez cuando haya internet.")
+            return None
+        finally:
+            QApplication.restoreOverrideCursor()
+
+    def publicar_web(self, ruta=None):
+        """Sube la presentación web (y su lista, sw.js, manifiesto e iconos, que están al lado) a GitHub Pages."""
+        if not ruta:
+            ruta, _ = QFileDialog.getOpenFileName(self, "Elegir la presentación web que publicar",
+                                                  self.settings.value("ultima_web", presentations_start_path) or
+                                                  presentations_start_path, "Página web (*.html)")
+            if not ruta:
+                return
+        base, carpeta = os.path.basename(ruta)[:-len(".html")], os.path.dirname(ruta)
+        archivos = [ruta] + [os.path.join(carpeta, n) for n in
+                             (base + "-lista.html", base + ".webmanifest", "sw.js", "icono-192.png", "icono-512.png")
+                             if os.path.exists(os.path.join(carpeta, n))]
+        if QMessageBox.question(
+                self, "Publicar en internet",
+                "Se subirán a tu página pública (" + url_presentaciones_web + "):\n\n"
+                + "\n".join("  · " + os.path.basename(a) for a in archivos)
+                + "\n  · index.html (la lista de todas tus milongas)\n\nCualquiera con el enlace podrá verlas. ¿Seguir?",
+                QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes) != QMessageBox.Yes:
+            return
+        url = self._subir(archivos, f"Publicar {os.path.basename(ruta)}")
+        if url:
+            QMessageBox.information(
+                self, "Publicada",
+                f"En la tablet abre (con wifi, una vez, para que se guarde):\n{url}\n\n"
+                f"Todas tus milongas: {url_presentaciones_web}\n\n"
+                f"GitHub tarda uno o dos minutos en ponerla al día.")
+
+    def lista_lo_que_sono(self):
+        """Después de la milonga: la lista de la gente con lo que sonó de verdad (historial de Mixxx)."""
+        import datetime as dt
+        d = self.datos()
+        if not d["milonga"]:
+            QMessageBox.warning(self, "Falta el nombre", "Escribe el nombre y la fecha de la milonga.")
+            return
+        inicio = dt.datetime.combine(d["fecha"], dt.datetime.strptime(d["inicio"], "%H:%M").time())
+        fin = dt.datetime.combine(d["fecha"], dt.datetime.strptime(d["fin"], "%H:%M").time())
+        if fin <= inicio:
+            fin += dt.timedelta(days=1)
+        rutas = proyectar.historial_mixxx(inicio - dt.timedelta(hours=1), fin + dt.timedelta(hours=2))
+        if not rutas:
+            QMessageBox.information(self, "Lista con lo que sonó",
+                                    f"Mixxx no tiene nada en su historial del {d['fecha']:%d/%m/%Y} entre las "
+                                    f"{inicio - dt.timedelta(hours=1):%H:%M} y las {fin + dt.timedelta(hours=2):%H:%M}.\n"
+                                    f"(Hay que hacerlo en el ordenador con el que pinchaste.)")
+            return
+        canciones, faltan = leer_canciones(rutas)
+        if canciones.empty:
+            QMessageBox.warning(self, "Lista con lo que sonó", "No se encuentra ninguno de los archivos que sonaron.")
+            return
+        tandas = agrupar_tandas(canciones)
+        previstas = {os.path.normcase(c["ruta"]) for t in self.tandas for _, c in t.canciones.iterrows()}
+        nuevas = [c["title"] for _, c in canciones.iterrows() if os.path.normcase(c["ruta"]) not in previstas]
+        destino = os.path.join(self.settings.value("ultima_web_carpeta", presentations_start_path)
+                               or presentations_start_path, web.nombre_lista(d))
+        web.crear_lista(tandas, d, destino)
+        resumen = (f"Sonaron {len(canciones)} temas (cortinas incluidas)"
+                   + (f"; {len(nuevas)} no estaban en la playlist: {', '.join(nuevas[:8])}{'…' if len(nuevas) > 8 else ''}"
+                      if self.tandas and nuevas else "")
+                   + (f".\n{len(faltan)} archivo(s) no se encuentran en este ordenador." if faltan else "."))
+        if not url_presentaciones_web or QMessageBox.question(
+                self, "Lista con lo que sonó",
+                f"{resumen}\n\nLista guardada en:\n{destino}\n\n¿Publicarla en internet (sustituye a la de la "
+                f"noche, la del QR)?", QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes) != QMessageBox.Yes:
+            return
+        url = self._subir([destino], f"{d['milonga']} {d['fecha']:%d/%m/%Y}: lo que sonó de verdad")
+        if url:
+            QMessageBox.information(self, "Publicada", f"La lista con lo que sonó:\n{url}")
 
     def proyectar(self, ruta=None):
         if not ruta:

@@ -75,6 +75,34 @@ def _mixxx(ruta=MIXXX):
     return f"{artista or ''} - {titulo or ''}", (archivo or "").replace("/", "\\"), momento
 
 
+def historial_mixxx(desde, hasta, ruta=MIXXX):
+    """Archivos que sonaron en Mixxx entre dos datetime (hora local), en orden y sin repetidos seguidos (un tema
+    cargado dos veces seguidas cuenta una)."""
+    if not os.path.exists(ruta):
+        return []
+    import sqlite3
+    from datetime import timezone
+    utc = lambda d: d.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")   # Mixxx guarda la hora en UTC
+    try:
+        con = sqlite3.connect(f"file:{ruta}?mode=ro", uri=True, timeout=2)
+        try:
+            filas = con.execute("""
+                SELECT tl.location FROM PlaylistTracks pt JOIN Playlists p ON p.id = pt.playlist_id
+                JOIN library l ON l.id = pt.track_id JOIN track_locations tl ON tl.id = l.location
+                WHERE p.hidden = 2 AND pt.pl_datetime_added BETWEEN ? AND ?
+                ORDER BY pt.pl_datetime_added, pt.id""", (utc(desde), utc(hasta))).fetchall()
+        finally:
+            con.close()
+    except sqlite3.Error:
+        return []
+    salida = []
+    for (archivo,) in filas:
+        archivo = (archivo or "").replace("/", "\\")
+        if archivo and (not salida or salida[-1] != archivo):
+            salida.append(archivo)
+    return salida
+
+
 def que_suena(tracklist=TRACKLIST, mixxx=MIXXX):
     """{'texto': 'Artista - Título', 'ruta': archivo o ''} de lo más reciente entre Mixxx y VirtualDJ."""
     fuentes = [f for f in (_mixxx(mixxx), _virtualdj(tracklist)) if f]
