@@ -14,6 +14,7 @@ watchdog
 Levenshtein
 python-dateutil
 av          # reproducir m4a/wma (pygame no sabe)
+segno       # código QR de la presentación web (lleva a la lista de la noche)
 
 # solo para crear el .exe (crear_exe.bat)
 pyinstaller

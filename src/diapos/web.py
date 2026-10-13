@@ -105,7 +105,7 @@ def diapos(tandas, datos):
             for _, c in t.canciones.iterrows():
                 salida.append({
                     "tipo": "cortina", "titulo": c["title"], "artista": c["artist"],
-                    "clave": f"{c['artist']} - {c['title']}", "archivo": _archivo(c['ruta']),
+                    "clave": f"{c['artist']} - {c['title']}", "archivo": _archivo(c['ruta']), "_ruta": c['ruta'],
                     "proxima": None if proxima is None else {
                         "orquesta": proxima.titulo_orquesta, "subtitulo": proxima.subtitulo,
                         "genero": "final" if proxima.es_cumparsita else _genero(proxima.genero),
@@ -122,13 +122,125 @@ def diapos(tandas, datos):
                 "tipo": "cumparsita" if t.es_cumparsita else "tema", "numero": numero, "total": len(reales),
                 "orquesta": t.titulo_orquesta, "subtitulo": t.subtitulo, "genero": _genero(t.genero),
                 "foto": foto(t.orquesta), "iniciales": _iniciales(t.orquesta or "?"),
-                "temas": temas, "actual": k, "duracion": round(float(c["duration"] or 0), 1), "bpm": _bpm(c), "clave": f"{c['artist']} - {c['title']}", "archivo": _archivo(c['ruta']),
+                "temas": temas, "actual": k, "duracion": round(float(c["duration"] or 0), 1), "bpm": _bpm(c), "clave": f"{c['artist']} - {c['title']}", "archivo": _archivo(c['ruta']), "_ruta": c['ruta'],
             })
     return salida, imagenes
 
 
-def crear_web(tandas, datos, destino):
+def nombre_lista(datos):
+    """'261013-milonga-mia-lista.html': la lista ligera de la noche (para el móvil de la gente)."""
+    return nombre_web(datos)[:-len(".html")] + "-lista.html"
+
+
+def qr_svg(texto):
+    """Código QR en SVG (para meterlo dentro del .html: se ve sin internet)."""
+    import segno
+    return segno.make(texto, error="m").svg_inline(scale=4, border=2, dark="#120c08", light="#f6efe4")
+
+
+def crear_lista(tandas, datos, destino):
+    """Versión ligera: el programa de la noche (tandas, temas y cortinas), para leer en el móvil. Unos pocos KB."""
+    import html as h
+    filas = []
+    numero = 0
+    for t in tandas:
+        if t.es_cortina:
+            for _, c in t.canciones.iterrows():
+                filas.append(f'<div class="cortina">Cortina · <b>{h.escape(c["title"])}</b>'
+                             f'{" — " + h.escape(c["artist"]) if c["artist"] else ""}</div>')
+            continue
+        if not t.es_cumparsita:
+            numero += 1
+        genero = "final" if t.es_cumparsita else _genero(t.genero)
+        etiqueta = "Último baile" if t.es_cumparsita else {"tango": "Tango", "vals": "Vals", "milonga": "Milonga"}[genero]
+        temas = []
+        for _, c in t.canciones.iterrows():
+            ano = f" <span>{h.escape(str(c['ano']))}</span>" if c["ano"] else ""
+            autores = compositor_para_diapo(c["composer"])
+            autores = f"<small>{h.escape(autores)}</small>" if autores else ""
+            temas.append(f"<li><b>{h.escape(c['title'])}</b>{ano}{autores}</li>")
+        temas = "".join(temas)
+        filas.append(f'<section class="{genero}"><div class="cab"><em>{"" if t.es_cumparsita else str(numero) + " · "}{etiqueta}</em></div>'
+                     f'<h2>{h.escape(t.titulo_orquesta)}</h2><p>{h.escape(t.subtitulo)}</p><ol>{temas}</ol></section>')
+    contenido = LISTA.replace("__TITULO__", h.escape(f"{datos['milonga']} · {fecha_larga(datos['fecha'])}")) \
+        .replace("__MILONGA__", h.escape(datos["milonga"])) \
+        .replace("__FECHA__", h.escape(f"{fecha_larga(datos['fecha'])} · de {datos['inicio']} a {datos['fin']}")) \
+        .replace("__DJ__", h.escape(FIRMA_DJ)).replace("__TANDAS__", "\n".join(filas))
+    with open(destino, "w", encoding="utf-8") as f:
+        f.write(contenido)
+    return destino
+
+
+LISTA = """<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITULO__</title>
+<style>
+  :root { --fondo:#fbf7f0; --texto:#2a1f17; --suave:#7a6a5c; --tango:#b9852a; --vals:#3f8f5a; --milonga:#c75a2c; --final:#7d5bb5; }
+  @media (prefers-color-scheme: dark) { :root { --fondo:#120c08; --texto:#f6efe4; --suave:#b9ab9b; } }
+  body { margin:0; background:var(--fondo); color:var(--texto); font:16px/1.45 Georgia, "Palatino Linotype", serif; }
+  header { padding:28px 16px 12px; text-align:center; }
+  h1 { margin:0; font-size:30px; } header p { margin:6px 0 0; color:var(--suave); }
+  .dj { font:600 12px system-ui, sans-serif; letter-spacing:.2em; text-transform:uppercase; color:var(--tango); }
+  main { max-width:640px; margin:0 auto; padding:0 16px 32px; }
+  section { margin:14px 0; padding:12px 14px; border-left:5px solid var(--tango); border-radius:8px; background:rgba(127,100,70,.08); }
+  section.vals { border-color:var(--vals); } section.milonga { border-color:var(--milonga); } section.final { border-color:var(--final); }
+  .cab em { font:600 12px system-ui, sans-serif; letter-spacing:.12em; text-transform:uppercase; color:var(--suave); font-style:normal; }
+  h2 { margin:2px 0 0; font-size:20px; } section > p { margin:0 0 6px; color:var(--suave); font-style:italic; }
+  ol { margin:0; padding-left:20px; } li { margin:4px 0; } li span { color:var(--suave); font-size:14px; }
+  li small { display:block; color:var(--suave); font-style:italic; font-size:13px; }
+  footer { text-align:center; color:var(--suave); font-size:13px; padding-bottom:24px; }
+  .cortina { margin:4px 0 4px 6px; padding:4px 10px; font:400 13px system-ui, sans-serif; color:var(--suave); }
+  .cortina b { font-weight:600; }
+</style></head>
+<body><header><h1>__MILONGA__</h1><p>__FECHA__</p><p class="dj">TDJ __DJ__</p></header>
+<main>
+__TANDAS__
+</main><footer>¡Gracias por bailar!</footer></body></html>
+"""
+
+
+def nombre_web(datos):
+    """'261013-milonga-mia.html': sin espacios ni acentos, para que sirva tal cual de dirección web."""
+    import re
+    from unidecode import unidecode
+    nombre = re.sub(r"[^a-z0-9]+", "-", unidecode(datos["milonga"]).lower()).strip("-") or "milonga"
+    return f"{datos['fecha']:%y%m%d}-{nombre}.html"
+
+
+def huellas_de_diapos(rutas, progreso=None):
+    """{índice de diapo: [códigos (Uint32 en base64), instantes (Uint16 en base64)]} para reconocer por el
+    sonido. Se lee cada canción entera (a 8 kHz); ~0,6 s por canción."""
+    import numpy as np
+    from src.diapos import bpm, huellas
+    salida = {}
+    for n, (i, ruta) in enumerate(sorted(rutas.items()), 1):
+        try:
+            muestras = bpm.leer_trozo(ruta, segundos=900, frecuencia=huellas.FRECUENCIA, donde="principio")
+            h = huellas.huella_de(muestras)
+        except Exception:
+            h = []
+        if h:
+            codigos = np.array([c for c, _ in h], dtype="<u4")
+            instantes = np.minimum([t for _, t in h], 65535).astype("<u2")
+            salida[i] = [base64.b64encode(codigos.tobytes()).decode(), base64.b64encode(instantes.tobytes()).decode()]
+        if progreso:
+            progreso(n, len(rutas))
+    return salida
+
+
+def crear_web(tandas, datos, destino, reconocer=True, progreso=None, url_lista=None):
+    """
+    reconocer: meter las huellas de audio para que la tablet pueda reconocer la canción por el sonido.
+    url_lista: dirección pública de la lista ligera (crear_lista): sale un QR pequeño en una esquina.
+    """
     lista, imagenes = diapos(tandas, datos)
+    try:
+        qr = (f'<div id="qr" title="{url_lista}">{qr_svg(url_lista)}<span>La lista de esta noche</span></div>'
+              if url_lista else "")
+    except Exception:
+        qr = ""
+    rutas = {i: d.pop("_ruta") for i, d in enumerate(lista) if "_ruta" in d}
+    huellas_json = json.dumps(huellas_de_diapos(rutas, progreso) if reconocer else {})
     fondo = os.path.join(background_image_folder, "background_tango_degradado.png")
     try:
         fondo_uri = _imagen_base64(fondo, ancho=1600, calidad=80)
@@ -136,10 +248,12 @@ def crear_web(tandas, datos, destino):
         fondo_uri = ""
     html = (PLANTILLA
             .replace("__TITULO__", f"{datos['milonga']} · {fecha_larga(datos['fecha'])}")
+            .replace("__HUELLAS__", huellas_json)
             .replace("__DIAPOS__", json.dumps(lista, ensure_ascii=False))
             .replace("__IMAGENES__", json.dumps(imagenes))
             .replace("__FONDO__", fondo_uri)
-            .replace("__FIRMA__", f"TDJ {FIRMA_DJ} · {datos['milonga']}"))
+            .replace("__FIRMA__", f"TDJ {FIRMA_DJ} · {datos['milonga']}")
+            .replace("__QR__", qr))
     os.makedirs(os.path.dirname(destino) or ".", exist_ok=True)
     with open(destino, "w", encoding="utf-8") as f:
         f.write(html)
@@ -203,6 +317,10 @@ PLANTILLA = r"""<!doctype html>
   .vals .eq i { background:var(--vals); } .milonga .eq i { background:var(--milonga); }
   @keyframes latido { from { transform:scaleY(.15); } to { transform:scaleY(1); } }
   body.pausado .eq i { animation-play-state:paused; }
+  #qr { position:fixed; left:1.2vw; top:1.2vh; display:flex; flex-direction:column; align-items:center; gap:.4vh;
+    padding:.6vh; border-radius:.8vh; background:#f6efe4; opacity:.85; }
+  #qr svg { width:max(72px, 11vh); height:auto; display:block; }
+  #qr span { font:600 max(9px, 1.1vh) system-ui, sans-serif; color:#120c08; }
   #hora { position:fixed; right:1.6vw; top:1.2vh; font:500 max(14px, 1.5vw) system-ui, sans-serif;
     color:rgba(246,239,228,.45); letter-spacing:.05em; }
   .vals li.ahora { border-left-color:var(--vals); } .milonga li.ahora { border-left-color:var(--milonga); }
@@ -261,7 +379,8 @@ PLANTILLA = r"""<!doctype html>
     animation:cae linear infinite; }
   @keyframes cae { to { transform:translateY(115vh) rotate(720deg); } }
   #aviso { position:fixed; left:50%; top:3vh; transform:translateX(-50%); padding:12px 20px; border-radius:12px; z-index:13;
-    background:rgba(13,9,7,.9); border:1px solid var(--tango); font:500 18px system-ui, sans-serif; display:none; }
+    background:rgba(13,9,7,.95); border:1px solid var(--tango); font:500 18px system-ui, sans-serif; display:none;
+    max-width:88vw; line-height:1.4; }
   #aviso.visible { display:block; }
   .mensaje { margin:3vh auto 0; max-width:70vw; padding:1.6vh 2vw; border-radius:1.2vw; background:rgba(217,164,65,.15);
     border:1px solid rgba(217,164,65,.4); font:500 max(16px, 2vw) system-ui, sans-serif; color:var(--texto); }
@@ -295,6 +414,7 @@ PLANTILLA = r"""<!doctype html>
 <div id="diapo"></div>
 <div id="firma">© __FIRMA__</div>
 <div id="hora"></div>
+__QR__
 <div id="estado" title="Verde: sigue al ordenador en vivo. Si no, por tiempo: toca al empezar cada tanda"><b></b><span>por tiempo · toca al empezar cada tanda</span></div>
 <div id="reproductor" class="apagado">
   <span id="t-lleva">0:00</span>
@@ -313,7 +433,7 @@ PLANTILLA = r"""<!doctype html>
   <button id="b-mensaje">💬 Mensaje<small>texto en todas las cortinas</small></button>
   <button id="b-bloqueo">🔓 Bloquear toques<small>tocar la pantalla no pasa diapos</small></button>
   <button id="b-simple">Simple<small>una diapo por tanda</small></button>
-  <button id="b-micro">🎤 Ecualizador real<small>las barras con el micrófono</small></button>
+  <button id="b-micro">🎤 Reconocer canción<small>escucha y corrige solo; si no, sigue el reloj</small></button>
   <button id="b-ayuda">? Ayuda<small>cómo funciona</small></button>
   <button id="b-completa">⛶ Pantalla completa</button>
   <button id="b-cerrar">✕ Cerrar</button>
@@ -327,7 +447,7 @@ PLANTILLA = r"""<!doctype html>
   <div class="baila">Un vals para celebrarlo</div></div>
 <div id="aviso"></div>
 <div id="tandas"></div>
-<div id="ayuda" class="visible"><div>
+<div id="ayuda"><div>
   <h3>Cómo funciona</h3>
   <p><b>Sin conexión ni cables (modo «por tiempo»):</b></p>
   <ol>
@@ -335,7 +455,7 @@ PLANTILLA = r"""<!doctype html>
     <li>Mejor: cuando empieza el <b>primer tema</b> de la tanda, <b>toca la pantalla una vez</b> (en la parte derecha). Si la cortina va a durar más, ⏸ Pausa.</li>
     <li>Los temas avanzan <b>solos</b> según su duración (la barrita dorada de abajo) y al acabar la tanda vuelve a la cortina.</li>
   </ol>
-  <p><b>Botones</b> (abajo, grandes; se apagan solos y vuelven al tocar): <b>◀</b> anterior · <b>⏸ Pausa</b> / <b>▶ Seguir</b> (para el reloj: si hablan, cortina larga…) · <b>▶</b> siguiente · <b>≡ Tandas</b> ir directo a una tanda si te pierdes · <b>⋯ Más</b>: 🎂 cumpleaños con confeti · 💬 mensaje en las cortinas · 🔓 bloquear toques (tocar la pantalla sin querer no pasa nada) · Simple (una diapo por tanda) · 🎤 ecualizador con el micrófono · ? ayuda · ⛶ pantalla completa.</p>
+  <p><b>Botones</b> (abajo, grandes; se apagan solos y vuelven al tocar): <b>◀</b> anterior · <b>⏸ Pausa</b> / <b>▶ Seguir</b> (para el reloj: si hablan, cortina larga…) · <b>▶</b> siguiente · <b>≡ Tandas</b> ir directo a una tanda si te pierdes · <b>⋯ Más</b>: 🎂 cumpleaños con confeti · 💬 mensaje en las cortinas · 🔓 bloquear toques (tocar la pantalla sin querer no pasa nada) · Simple (una diapo por tanda) · 🎤 reconocer canción (la tablet escucha y corrige sola si oye otra cosa o va desfasada; el reloj sigue mandando, y si no hay micrófono no pasa nada) · ? ayuda · ⛶ pantalla completa.</p>
   <p><b>Reproductor</b> (encima de los botones): lo que lleva el tema, lo que queda y lo que dura. Si no cuadra con Mixxx, <b>toca o arrastra la barra</b> hasta el punto en que va el tema (por ejemplo, si en Mixxx va por 1:30, ponla en 1:30).</p>
   <p>En la cortina se ve cuándo empezará sola la tanda. Si se cierra o se recarga, al abrirla vuelve a la misma diapo.</p>
   <p>Tocar la pantalla: a la <b>derecha</b> avanza, en el <b>tercio izquierdo</b> retrocede. En un ordenador: flechas, espacio, F = pantalla completa.</p>
@@ -345,6 +465,7 @@ PLANTILLA = r"""<!doctype html>
 <script>
 const DIAPOS = __DIAPOS__;
 const IMG = __IMAGENES__;
+const HUELLAS = __HUELLAS__;
 let actual = 0, ultimoTexto = null;
 
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -615,7 +736,7 @@ boton("b-cerrar", cerrarMas);
 boton("b-cumple", () => { cerrarMas(); pedir("¿Quién cumple años?", "", nombre => { if (nombre) cumple(nombre); }); });
 boton("b-mensaje", () => { cerrarMas(); pedir("Mensaje para las cortinas (vacío = sin mensaje):", mensaje, texto => {
   mensaje = texto; guarda("mensaje", texto); const n = destino, ini = inicio; destino = -1; ir(n, ini); }); });
-boton("b-micro", () => { cerrarMas(); micro(); });
+boton("b-micro", () => { cerrarMas(); activarReconocer(); });
 panel("cumple").addEventListener("click", e => { e.stopPropagation(); e.currentTarget.classList.remove("visible"); });
 panel("pedir").addEventListener("click", e => e.stopPropagation());
 const pista = document.getElementById("pista");
@@ -635,7 +756,17 @@ document.getElementById("tandas").addEventListener("click", e => {
 });
 boton("b-completa", () => { cerrarMas(); pantallaCompleta(); });
 document.getElementById("ayuda").addEventListener("click", e => {
-  e.stopPropagation(); e.currentTarget.classList.remove("visible"); despierta(); pantallaCompleta(); });
+  e.stopPropagation(); e.currentTarget.classList.remove("visible"); guarda("ayuda_vista", true);
+  despertarOido(); despierta(); pantallaCompleta(); });
+// Algunos navegadores no dejan sonar/escuchar hasta el primer toque: cualquier toque lo despierta
+function despertarOido() {
+  if (entrada && entrada.ctx.state === "suspended") {
+    entrada.ctx.resume().then(() => {
+      if (reconociendo) document.getElementById("estado").querySelector("span").textContent = "🎤 escuchando…";
+    });
+  }
+}
+document.addEventListener("pointerdown", despertarOido, true);
 // Tocar la diapo: a la derecha (2/3 de la pantalla) avanza, a la izquierda retrocede
 document.addEventListener("click", e => {
   despierta(); mostrarBotones();
@@ -720,34 +851,274 @@ function cumple(nombre) {
 function aviso(texto) {
   const a = panel("aviso");
   a.textContent = texto; a.classList.add("visible");
-  clearTimeout(aviso.t); aviso.t = setTimeout(() => a.classList.remove("visible"), 4000);
+  clearTimeout(aviso.t); aviso.t = setTimeout(() => a.classList.remove("visible"), Math.max(4000, texto.length * 80));
 }
 
 // 🎤 Ecualizador con el micrófono (opcional): si no hay permiso, siguen latiendo al BPM
+// ---------------------------------------------------------------- micrófono (compartido)
+let entrada = null;                  // {ctx, fuente}
+async function microfono() {
+  if (entrada) return entrada;
+  const flujo = await navigator.mediaDevices.getUserMedia(
+    {audio: {echoCancellation: false, noiseSuppression: false, autoGainControl: true}});
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  if (ctx.state === "suspended") await ctx.resume();
+  entrada = {ctx, fuente: ctx.createMediaStreamSource(flujo)};
+  return entrada;
+}
+
+// Ecualizador con el micrófono: las barras con la música real
 let microActivo = false;
-async function micro() {
-  if (microActivo) { aviso("El ecualizador ya va con el micrófono"); return; }
+function ecualizadorMicro({ctx, fuente}) {
+  if (microActivo) return;
+  const analizador = ctx.createAnalyser();
+  analizador.fftSize = 64;
+  fuente.connect(analizador);
+  const datos = new Uint8Array(analizador.frequencyBinCount);
+  microActivo = true;
+  document.body.classList.add("micro");
+  const bandas = [1, 2, 3, 5, 7, 10, 14];
+  (function mover() {
+    analizador.getByteFrequencyData(datos);
+    document.querySelectorAll(".eq").forEach(eq => eq.querySelectorAll("i").forEach((i, k) => {
+      const v = pausado ? 0.15 : Math.max(0.12, datos[bandas[k]] / 255);
+      i.style.transform = `scaleY(${v.toFixed(2)})`;
+    }));
+    requestAnimationFrame(mover);
+  })();
+}
+
+// ---------------------------------------------------------------- reconocer la canción por el sonido
+// Lo mismo que src/diapos/huellas.py: espectrograma a 8 kHz, picos, parejas de picos -> códigos; los códigos
+// que coinciden con los de una canción con el mismo desfase votan por esa canción y ese segundo.
+const H = {F: 8000, N: 1024, SALTO: 256, VF: 15, VT: 15, PICOS: 25, PAREJAS: 6, DTMIN: 1, DTMAX: 64, BMIN: 6, BMAX: 480};
+const HANN = Float32Array.from({length: H.N}, (_, n) => 0.5 - 0.5 * Math.cos(2 * Math.PI * n / (H.N - 1)));
+
+const fft = (() => {                 // FFT real de 1024 puntos -> magnitud en dB (N/2 + 1 bandas)
+  const N = H.N, bits = Math.log2(N), rev = new Uint16Array(N);
+  const co = new Float64Array(N / 2), si = new Float64Array(N / 2), re = new Float64Array(N), im = new Float64Array(N);
+  for (let i = 0; i < N; i++) { let r = 0; for (let b = 0; b < bits; b++) r |= ((i >> b) & 1) << (bits - 1 - b); rev[i] = r; }
+  for (let i = 0; i < N / 2; i++) { co[i] = Math.cos(-2 * Math.PI * i / N); si[i] = Math.sin(-2 * Math.PI * i / N); }
+  return (x, salida) => {
+    for (let i = 0; i < N; i++) { re[rev[i]] = x[i]; im[rev[i]] = 0; }
+    for (let tam = 2; tam <= N; tam <<= 1) {
+      const mitad = tam >> 1, paso = N / tam;
+      for (let i = 0; i < N; i += tam) for (let j = 0; j < mitad; j++) {
+        const k = j * paso, a = i + j, b = a + mitad;
+        const tr = re[b] * co[k] - im[b] * si[k], ti = re[b] * si[k] + im[b] * co[k];
+        re[b] = re[a] - tr; im[b] = im[a] - ti; re[a] += tr; im[a] += ti;
+      }
+    }
+    for (let i = 0; i <= N / 2; i++) salida[i] = 20 * Math.log10(Math.hypot(re[i], im[i]) + 1e-6);
+  };
+})();
+
+function huella(m) {                 // [[código, columna], …] de unas muestras a 8 kHz
+  const n = m.length < H.N ? 0 : 1 + Math.floor((m.length - H.N) / H.SALTO);
+  if (!n) return [];
+  const B = H.BMAX - H.BMIN, zona = new Float32Array(B * n);
+  const marco = new Float32Array(H.N), col = new Float32Array(H.N / 2 + 1);
+  for (let t = 0; t < n; t++) {
+    const o = t * H.SALTO;
+    for (let i = 0; i < H.N; i++) marco[i] = m[o + i] * HANN[i];
+    fft(marco, col);
+    for (let b = 0; b < B; b++) zona[b * n + t] = col[b + H.BMIN];
+  }
+  const mf = new Float32Array(B * n), mx = new Float32Array(B * n);
+  for (let t = 0; t < n; t++) for (let b = 0; b < B; b++) {
+    let v = -Infinity;
+    for (let k = Math.max(0, b - H.VF), f = Math.min(B - 1, b + H.VF); k <= f; k++) if (zona[k * n + t] > v) v = zona[k * n + t];
+    mf[b * n + t] = v;
+  }
+  for (let b = 0; b < B; b++) for (let t = 0; t < n; t++) {
+    let v = -Infinity;
+    for (let k = Math.max(0, t - H.VT), f = Math.min(n - 1, t + H.VT); k <= f; k++) if (mf[b * n + k] > v) v = mf[b * n + k];
+    mx[b * n + t] = v;
+  }
+  const ordenada = Float32Array.from(zona).sort();
+  const umbral = ordenada[Math.floor(ordenada.length / 2)] + 10;
+  let picos = [];
+  for (let b = 0; b < B; b++) for (let t = 0; t < n; t++) {
+    const v = zona[b * n + t];
+    if (v === mx[b * n + t] && v > umbral) picos.push([t, b + H.BMIN, v]);
+  }
+  const maximo = Math.max(1, Math.floor(n * H.SALTO / H.F * H.PICOS));
+  if (picos.length > maximo) picos = picos.sort((a, c) => c[2] - a[2]).slice(0, maximo);
+  picos.sort((a, c) => a[0] - c[0] || a[1] - c[1]);
+  const salida = [];
+  for (let i = 0; i < picos.length; i++) {
+    const [t1, f1] = picos[i];
+    let parejas = 0;
+    for (let j = i + 1; j < picos.length; j++) {
+      const dt = picos[j][0] - t1;
+      if (dt < H.DTMIN) continue;
+      if (dt > H.DTMAX || parejas >= H.PAREJAS) break;
+      salida.push([((f1 & 511) << 15) | ((picos[j][1] & 511) << 6) | (dt & 63), t1]);
+      parejas++;
+    }
+  }
+  return salida;
+}
+
+let indiceHuellas = null;            // código -> [diapo * 65536 + columna, …]
+function prepararIndice() {
+  if (indiceHuellas) return indiceHuellas;
+  indiceHuellas = new Map();
+  const bytes = b64 => Uint8Array.from(atob(b64), c => c.charCodeAt(0)).buffer;
+  for (const [diapo, [c64, t64]] of Object.entries(HUELLAS)) {
+    const codigos = new Uint32Array(bytes(c64)), cols = new Uint16Array(bytes(t64)), d = Number(diapo) * 65536;
+    for (let i = 0; i < codigos.length; i++) {
+      let lista = indiceHuellas.get(codigos[i]);
+      if (!lista) indiceHuellas.set(codigos[i], lista = []);
+      lista.push(d + cols[i]);
+    }
+  }
+  return indiceHuellas;
+}
+
+function reconocer(h) {              // {diapo, segundo (al final del trozo), votos} o null
+  const indice = prepararIndice(), votos = new Map();
+  let ultimo = 0;
+  for (const [, t] of h) if (t > ultimo) ultimo = t;
+  for (const [codigo, t] of h) {
+    const lista = indice.get(codigo);
+    if (!lista) continue;
+    for (const x of lista) {
+      const clave = Math.floor(x / 65536) * 1000000 + ((x % 65536) - t + 500000);
+      votos.set(clave, (votos.get(clave) || 0) + 1);
+    }
+  }
+  let mejor = null;
+  for (const [clave, v] of votos) {
+    const total = v + (votos.get(clave - 1) || 0) + (votos.get(clave + 1) || 0);
+    if (!mejor || total > mejor.votos) {
+      mejor = {diapo: Math.floor(clave / 1000000), desfase: (clave % 1000000) - 500000, votos: total};
+    }
+  }
+  if (!mejor) return null;
+  return {diapo: mejor.diapo, segundo: (mejor.desfase + ultimo) * H.SALTO / H.F, votos: mejor.votos};
+}
+
+// Lo que se oye: los últimos ESCUCHA segundos a 8 kHz (remuestreado del micrófono)
+const ESCUCHA = 8;
+const oido = {buf: new Float32Array(ESCUCHA * H.F), w: 0, lleno: 0, acc: 0, n: 0, fase: 0};
+function grabar({ctx, fuente}) {
+  const nodo = ctx.createScriptProcessor(4096, 1, 1);
+  const ratio = ctx.sampleRate / H.F;
+  nodo.onaudioprocess = e => {
+    const x = e.inputBuffer.getChannelData(0);
+    for (let i = 0; i < x.length; i++) {   // media de cada grupo de muestras -> 8 kHz
+      oido.acc += x[i]; oido.n++; oido.fase += 1;
+      if (oido.fase >= ratio) {
+        oido.fase -= ratio;
+        oido.buf[oido.w] = oido.acc / oido.n; oido.w = (oido.w + 1) % oido.buf.length;
+        oido.lleno = Math.min(oido.buf.length, oido.lleno + 1); oido.acc = 0; oido.n = 0;
+      }
+    }
+  };
+  const mudo = ctx.createGain(); mudo.gain.value = 0;
+  fuente.connect(nodo); nodo.connect(mudo); mudo.connect(ctx.destination);
+  oido.nodo = nodo;
+}
+function ultimosSegundos() {
+  const b = oido.buf, salida = new Float32Array(b.length);
+  salida.set(b.subarray(oido.w)); salida.set(b.subarray(0, oido.w), b.length - oido.w);
+  return salida;
+}
+
+// Diapo y segundo dentro de ella para una canción reconocida (en modo simple, la diapo es la de la tanda)
+function dondeVa(diapo, segundo) {
+  const d = DIAPOS[diapo];
+  // en la cortina el reloj es la espera hasta la tanda, no el segundo de la canción: empieza a contar ahora
+  // (y el oído reconocerá cuándo empieza de verdad la tanda)
+  if (d.tipo === "cortina") return [diapo, 0];
+  if (!(simple && d.tipo === "tema" && d.actual > 0)) return [diapo, segundo];
+  let base = diapo - d.actual, antes = 0;
+  for (let k = base; k < diapo; k++) antes += (DIAPOS[k].duracion || 0) + PAUSA;
+  return [base, antes + segundo];
+}
+
+// Las reglas: el reloj manda; el oído solo corrige si oye otra cosa (o el tema va desfasado)
+let reconociendo = false, oidas = [];
+function escuchar() {
+  if (!reconociendo || oido.lleno < oido.buf.length || pausado || enVivo) return;
+  const r = reconocer(huella(ultimosSegundos()));
+  const estado = document.getElementById("estado").querySelector("span");
+  if (!r || r.votos < 3) { estado.textContent = "🎤 escuchando…"; oidas = []; return; }
+  r.cuando = Date.now();
+  oidas = oidas.concat([r]).slice(-3);
+  // ¿coinciden con las anteriores (misma canción y el segundo avanza lo mismo que el reloj)?
+  const coherentes = oidas.filter(o => o.diapo === r.diapo &&
+    Math.abs((r.segundo - o.segundo) - (r.cuando - o.cuando) / 1000) <= 1.5).length;
+  const [diapo, segundo] = dondeVa(r.diapo, r.segundo);
+  const titulo = DIAPOS[r.diapo].tipo === "cortina" ? "cortina" : (DIAPOS[r.diapo].temas || [])[DIAPOS[r.diapo].actual]?.titulo;
+  if (diapo === destino) {
+    // el tema que toca: corregir el reloj si va desfasado
+    if ((coherentes >= 2 || r.votos >= 6) && largo && DIAPOS[diapo].tipo !== "cortina") {
+      const desfase = segundo * 1000 - lleva();
+      if (Math.abs(desfase) > 2500) { inicio = ahora() - segundo * 1000; pintarReloj(); }
+    }
+    estado.textContent = `🎤 ✓ ${titulo || ""}`;
+    return;
+  }
+  // otra canción: saltar solo si se confirma (y más confirmaciones si es un salto raro)
+  const necesarias = Math.abs(diapo - destino) <= 4 ? 2 : 3;
+  estado.textContent = `🎤 ¿${titulo || ""}? (${coherentes}/${necesarias})`;
+  if (coherentes >= necesarias) {
+    ir(diapo, ahora() - segundo * 1000);
+    estado.textContent = `🎤 → ${titulo || ""}`;
+    oidas = [];
+  }
+}
+
+// 🎤 Reconocer canción: se enciende sola al abrir (si se dejó encendida) y el botón la enciende o apaga
+let grabando = false;
+function ponerBotonMicro() {
+  document.getElementById("b-micro").innerHTML = reconociendo
+    ? "🎤 Reconociendo ✓<small>toca para apagarlo (seguirá el reloj)</small>"
+    : "🎤 Reconocer canción<small>escucha y corrige solo; si no, sigue el reloj</small>";
+}
+
+async function activarReconocer(automatico = false) {
+  if (reconociendo && !automatico) {               // apagar
+    reconociendo = false; guarda("reconocer", false); ponerBotonMicro();
+    document.getElementById("estado").querySelector("span").textContent = "por tiempo · toca al empezar cada tanda";
+    aviso("🎤 Apagado: sigue el reloj");
+    return;
+  }
+  if (!Object.keys(HUELLAS).length) {
+    if (!automatico) aviso("Esta presentación no lleva las huellas de audio: créala de nuevo desde TangoTags");
+    return;
+  }
+  const estado = document.getElementById("estado").querySelector("span");
   try {
-    const flujo = await navigator.mediaDevices.getUserMedia({audio: true});
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const analizador = ctx.createAnalyser();
-    analizador.fftSize = 64;
-    ctx.createMediaStreamSource(flujo).connect(analizador);
-    const datos = new Uint8Array(analizador.frequencyBinCount);
-    microActivo = true;
-    document.body.classList.add("micro");
-    aviso("🎤 Ecualizador con el micrófono");
-    const bandas = [1, 2, 3, 5, 7, 10, 14];
-    (function mover() {
-      analizador.getByteFrequencyData(datos);
-      document.querySelectorAll(".eq").forEach(eq => eq.querySelectorAll("i").forEach((i, k) => {
-        const v = pausado ? 0.15 : Math.max(0.12, datos[bandas[k]] / 255);
-        i.style.transform = `scaleY(${v.toFixed(2)})`;
-      }));
-      requestAnimationFrame(mover);
-    })();
-  } catch (e) {
-    aviso("No se pudo usar el micrófono: el ecualizador sigue al ritmo del tema");
+    const e = await microfono();
+    ecualizadorMicro(e);
+    if (!grabando) {
+      prepararIndice();
+      grabar(e);
+      grabando = true;
+      setInterval(escuchar, 4000);
+    }
+    reconociendo = true; guarda("reconocer", true); ponerBotonMicro();
+    if (e.ctx.state === "suspended") estado.textContent = "🎤 toca la pantalla una vez para empezar a escuchar";
+    else { estado.textContent = "🎤 escuchando…"; aviso("🎤 Escuchando: irá sola a lo que suene (el reloj sigue de respaldo)"); }
+  } catch (err) {
+    estado.textContent = "por tiempo · toca al empezar cada tanda";
+    // decir por qué (para poder arreglarlo)
+    let porque;
+    if (!window.isSecureContext || !navigator.mediaDevices) {
+      porque = "este navegador no deja usar el micrófono en un archivo abierto así (" + location.protocol +
+               "). Prueba con Firefox o sirviéndola desde la propia tablet";
+    } else if (err && err.name === "NotAllowedError") {
+      porque = "permiso denegado. Mira Ajustes de Android → Aplicaciones → Chrome → Permisos → Micrófono → " +
+               "Permitir, y en Chrome el candado/ajustes del sitio → Micrófono → Permitir";
+    } else if (err && err.name === "NotFoundError") {
+      porque = "no se encuentra ningún micrófono";
+    } else {
+      porque = (err && (err.name + ": " + err.message)) || "error desconocido";
+    }
+    aviso("🎤 No se pudo usar el micrófono: " + porque + ". Sigue el reloj como siempre.");
   }
 }
 
@@ -767,5 +1138,16 @@ mensaje = lee("mensaje", "");
 actual = -1; destino = -1;
 ir(location.hash.length > 1 ? (parseInt(location.hash.slice(1)) || 0) : lee("diapo", 0));
 vivo(); setInterval(vivo, 1500);
+
+// Al abrir: la ayuda solo la primera vez en esta tablet (y se cierra sola a los 20 s para no tapar nada),
+// y si la presentación lleva huellas, empieza a escuchar sola (salvo que se apagara a propósito)
+if (!lee("ayuda_vista", false)) {
+  document.getElementById("ayuda").classList.add("visible");
+  setTimeout(() => { document.getElementById("ayuda").classList.remove("visible"); guarda("ayuda_vista", true); }, 20000);
+}
+ponerBotonMicro();
+if (location.protocol === "file:" || !enVivo) {
+  if (Object.keys(HUELLAS).length && lee("reconocer", true)) activarReconocer(true);
+}
 </script></body></html>
 """

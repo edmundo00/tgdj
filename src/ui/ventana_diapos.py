@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (
     QApplication, QProgressBar, QListWidget, QListWidgetItem, QWidget, QComboBox, QSpinBox, QProgressDialog,
 )
 
-from src.config.config import m3u_start_path, presentations_start_path, default_milonga_data
+from src.config.config import m3u_start_path, presentations_start_path, default_milonga_data, url_presentaciones_web
 from src.diapos.generador import (
     leer_playlist, agrupar_tandas, crear_presentacion, duracion_texto, nombre_archivo, compositor_para_diapo,
 )
@@ -543,27 +543,47 @@ class VentanaDiapos(QDialog):
                 + "\n\n¿Crear la presentación igualmente?",
                 QMessageBox.Yes | QMessageBox.No, QMessageBox.No) != QMessageBox.Yes:
             return
-        nombre = os.path.splitext(nombre_archivo(d))[0] + ".html"
+        nombre = web.nombre_web(d)           # 261013-milonga-mia.html (vale tal cual de dirección web)
         destino, _ = QFileDialog.getSaveFileName(self, "Guardar presentación web",
                                                  os.path.join(presentations_start_path, nombre),
                                                  "Página web (*.html)")
         if not destino:
             return
         QApplication.setOverrideCursor(Qt.WaitCursor)
+        self.progreso.setFormat("Preparando el reconocimiento por sonido… %v de %m canciones")
+        self.progreso.show()
+
+        def progreso(hechas, total):
+            self.progreso.setMaximum(total)
+            self.progreso.setValue(hechas)
+            QApplication.processEvents()
+
         try:
-            web.crear_web(self.tandas, d, destino)
+            # la lista ligera para el móvil de la gente, junto a la presentación; el QR lleva a ella
+            lista = os.path.join(os.path.dirname(destino), web.nombre_lista(d))
+            web.crear_lista(self.tandas, d, lista)
+            url_lista = url_presentaciones_web + os.path.basename(lista) if url_presentaciones_web else None
+            web.crear_web(self.tandas, d, destino, progreso=progreso, url_lista=url_lista)
         except Exception as e:
             QMessageBox.critical(self, "Error", f"No se pudo crear la presentación web:\n{e}")
             return
         finally:
             QApplication.restoreOverrideCursor()
+            self.progreso.hide()
+            self.progreso.setFormat("%p%")
         self.settings.setValue("ultima_web", destino)
         if getattr(self, "proyector", None) is not None and self.proyector.activo:
             self.proyector.cambiar_html(destino)
+        carpeta = os.path.dirname(destino)
+        publicar = (f"\n\nPara usar el micrófono en la tablet y que el QR funcione, sube estos DOS archivos a tu "
+                    f"repositorio de GitHub Pages ({url_presentaciones_web}):\n  · {os.path.basename(destino)}\n"
+                    f"  · {web.nombre_lista(d)}  (la lista ligera a la que lleva el QR)\n"
+                    f"y en la tablet abre {url_presentaciones_web}{os.path.basename(destino)}"
+                    if url_presentaciones_web else "")
         r = QMessageBox.question(self, "Presentación web creada",
-                                 f"Guardada en:\n{destino}\n\nSe abre en cualquier navegador (F = pantalla completa, "
-                                 f"flechas para pasar).\n\n¿Proyectarla ya en vivo (salta sola con VirtualDJ)?",
-                                 QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+                                 f"Guardada en:\n{carpeta}{publicar}\n\n"
+                                 f"¿Proyectarla también desde este ordenador (modo en vivo con Mixxx)?",
+                                 QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if r == QMessageBox.Yes:
             self.proyectar(destino)
 

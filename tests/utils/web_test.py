@@ -38,6 +38,8 @@ class WebTest(Base):
         contenido = open(html, encoding="utf-8").read()
         self.assertIn('"clave": "Juan D\'Arienzo - Tres"', contenido)
         self.assertNotIn("__DIAPOS__", contenido)
+        self.assertNotIn("__HUELLAS__", contenido)
+        self.assertIn("const HUELLAS = {", contenido)
         tracklist = os.path.join(dir_, "tracklist.txt")
         with open(tracklist, "w", encoding="utf-8") as f:
             f.write("21:00 : Juan D'Arienzo - Uno\n21:03 : Juan D'Arienzo - Dos\n\n")
@@ -51,6 +53,26 @@ class WebTest(Base):
             self.assertIn(b"Milonga Mia", urllib.request.urlopen(base + "/").read())
         finally:
             p.parar()
+
+
+class ListaYQrTest(Base):
+    def test_lista_ligera_y_qr(self):
+        filas = (self.tanda("Juan D'Arienzo", titulos=["Uno", "Dos", "Tres"]) + [self.cortina("Clandestina")]
+                 + self.tanda("Carlos di Sarli", genero="tango vals"))
+        tandas = agrupar_tandas(pd.DataFrame(filas))
+        datos = dict(DATOS, milonga="Milonga Mía")
+        self.assertEqual(web.nombre_web(datos), "261013-milonga-mia.html")
+        self.assertEqual(web.nombre_lista(datos), "261013-milonga-mia-lista.html")
+        dir_ = tempfile.mkdtemp()
+        lista = open(web.crear_lista(tandas, datos, os.path.join(dir_, "lista.html")), encoding="utf-8").read()
+        self.assertIn("Dos", lista)
+        self.assertIn("Cortina · <b>Clandestina</b>", lista)   # las cortinas también salen
+        self.assertLess(len(lista), 20000)
+        html = open(web.crear_web(tandas, datos, os.path.join(dir_, "p.html"), reconocer=False,
+                                  url_lista="https://ejemplo.org/lista.html"), encoding="utf-8").read()
+        self.assertIn('id="qr"', html)
+        self.assertIn("<svg", html)
+        self.assertNotIn("__QR__", html)
 
 
 def mixxx_falso(ruta, canciones):

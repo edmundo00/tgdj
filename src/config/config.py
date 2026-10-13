@@ -147,6 +147,8 @@ def ruta_local(ruta):
     return traducida if os.path.normcase(traducida) != os.path.normcase(ruta) else ruta
 m3u_start_path = os.path.join(dropbox_path, "TDJ", "playlists","trabajo")
 presentations_start_path = os.path.join(dropbox_path, "TDJ", "Presentacion")
+# Dónde se publican las presentaciones web (GitHub Pages): el QR de la presentación lleva a la lista de la noche
+url_presentaciones_web = "https://edmundo00.github.io/presentaciones-milonga/"
 musicbee_start_folder = os.path.join(dropbox_path, "TDJ", "MUSICBEE DATABASES")
 # La única carpeta de música que se sincroniza en el portátil que va a la milonga
 carpeta_portatil = os.path.join(dropbox_path, "TDJ", "MUSICA", "Edmundo")
