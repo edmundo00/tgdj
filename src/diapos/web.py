@@ -375,7 +375,15 @@ PLANTILLA = r"""<!doctype html>
     font-family: Georgia, "Palatino Linotype", "Book Antiqua", serif; }
   #fondo { position:fixed; inset:-2vw; background:#0d0907 url("__FONDO__") center/cover no-repeat;
     filter:brightness(.28) blur(6px) saturate(.8); }
-  #fondo { transition:filter 1.5s ease; }
+  #fondo { transition:filter 1.5s ease, opacity 1s ease; } #velo { transition:opacity 1s ease; }
+  /* Cortinas: lo moderno, alegre. Un degradado de colores vivos que se mueve despacio (cada cortina, otro) */
+  #alegre { position:fixed; inset:0; opacity:0; transition:opacity 1s ease; pointer-events:none;
+    background:linear-gradient(125deg, var(--c1, #ff5f6d), var(--c2, #ffc371), var(--c3, #ff5f9e), var(--c1, #ff5f6d));
+    background-size:300% 300%; animation:ola 16s ease-in-out infinite; }
+  @keyframes ola { 0% { background-position:0% 50%; } 50% { background-position:100% 50%; } 100% { background-position:0% 50%; } }
+  body[data-tipo="cortina"] #alegre { opacity:1; }
+  body[data-tipo="cortina"] #fondo, body[data-tipo="cortina"] #velo { opacity:0; }
+  body[data-tipo="cortina"] #hora, body[data-tipo="cortina"] #firma, body[data-tipo="cortina"] #estado { color:rgba(255,255,255,.75); }
   #tinte { position:fixed; inset:0; pointer-events:none; opacity:0; transition:opacity 1.5s ease; }
   body[data-genero="tango"] #tinte { opacity:1; background:radial-gradient(ellipse at 22% 50%, rgba(217,164,65,.14), transparent 65%); }
   body[data-genero="vals"] #tinte { opacity:1; background:radial-gradient(ellipse at 22% 50%, rgba(111,191,138,.2), transparent 65%); }
@@ -448,8 +456,14 @@ PLANTILLA = r"""<!doctype html>
   .portada .lista b { display:inline-block; width:1.4vw; height:1.4vw; border-radius:50%; margin-right:.8vw; vertical-align:-.15vw; background:var(--tango); }
   .portada .lista b.vals { background:var(--vals); } .portada .lista b.milonga { background:var(--milonga); }
   .cortina { text-align:center; width:100%; }
-  .cortina .sonando { font:500 1.7vw system-ui, sans-serif; letter-spacing:.25em; text-transform:uppercase; color:var(--suave); }
-  .cortina h1 { font-size:4.4vw; } .cortina h2 { margin-bottom:6vh; }
+  .cortina .sonando { font:600 max(16px, 2vw) system-ui, sans-serif; letter-spacing:.35em; text-transform:uppercase; color:#fff; opacity:.9; }
+  .cortina h1 { font:800 min(8.5vw, 15vh)/1.02 system-ui, "Segoe UI", sans-serif; letter-spacing:-.02em; color:#fff;
+    margin:1vh 0 .5vh; text-shadow:0 .6vh 3vh rgba(0,0,0,.35); }
+  .cortina h2 { font:italic 400 min(3.6vw, 6vh) Georgia, serif; color:#fff; opacity:.92; margin-bottom:5vh;
+    text-shadow:0 .3vh 1.5vh rgba(0,0,0,.3); }
+  .cortina .proxima { background:rgba(20,10,30,.45); backdrop-filter:blur(4px); }
+  .cortina .cuenta { color:rgba(255,255,255,.85); }
+  .cortina .mensaje { background:rgba(255,255,255,.2); border-color:rgba(255,255,255,.5); }
   .proxima { display:inline-flex; align-items:center; gap:2.5vw; padding:2.5vh 3vw; border-radius:2vw; background:rgba(0,0,0,.45); text-align:left; }
   .proxima img, .proxima .emblema { width:14vw; height:14vw; font-size:5vw; }
   .proxima .que { font:500 1.5vw system-ui, sans-serif; letter-spacing:.2em; text-transform:uppercase; color:var(--suave); }
@@ -547,7 +561,7 @@ PLANTILLA = r"""<!doctype html>
   }
 </style></head>
 <body>
-<div id="fondo"></div><div id="velo"></div><div id="tinte"></div>
+<div id="fondo"></div><div id="velo"></div><div id="tinte"></div><div id="alegre"></div>
 <div id="diapo"></div>
 <div id="firma">© __FIRMA__</div>
 <div id="hora"></div>
@@ -778,8 +792,19 @@ function ir(n, desde) {
   setTimeout(() => { if (destino !== n) return;
                      actual = n; document.body.dataset.tipo = DIAPOS[n].tipo;
                      document.body.dataset.genero = DIAPOS[n].tipo === "cortina" ? "" : (DIAPOS[n].genero || "");
+                     if (DIAPOS[n].tipo === "cortina") alegrar(n);
                      caja.innerHTML = pintar(DIAPOS[n]); caja.classList.remove("oculta");
                      if (!ensayo) history.replaceState(null, "", "#" + n); }, 180);
+}
+
+// Colores de las cortinas: cada cortina de la noche con su combinación (vivos, y que se lea el blanco encima)
+const ALEGRES = [["#ff5f6d", "#ffc371", "#ff5f9e"], ["#7f00ff", "#e100ff", "#ff6a88"], ["#00b09b", "#3a7bd5", "#00c6ff"],
+                 ["#f7971e", "#ff4e50", "#f9d423"], ["#fc466b", "#3f5efb", "#a044ff"], ["#11998e", "#38ef7d", "#0f9b8e"],
+                 ["#ee0979", "#ff6a00", "#ff3cac"], ["#4776e6", "#8e54e9", "#00d2ff"]];
+function alegrar(n) {
+  const k = DIAPOS.slice(0, n).filter(d => d.tipo === "cortina").length % ALEGRES.length;
+  const a = document.getElementById("alegre");
+  ALEGRES[k].forEach((c, i) => a.style.setProperty(`--c${i + 1}`, c));
 }
 
 // Que la pantalla de la tablet no se apague (si el navegador lo permite)
