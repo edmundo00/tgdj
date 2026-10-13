@@ -6,13 +6,14 @@ from PyQt5.QtGui import QColor, QFont
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QLineEdit, QDateEdit, QTimeEdit, QPushButton,
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QFileDialog, QMessageBox, QSplitter,
-    QApplication, QProgressBar,
+    QApplication, QProgressBar, QListWidget, QListWidgetItem, QWidget,
 )
 
 from src.config.config import m3u_start_path, presentations_start_path, default_milonga_data
 from src.diapos.generador import (
     leer_playlist, agrupar_tandas, crear_presentacion, duracion_texto, nombre_archivo, compositor_para_diapo,
 )
+from src.diapos.revision import revisar, horas_de_inicio, ERROR, AVISO
 from src.utils.utils import convertir_segundos
 
 
@@ -24,6 +25,8 @@ class VentanaDiapos(QDialog):
         self.resize(1400, 800)
         self.settings = QSettings("TangoTags", "TangoTags")
         self.tandas = []
+        self.faltan = []
+        self.avisos = []
         self.playlist = None
 
         lay = QVBoxLayout(self)
@@ -63,8 +66,9 @@ class VentanaDiapos(QDialog):
         lay.addLayout(fila)
 
         # --- Vista previa: tandas arriba, canciones de la tanda seleccionada abajo
-        self.tabla_tandas = QTableWidget(0, 6)
-        self.tabla_tandas.setHorizontalHeaderLabels(["#", "Tipo", "Título de la diapo", "Subtítulo", "Temas", "Duración"])
+        self.tabla_tandas = QTableWidget(0, 7)
+        self.tabla_tandas.setHorizontalHeaderLabels(["#", "Tipo", "Título de la diapo", "Subtítulo", "Temas", "Duración",
+                                                     "Empieza"])
         self.tabla_tandas.verticalHeader().hide()
         self.tabla_tandas.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.tabla_tandas.setSelectionMode(QAbstractItemView.SingleSelection)
@@ -84,10 +88,21 @@ class VentanaDiapos(QDialog):
         h.setSectionResizeMode(2, QHeaderView.ResizeToContents)
         h.setSectionResizeMode(4, QHeaderView.ResizeToContents)
 
+        # --- Revisión: lo que conviene mirar antes de crear la presentación (clic = ir a la tanda)
+        self.lista_revision = QListWidget()
+        self.lista_revision.itemClicked.connect(self.ir_a_aviso)
+        caja_revision = QWidget()
+        lay_revision = QVBoxLayout(caja_revision)
+        lay_revision.setContentsMargins(0, 0, 0, 0)
+        self.titulo_revision = QLabel("<b>Revisión</b>")
+        lay_revision.addWidget(self.titulo_revision)
+        lay_revision.addWidget(self.lista_revision)
+
         division = QSplitter(Qt.Vertical)
         division.addWidget(self.tabla_tandas)
         division.addWidget(self.tabla_canciones)
-        division.setSizes([500, 200])
+        division.addWidget(caja_revision)
+        division.setSizes([450, 170, 170])
         lay.addWidget(division, 1)
 
         self.resumen = QLabel()
@@ -117,11 +132,13 @@ class VentanaDiapos(QDialog):
     def actualizar_duracion(self):
         d = self.datos()
         self.duracion.setText(f"Duración: {duracion_texto(d['inicio'], d['fin'])}")
+        if self.tandas:
+            self.revisar()
 
     def elegir_playlist(self):
         ruta, _ = QFileDialog.getOpenFileName(
             self, "Elegir playlist", self.settings.value("dir_playlist_diapos", m3u_start_path) or m3u_start_path,
-            "Playlists (*.m3u *.m3u8);;Todos (*.*)")
+            "Playlists (*.m3u *.m3u8 *.mbp);;Todos (*.*)")
         if ruta:
             self.settings.setValue("dir_playlist_diapos", os.path.dirname(ruta))
             self.cargar_playlist(ruta)
@@ -133,6 +150,7 @@ class VentanaDiapos(QDialog):
         finally:
             QApplication.restoreOverrideCursor()
         self.playlist = ruta
+        self.faltan = faltan
         self.tandas = agrupar_tandas(canciones)
         self.etiqueta_playlist.setText(f"<b>{os.path.basename(ruta)}</b> — {len(canciones)} canciones")
         self.rellenar_tandas()
@@ -146,35 +164,72 @@ class VentanaDiapos(QDialog):
         t = self.tabla_tandas
         t.setRowCount(len(self.tandas))
         n_tanda = 0
-        avisos = 0
         for fila, tanda in enumerate(self.tandas):
             if not tanda.es_cortina:
                 n_tanda += 1
             valores = [str(n_tanda) if not tanda.es_cortina else "",
                        "Cortina" if tanda.es_cortina else tanda.genero.capitalize(),
                        tanda.titulo_orquesta, tanda.subtitulo, str(len(tanda.canciones)),
-                       convertir_segundos(tanda.duracion)]
-            color = QColor("#eeeeee") if tanda.es_cortina else QColor("#ffffff")
-            if tanda.avisos:
-                color = QColor("#ffcdd2")
-                avisos += 1
+                       convertir_segundos(tanda.duracion), ""]
             for col, v in enumerate(valores):
                 it = QTableWidgetItem(v)
-                it.setBackground(color)
-                it.setToolTip("\n".join(tanda.avisos) if tanda.avisos else v)
                 if col == 2 and not tanda.es_cortina:
                     it.setFont(QFont("", -1, QFont.Bold))
                 t.setItem(fila, col, it)
+        self.revisar()
+        if self.tandas:
+            t.selectRow(0)
+
+    def revisar(self):
+        """Revisa la playlist, colorea las filas con problemas y llena la lista de la revisión."""
+        d = self.datos()
+        self.avisos = revisar(self.tandas, self.faltan, d["inicio"], d["fin"])
+        por_fila = {}
+        for a in self.avisos:
+            if a.fila is not None:
+                por_fila.setdefault(a.fila, []).append(a)
+        colores = {ERROR: QColor("#ffcdd2"), AVISO: QColor("#fff3c4")}
+        horas = horas_de_inicio(self.tandas, d["inicio"])
+        for fila, tanda in enumerate(self.tandas):
+            suyos = por_fila.get(fila, [])
+            niveles = {a.nivel for a in suyos}
+            nivel = ERROR if ERROR in niveles else AVISO if AVISO in niveles else None
+            color = colores.get(nivel, QColor("#eeeeee") if tanda.es_cortina else QColor("#ffffff"))
+            self.tabla_tandas.item(fila, 6).setText(horas[fila])
+            for col in range(self.tabla_tandas.columnCount()):
+                it = self.tabla_tandas.item(fila, col)
+                it.setBackground(color)
+                it.setToolTip("\n".join(a.texto for a in suyos) if suyos else it.text())
+
+        self.lista_revision.clear()
+        iconos = {ERROR: "❌", AVISO: "⚠", "info": "ℹ"}
+        for a in self.avisos:
+            item = QListWidgetItem(f"{iconos[a.nivel]}  {a.texto}")
+            item.setData(Qt.UserRole, a.fila)
+            if a.nivel in colores:
+                item.setBackground(colores[a.nivel])
+            self.lista_revision.addItem(item)
+        errores = sum(a.nivel == ERROR for a in self.avisos)
+        avisos = sum(a.nivel == AVISO for a in self.avisos)
+        if not self.avisos:
+            self.lista_revision.addItem("✔  Todo bien")
+        self.titulo_revision.setText(f"<b>Revisión</b> — {errores} error(es), {avisos} aviso(s)"
+                                     + ("" if errores or avisos else " ✔"))
+
         reales = [x for x in self.tandas if not x.es_cortina]
         musica = sum(x.duracion for x in reales)
         texto = (f"{len(reales)} tandas, {len(self.tandas) - len(reales)} cortinas — música: "
                  f"{convertir_segundos(musica, 'x minutos y x segundos')}, estimado con cortinas: "
                  f"{convertir_segundos(musica + max(len(reales) - 1, 0) * 60, 'x minutos y x segundos')}")
-        if avisos:
-            texto += f" — <span style='background:#ffcdd2'>&nbsp;{avisos} con avisos (pasa el ratón por encima)&nbsp;</span>"
+        if errores:
+            texto += f" — <span style='background:#ffcdd2'>&nbsp;{errores} error(es): mira la revisión&nbsp;</span>"
         self.resumen.setText(texto)
-        if self.tandas:
-            t.selectRow(0)
+
+    def ir_a_aviso(self, item):
+        fila = item.data(Qt.UserRole)
+        if fila is not None:
+            self.tabla_tandas.selectRow(fila)
+            self.tabla_tandas.scrollToItem(self.tabla_tandas.item(fila, 0))
 
     def mostrar_canciones(self):
         filas = self.tabla_tandas.selectionModel().selectedRows()
@@ -193,6 +248,13 @@ class VentanaDiapos(QDialog):
         d = self.datos()
         if not d["milonga"]:
             QMessageBox.warning(self, "Falta el nombre", "Escribe el nombre de la milonga.")
+            return
+        errores = [a.texto for a in self.avisos if a.nivel == ERROR]
+        if errores and QMessageBox.question(
+                self, "La playlist tiene errores",
+                f"La revisión encontró {len(errores)} error(es):\n\n" + "\n".join(errores[:10])
+                + ("\n…" if len(errores) > 10 else "") + "\n\n¿Crear la presentación igualmente?",
+                QMessageBox.Yes | QMessageBox.No, QMessageBox.No) != QMessageBox.Yes:
             return
         for clave, valor in (("diapos_nombre", d["milonga"]), ("diapos_inicio", d["inicio"]), ("diapos_fin", d["fin"])):
             self.settings.setValue(clave, valor)

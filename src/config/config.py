@@ -148,6 +148,8 @@ def ruta_local(ruta):
 m3u_start_path = os.path.join(dropbox_path, "TDJ", "playlists","trabajo")
 presentations_start_path = os.path.join(dropbox_path, "TDJ", "Presentacion")
 musicbee_start_folder = os.path.join(dropbox_path, "TDJ", "MUSICBEE DATABASES")
+# La única carpeta de música que se sincroniza en el portátil que va a la milonga
+carpeta_portatil = os.path.join(dropbox_path, "TDJ", "MUSICA", "Edmundo")
 
 data_folder = DATA_FOLDER
 mp3_dir = os.path.join(dropbox_path, "TDJ", "tangolinkdatabase", "MP3")

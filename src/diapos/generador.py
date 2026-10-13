@@ -25,6 +25,7 @@ from src.config.config import (
 )
 from src.utils.buscar_artista import separar_orquesta_cantor
 from src.utils.formato_tags import separar_compositor_autor, formatear_fecha
+from src.utils.musicbee_playlist import leer_mbp
 from src.utils.funciones_para_diapos import add_text_to_slide, add_resized_image_to_slide, transformar_posiciones
 from src.utils.utils import obtener_autores, convertir_segundos, load_m3u_file_helper
 
@@ -70,9 +71,10 @@ def resolver_ruta(linea):
 
 
 def leer_playlist(ruta_m3u):
-    """Devuelve (DataFrame de canciones, lista de rutas que no existen)."""
+    """Playlist .m3u/.m3u8 o de MusicBee (.mbp) -> (DataFrame de canciones, lista de rutas que no existen)."""
     filas, faltan = [], []
-    for linea in load_m3u_file_helper(ruta_m3u):
+    lineas = leer_mbp(ruta_m3u) if ruta_m3u.lower().endswith(".mbp") else load_m3u_file_helper(ruta_m3u)
+    for linea in lineas:
         ruta = resolver_ruta(linea)
         if not os.path.exists(ruta):
             faltan.append(linea)

@@ -36,10 +36,23 @@ La barra de arriba sigue el orden de trabajo:
 | ① Cargar | Archivos · Carpeta · Playlist · MusicBee | Carga canciones y las busca en la base de datos. Las ya revisadas se saltan (*Opciones*) |
 | ② Revisar | Marcar sugeridas · Desmarcar todo · Buscar en BD · Parar música | A la izquierda las tags del archivo, a la derecha las coincidencias **ya con el formato final**. Marca **Usar** en la buena (las sugeridas vienen marcadas). Se pueden editar las celdas de la BD; doble clic en una canción sin coincidencias para buscarla a mano. ▶ para escuchar |
 | ③ Aplicar | Aplicar tags · Deshacer | Muestra antes/después y, si confirmas, escribe. Siempre guarda antes una copia para poder **deshacer** |
-| ④ Diapos | Crear diapos · Control diapos | Presentación de las tandas desde una playlist (con vista previa) / pasar diapos durante la milonga |
+| ④ Diapos | Crear diapos · Control diapos | Presentación de las tandas desde una playlist .m3u o .mbp de MusicBee (con vista previa y **revisión**) / pasar diapos durante la milonga |
 
 **Colores** de la comparación: verde = igual, amarillo = parecido (p. ej. mismo año), naranja =
 parcial (falta el dato), rojo = distinto.
+
+### Revisión antes de crear las diapos
+
+Al cargar la playlist en *Crear diapos* (vale la `.mbp` de MusicBee directamente) se revisa y se ve abajo
+(clic en un aviso = ir a la tanda; en la tabla, la hora a la que empieza cada tanda):
+
+- ❌ **Errores**: canciones fuera de `MUSICA\Edmundo` (no estarán en el portátil) o que no existen, falta una
+  cortina entre tandas, el mismo archivo o tema dos veces en una tanda. Si hay errores, pregunta antes de crear.
+- ⚠ **Avisos**: tandas que no son de 3–4 temas, mezcla de orquestas, de instrumentales y cantadas o de cantores,
+  años separados más de 5, sin año, cortinas dobles, vals y milonga sin tango en medio, la misma orquesta o
+  cantor a menos de 4 tandas, un tema que suena dos veces en la noche, archivos solo en la nube, que la música
+  no quepa en el horario.
+- ℹ **Info**: minutos libres, pocas instrumentales, Pugliese en el primer tercio, temas sin compositor en la diapo.
 
 Menú **Ayuda → Cómo se usa** (F1) tiene la misma explicación dentro de la app.
 Si cargas desde MusicBee, después de aplicar haz en MusicBee *Herramientas → Volver a leer tags*.
@@ -170,6 +183,7 @@ src/biblioteca/            Mi biblioteca: SQLite local, escáner incremental, em
 src/motor/emparejar.py     el motor que compara una canción con la base de datos de tango
 src/ui/                    ventanas (principal, Mi biblioteca, buscador, estado, duplicados, playlists, diapos)
 src/diapos/generador.py    creación del PowerPoint
+src/diapos/revision.py     revisión de la playlist antes de las diapos
 src/utils/                 formato de tags, búsqueda, historial, base de datos
 control_slides.py          control de diapos (también abre suelto / control_slides.exe)
 herramientas/              scripts sueltos: descargar tango.info, preparar fotos de orquestas

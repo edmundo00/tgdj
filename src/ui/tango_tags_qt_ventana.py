@@ -117,7 +117,10 @@ Antes de escribir se guarda una copia de las tags anteriores: <b>Deshacer</b> (C
 vuelve a poner, y <i>Archivo → Historial de cambios</i> permite deshacer cambios más antiguos.
 Si cargaste desde MusicBee, después haz en MusicBee <i>Herramientas → Volver a leer tags</i>.</li>
 <li><b>Diapos</b>: <i>Crear diapos</i> genera la presentación de las tandas a partir de una playlist
-(con vista previa de las tandas; las que mezclan orquestas salen en rojo);
+(.m3u o la .mbp de MusicBee), con vista previa y una <b>revisión</b> antes de crearla: que todo esté en
+MUSICA/Edmundo (lo que hay en el portátil), cortinas entre tandas, 3–4 temas, mismo cantor y años cercanos,
+orquestas o cantores repetidos muy cerca, vals y milonga seguidos, temas repetidos y la duración
+(rojo = error, amarillo = aviso);
 <i>Control diapos</i> va pasando las diapos durante la milonga.</li>
 </ol>
 <p><b>Teclado</b> en la tabla: 1–9 elegir · 0 ninguna · Espacio escuchar · S siguiente por decidir · X no tocar.</p>
