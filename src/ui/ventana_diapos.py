@@ -564,6 +564,7 @@ class VentanaDiapos(QDialog):
             web.crear_lista(self.tandas, d, lista)
             url_lista = url_presentaciones_web + os.path.basename(lista) if url_presentaciones_web else None
             web.crear_web(self.tandas, d, destino, progreso=progreso, url_lista=url_lista)
+            extras = web.archivos_para_publicar(d, os.path.dirname(destino))
         except Exception as e:
             QMessageBox.critical(self, "Error", f"No se pudo crear la presentación web:\n{e}")
             return
@@ -575,9 +576,11 @@ class VentanaDiapos(QDialog):
         if getattr(self, "proyector", None) is not None and self.proyector.activo:
             self.proyector.cambiar_html(destino)
         carpeta = os.path.dirname(destino)
-        publicar = (f"\n\nPara usar el micrófono en la tablet y que el QR funcione, sube estos DOS archivos a tu "
-                    f"repositorio de GitHub Pages ({url_presentaciones_web}):\n  · {os.path.basename(destino)}\n"
+        publicar = (f"\n\nPara usar el micrófono en la tablet y que el QR funcione, sube a tu repositorio de "
+                    f"GitHub Pages ({url_presentaciones_web}):\n  · {os.path.basename(destino)}\n"
                     f"  · {web.nombre_lista(d)}  (la lista ligera a la que lleva el QR)\n"
+                    f"  · {', '.join(extras)}  (para que funcione sin internet y se pueda añadir a la "
+                    f"pantalla de inicio; sw.js y los iconos solo hace falta subirlos una vez)\n"
                     f"y en la tablet abre {url_presentaciones_web}{os.path.basename(destino)}"
                     if url_presentaciones_web else "")
         r = QMessageBox.question(self, "Presentación web creada",

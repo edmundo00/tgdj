@@ -40,6 +40,74 @@ def _imagen_base64(ruta, ancho=ANCHO_FOTO, calidad=85):
     return f"data:image/{tipo};base64,{base64.b64encode(buf.getvalue()).decode()}"
 
 
+def _autores(compositor):
+    """'Música: X - Letra: Y' (con tilde) para la presentación web y la lista."""
+    return compositor_para_diapo(compositor).replace("Musica:", "Música:")
+
+
+# ---------------------------------------------------------------- para publicar (GitHub Pages)
+SW = """// Guarda lo que se abre para que funcione sin internet: con red, lo último (y se guarda); sin red, lo guardado
+const CACHE = "milongas-v1";
+self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", e => e.waitUntil(self.clients.claim()));
+self.addEventListener("fetch", e => {
+  if (e.request.method !== "GET" || new URL(e.request.url).origin !== location.origin) return;
+  e.respondWith((async () => {
+    const cache = await caches.open(CACHE);
+    try {
+      const r = await fetch(e.request);
+      if (r.ok) cache.put(e.request, r.clone());
+      return r;
+    } catch (err) {
+      const guardado = await cache.match(e.request, {ignoreSearch: true});
+      if (guardado) return guardado;
+      throw err;
+    }
+  })());
+});
+"""
+
+
+def nombre_manifiesto(datos):
+    return nombre_web(datos)[:-len(".html")] + ".webmanifest"
+
+
+def crear_icono(destino, lado):
+    """Icono de la app (pantalla de inicio de la tablet): círculo dorado con «TDJ» sobre fondo oscuro."""
+    from PIL import Image, ImageDraw, ImageFont
+    im = Image.new("RGB", (lado, lado), "#0d0907")
+    d = ImageDraw.Draw(im)
+    m = lado // 10
+    d.ellipse([m, m, lado - m, lado - m], fill="#d9a441")
+    try:
+        letra = ImageFont.truetype(os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "Fonts", "georgiab.ttf"), lado // 4)
+    except OSError:
+        letra = ImageFont.load_default()
+    d.text((lado / 2, lado / 2), "TDJ", fill="#120c08", font=letra, anchor="mm")
+    im.save(destino)
+    return destino
+
+
+def archivos_para_publicar(datos, carpeta):
+    """Crea junto a la presentación lo que necesita para funcionar sin internet y abrirse a pantalla completa
+    desde un icono: sw.js, el manifiesto y los iconos. Devuelve sus nombres."""
+    nombres = ["sw.js", nombre_manifiesto(datos), "icono-192.png", "icono-512.png"]
+    with open(os.path.join(carpeta, "sw.js"), "w", encoding="utf-8") as f:
+        f.write(SW)
+    manifiesto = {
+        "name": f"{datos['milonga']} · {fecha_larga(datos['fecha'])}", "short_name": datos["milonga"][:12],
+        "start_url": "./" + nombre_web(datos), "scope": "./", "display": "fullscreen", "orientation": "landscape",
+        "background_color": "#0d0907", "theme_color": "#0d0907",
+        "icons": [{"src": "icono-192.png", "sizes": "192x192", "type": "image/png"},
+                  {"src": "icono-512.png", "sizes": "512x512", "type": "image/png"}],
+    }
+    with open(os.path.join(carpeta, nombre_manifiesto(datos)), "w", encoding="utf-8") as f:
+        json.dump(manifiesto, f, ensure_ascii=False, indent=1)
+    crear_icono(os.path.join(carpeta, "icono-192.png"), 192)
+    crear_icono(os.path.join(carpeta, "icono-512.png"), 512)
+    return nombres
+
+
 def _archivo(ruta):
     """Nombre del archivo en minúsculas: el programa de pinchar (Mixxx) dice qué archivo suena."""
     return os.path.basename(str(ruta).replace("/", "\\")).lower()
@@ -116,7 +184,7 @@ def diapos(tandas, datos):
             continue
         if not t.es_cumparsita:
             numero += 1
-        temas = [{"titulo": c["title"], "ano": c["ano"], "autores": compositor_para_diapo(c["composer"]),
+        temas = [{"titulo": c["title"], "ano": c["ano"], "autores": _autores(c["composer"]),
                   "cantor": c["artist2"]} for _, c in t.canciones.iterrows()]
         for k, (_, c) in enumerate(t.canciones.iterrows()):
             salida.append({
@@ -159,7 +227,7 @@ def crear_lista(tandas, datos, destino):
         temas = []
         for _, c in t.canciones.iterrows():
             ano = f" <span>{h.escape(str(c['ano']))}</span>" if c["ano"] else ""
-            autores = compositor_para_diapo(c["composer"])
+            autores = _autores(c["composer"])
             autores = f"<small>{h.escape(autores)}</small>" if autores else ""
             busqueda = quote_plus(" ".join(x for x in (c["artist1"], c["artist2"], c["title"], str(c["ano"] or ""))
                                            if x))
@@ -287,7 +355,8 @@ def crear_web(tandas, datos, destino, reconocer=True, progreso=None, url_lista=N
             .replace("__IMAGENES__", json.dumps(imagenes))
             .replace("__FONDO__", fondo_uri)
             .replace("__FIRMA__", f"TDJ {FIRMA_DJ} · {datos['milonga']}")
-            .replace("__QR__", qr))
+            .replace("__QR__", qr)
+            .replace("__MANIFEST__", nombre_manifiesto(datos)))
     os.makedirs(os.path.dirname(destino) or ".", exist_ok=True)
     with open(destino, "w", encoding="utf-8") as f:
         f.write(html)
@@ -297,6 +366,8 @@ def crear_web(tandas, datos, destino, reconocer=True, progreso=None, url_lista=N
 PLANTILLA = r"""<!doctype html>
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="__MANIFEST__"><meta name="theme-color" content="#0d0907">
+<meta name="mobile-web-app-capable" content="yes"><link rel="icon" href="icono-192.png">
 <title>__TITULO__</title>
 <style>
   :root { --tango:#d9a441; --vals:#6fbf8a; --milonga:#e0784a; --final:#c9a0ff; --texto:#f6efe4; --suave:#cdbfae; }
@@ -713,12 +784,17 @@ function buscar(texto) {
   return puntos >= 0.5 ? mejor : null;
 }
 
+// Modo en vivo: solo si la sirve TangoTags (📽 Proyectar en vivo). Abierta como archivo o desde GitHub no hay
+// servidor: se deja de preguntar a la primera y no se toca el aviso de abajo (el del micrófono o el reloj).
+let hayServidor = null;              // null = sin comprobar, true / false
 async function vivo() {
-  if (location.protocol === "file:") return;
+  if (location.protocol === "file:" || hayServidor === false) return;
   const estado = document.getElementById("estado");
   try {
-    const r = await fetch("/ahora", {cache: "no-store"});
+    const r = await fetch("ahora", {cache: "no-store"});
+    if (!r.ok || !(r.headers.get("content-type") || "").includes("json")) throw new Error("sin servidor");
     const j = await r.json();
+    hayServidor = true;
     estado.className = "vivo"; estado.querySelector("span").textContent = "en vivo";
     if (!enVivo) { enVivo = true; largo = 0; pintarReloj(); }      // con conexión manda el ordenador, no el reloj
     const id = (j.ruta || "") + "|" + (j.texto || "");
@@ -729,7 +805,10 @@ async function vivo() {
       else libre(j.texto);          // algo que no está en la presentación (reserva, cumpleaños…)
     }
   } catch (e) {
-    estado.className = ""; estado.querySelector("span").textContent = "por tiempo · toca al empezar cada tanda";
+    if (hayServidor === null) { hayServidor = false; return; }      // nunca hubo servidor: no insistir
+    // había servidor y se ha perdido la conexión: vuelve el reloj
+    estado.className = "";
+    if (!reconociendo) estado.querySelector("span").textContent = "por tiempo · toca al empezar cada tanda";
     if (enVivo) { enVivo = false; inicio = ahora(); largo = duracionDe(destino); }
   }
 }
@@ -1187,6 +1266,16 @@ mensaje = lee("mensaje", "");
 actual = -1; destino = -1;
 ir(location.hash.length > 1 ? (parseInt(location.hash.slice(1)) || 0) : lee("diapo", 0));
 vivo(); setInterval(vivo, 1500);
+
+// Publicada (https): guardarla en la tablet para que, si se recarga sin internet, abra la copia guardada
+if (window.isSecureContext && location.protocol.startsWith("http") && "serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").then(async () => {
+    try {
+      const cache = await caches.open("milongas-v1");
+      if (!(await cache.match(location.pathname, {ignoreSearch: true}))) await cache.add(location.pathname);
+    } catch (e) {}
+  }).catch(() => {});
+}
 
 // Al abrir: la ayuda solo la primera vez en esta tablet (y se cierra sola a los 20 s para no tapar nada),
 // y si la presentación lleva huellas, empieza a escuchar sola (salvo que se apagara a propósito)
