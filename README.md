@@ -58,6 +58,17 @@ Al cargar la playlist en *Crear diapos* (vale la `.mbp` de MusicBee directamente
   puede elegir uno o *Libre*. Empezar con más tangos para calentar no es error. **Sin milonga los últimos 40 min**
   (se puede cambiar; 0 = no mirar). Abrir con una orquesta difícil (Pugliese, Salgán…) o ponerla en el primer
   tercio sale como consejo. Todo son consejos: nunca impide crear la presentación.
+- **Carácter** (columna de la tabla): sale de `data/caracter_orquestas.csv`, una fila por orquesta y época (y a veces
+  cantor) con carácter (rítmico, melódico, lírico, dramático), energía 1–5, dificultad 1–3 y notas. Botón
+  *Editar tabla de carácter…* (se abre con Excel; guarda y pulsa *↻ Volver a revisar*). Con ella avisa de tandas
+  que mezclan carácter, de 3 tandas muy tranquilas o muy enérgicas seguidas, de abrir con algo difícil, y lista
+  las orquestas que aún no están en la tabla.
+- **BPM** (columna en las tandas y en las canciones): se calcula del audio al cargar la playlist (30 s del centro
+  de cada tema, ~0,2 s por canción) y se guarda en `%LOCALAPPDATA%\TangoTags\bpm.sqlite` (la próxima vez sale al
+  momento). Cada género se mide en su escala (tango 85–170, vals 150–300, milonga 70–140) para que no salga a la
+  mitad o al doble. En las milongas es menos fiable (el ritmo de habanera confunde).
+- **La Cumparsita** al final va sola (aunque no lleve cortina delante): su propia diapo, sin compararla con nada.
+  Dentro de una tanda o a mitad de la noche: aviso.
 
 Menú **Ayuda → Cómo se usa** (F1) tiene la misma explicación dentro de la app.
 Si cargas desde MusicBee, después de aplicar haz en MusicBee *Herramientas → Volver a leer tags*.

@@ -13,10 +13,18 @@ from src.config.config import m3u_start_path, presentations_start_path, default_
 from src.diapos.generador import (
     leer_playlist, agrupar_tandas, crear_presentacion, duracion_texto, nombre_archivo, compositor_para_diapo,
 )
+from src.diapos import bpm, caracter
 from src.diapos.revision import (
     revisar, horas_de_inicio, ERROR, AVISO, AUTO, LIBRE, PATRONES, MINUTOS_SIN_MILONGA,
 )
 from src.utils.utils import convertir_segundos
+
+
+def _texto_bpm(valor):
+    try:
+        return f"{float(valor):.0f}" if valor and float(valor) == float(valor) else ""
+    except (TypeError, ValueError):
+        return ""
 
 
 class VentanaDiapos(QDialog):
@@ -70,6 +78,14 @@ class VentanaDiapos(QDialog):
         reglas.addWidget(QLabel("<b>Sin milonga los últimos</b>"))
         reglas.addWidget(self.sin_milonga)
         reglas.addStretch(1)
+        editar_caracter = QPushButton("Editar tabla de carácter…")
+        editar_caracter.setToolTip("Carácter, energía y dificultad de cada orquesta y época (se abre con Excel).\n"
+                                   "Guarda y pulsa «Volver a revisar».")
+        editar_caracter.clicked.connect(lambda: os.startfile(caracter.ARCHIVO))
+        volver = QPushButton("↻ Volver a revisar")
+        volver.clicked.connect(self.cambiar_reglas)
+        reglas.addWidget(editar_caracter)
+        reglas.addWidget(volver)
         datos.addWidget(QLabel("<b>Milonga:</b>"), 0, 0)
         datos.addWidget(self.nombre, 0, 1, 1, 6)
         datos.addWidget(QLabel("<b>Fecha:</b>"), 0, 7)
@@ -92,9 +108,9 @@ class VentanaDiapos(QDialog):
         lay.addLayout(fila)
 
         # --- Vista previa: tandas arriba, canciones de la tanda seleccionada abajo
-        self.tabla_tandas = QTableWidget(0, 7)
+        self.tabla_tandas = QTableWidget(0, 9)
         self.tabla_tandas.setHorizontalHeaderLabels(["#", "Tipo", "Título de la diapo", "Subtítulo", "Temas", "Duración",
-                                                     "Empieza"])
+                                                     "Empieza", "Carácter", "BPM"])
         self.tabla_tandas.verticalHeader().hide()
         self.tabla_tandas.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.tabla_tandas.setSelectionMode(QAbstractItemView.SingleSelection)
@@ -105,14 +121,16 @@ class VentanaDiapos(QDialog):
         h.setSectionResizeMode(3, QHeaderView.Stretch)
         self.tabla_tandas.itemSelectionChanged.connect(self.mostrar_canciones)
 
-        self.tabla_canciones = QTableWidget(0, 5)
-        self.tabla_canciones.setHorizontalHeaderLabels(["Título", "Artista", "Año", "Compositor (en la diapo)", "Duración"])
+        self.tabla_canciones = QTableWidget(0, 6)
+        self.tabla_canciones.setHorizontalHeaderLabels(["Título", "Artista", "Año", "Compositor (en la diapo)", "Duración",
+                                                        "BPM"])
         self.tabla_canciones.verticalHeader().hide()
         self.tabla_canciones.setEditTriggers(QAbstractItemView.NoEditTriggers)
         h = self.tabla_canciones.horizontalHeader()
         h.setSectionResizeMode(QHeaderView.Stretch)
         h.setSectionResizeMode(2, QHeaderView.ResizeToContents)
         h.setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        h.setSectionResizeMode(5, QHeaderView.ResizeToContents)
 
         # --- Revisión: lo que conviene mirar antes de crear la presentación (clic = ir a la tanda)
         self.lista_revision = QListWidget()
@@ -191,18 +209,57 @@ class VentanaDiapos(QDialog):
             QMessageBox.warning(self, "Canciones no encontradas",
                                 f"{len(faltan)} canción(es) de la playlist no existen y no saldrán en las diapos:\n\n"
                                 + "\n".join(faltan[:15]))
+        self.calcular_bpm()
+
+    def calcular_bpm(self):
+        """BPM de las canciones de las tandas: los guardados al momento, los nuevos (~0,2 s cada uno) con barra."""
+        try:
+            cache = bpm.CacheBpm()
+        except Exception:
+            return
+        pendientes = []
+        for fila, tanda in enumerate(self.tandas):
+            if tanda.es_cortina:
+                continue
+            tanda.canciones["bpm"] = None
+            for idx, c in tanda.canciones.iterrows():
+                encontrado, valor = cache.guardado(c["ruta"], c["genre"])
+                if encontrado:
+                    tanda.canciones.at[idx, "bpm"] = valor
+                else:
+                    pendientes.append((fila, idx))
+        if pendientes:
+            self.progreso.setMaximum(len(pendientes))
+            self.progreso.setFormat("Calculando BPM… %v de %m")
+            self.progreso.show()
+            for n, (fila, idx) in enumerate(pendientes, 1):
+                c = self.tandas[fila].canciones.loc[idx]
+                self.tandas[fila].canciones.at[idx, "bpm"] = cache.bpm(c["ruta"], c["genre"])
+                self.progreso.setValue(n)
+                QApplication.processEvents()
+            self.progreso.hide()
+            self.progreso.setFormat("%p%")
+        for fila, tanda in enumerate(self.tandas):
+            if not tanda.es_cortina:
+                valores = [v for v in tanda.canciones["bpm"] if v]
+                texto = "" if not valores else (f"{min(valores):.0f}" if min(valores) == max(valores)
+                                                else f"{min(valores):.0f}–{max(valores):.0f}")
+                self.tabla_tandas.item(fila, 8).setText(texto)
+        self.revisar()
+        self.mostrar_canciones()
 
     def rellenar_tandas(self):
         t = self.tabla_tandas
         t.setRowCount(len(self.tandas))
         n_tanda = 0
         for fila, tanda in enumerate(self.tandas):
-            if not tanda.es_cortina:
+            es_tanda = not tanda.es_cortina and not tanda.es_cumparsita
+            if es_tanda:
                 n_tanda += 1
-            valores = [str(n_tanda) if not tanda.es_cortina else "",
-                       "Cortina" if tanda.es_cortina else tanda.genero.capitalize(),
+            valores = [str(n_tanda) if es_tanda else "",
+                       "Cortina" if tanda.es_cortina else "Final" if tanda.es_cumparsita else tanda.genero.capitalize(),
                        tanda.titulo_orquesta, tanda.subtitulo, str(len(tanda.canciones)),
-                       convertir_segundos(tanda.duracion), ""]
+                       convertir_segundos(tanda.duracion), "", "", ""]
             for col, v in enumerate(valores):
                 it = QTableWidgetItem(v)
                 if col == 2 and not tanda.es_cortina:
@@ -229,10 +286,15 @@ class VentanaDiapos(QDialog):
             nivel = ERROR if ERROR in niveles else AVISO if AVISO in niveles else None
             color = colores.get(nivel, QColor("#eeeeee") if tanda.es_cortina else QColor("#ffffff"))
             self.tabla_tandas.item(fila, 6).setText(horas[fila])
+            car = None if tanda.es_cumparsita else caracter.de_tanda(tanda)
+            self.tabla_tandas.item(fila, 7).setText(car.texto if car else "")
             for col in range(self.tabla_tandas.columnCount()):
                 it = self.tabla_tandas.item(fila, col)
                 it.setBackground(color)
                 it.setToolTip("\n".join(a.texto for a in suyos) if suyos else it.text())
+            if car and not suyos:
+                self.tabla_tandas.item(fila, 7).setToolTip(
+                    f"{car.texto}, dificultad {car.dificultad}" + (f"\n{car.notas}" if car.notas else ""))
 
         self.lista_revision.clear()
         iconos = {ERROR: "❌", AVISO: "⚠", "info": "ℹ"}
@@ -272,7 +334,7 @@ class VentanaDiapos(QDialog):
         self.tabla_canciones.setRowCount(len(df))
         for i, (_, c) in enumerate(df.iterrows()):
             for col, v in enumerate([c["title"], c["artist"], c["ano"], compositor_para_diapo(c["composer"]),
-                                     convertir_segundos(c["duration"])]):
+                                     convertir_segundos(c["duration"]), _texto_bpm(c.get("bpm"))]):
                 it = QTableWidgetItem(str(v))
                 it.setToolTip(f"{v}\n\n{c['ruta']}")
                 self.tabla_canciones.setItem(i, col, it)

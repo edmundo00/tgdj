@@ -186,6 +186,24 @@ class PatronTest(Base):
         self.assertTrue(any("Abrir con Osvaldo Pugliese" in t for t in self.textos(avisos, INFO)))
 
 
+class CumparsitaTest(Base):
+    def test_al_final_va_sola_aunque_no_haya_cortina(self):
+        filas = (self.tanda("Juan D'Arienzo") + [self.cortina()] + self.tanda("Carlos di Sarli / Alberto Podestá")
+                 + [self.cancion("Juan D'Arienzo", "La cumparsita", 1971)])
+        tandas, avisos = self.revisar(filas)
+        self.assertTrue(tandas[-1].es_cumparsita)
+        self.assertEqual(len(tandas[-2].canciones), 3)
+        self.assertEqual(self.textos(avisos, ERROR) + self.textos(avisos, AVISO), [])
+        self.assertTrue(any("Cierre con La Cumparsita" in t for t in self.textos(avisos, INFO)))
+
+    def test_dentro_de_una_tanda_es_aviso(self):
+        filas = (self.tanda("Juan D'Arienzo", titulos=["a", "La Cumparsita", "b"]) + [self.cortina()]
+                 + self.tanda("Carlos di Sarli"))
+        tandas, avisos = self.revisar(filas)
+        self.assertFalse(any(t.es_cumparsita for t in tandas))
+        self.assertTrue(any("va sola al final" in t for t in self.textos(avisos, AVISO)))
+
+
 class LeerMbpTest(unittest.TestCase):
     def test_lee_todas_las_rutas_incluida_la_primera(self):
         rutas = ["D:\\Dropbox\\TDJ\\MUSICA\\Edmundo\\Firpo\\01. La maleva.flac",

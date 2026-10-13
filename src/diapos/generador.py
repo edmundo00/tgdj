@@ -47,6 +47,7 @@ class Tanda:
     subtitulo: str = ""
     misma_orquesta: bool = True
     es_cortina: bool = False
+    es_cumparsita: bool = False        # La Cumparsita sola al final: el último baile, no es una tanda
     duracion: float = 0.0
     avisos: list = field(default_factory=list)
 
@@ -119,13 +120,22 @@ def intervalo_anos(anos):
     return f"({validos[0]})" if validos[0] == validos[-1] else f"({validos[0]} - {validos[-1]})"
 
 
+def es_cumparsita(titulo):
+    t = unidecode(str(titulo or "")).lower().strip()
+    return t.startswith("la cumparsita") or t.startswith("cumparsita")
+
+
 def agrupar_tandas(canciones):
     if canciones.empty:
         return []
     grupo = canciones["genre"].ne(canciones["genre"].shift()).cumsum()
+    grupos = [df.reset_index(drop=True) for _, df in canciones.groupby(grupo, sort=False)]
+    # La Cumparsita al final va sola aunque no lleve cortina delante: no es parte de la última tanda
+    ultimo = grupos[-1]
+    if len(ultimo) > 1 and es_tanda(ultimo["genre"].iloc[0]) and es_cumparsita(ultimo["title"].iloc[-1]):
+        grupos[-1:] = [ultimo.iloc[:-1].reset_index(drop=True), ultimo.iloc[-1:].reset_index(drop=True)]
     tandas = []
-    for _, df in canciones.groupby(grupo, sort=False):
-        df = df.reset_index(drop=True)
+    for df in grupos:
         genero = df["genre"].iloc[0]
         orquestas = df["artist1"].unique()
         t = Tanda(genero=genero, canciones=df, misma_orquesta=len(orquestas) == 1,
@@ -143,6 +153,9 @@ def agrupar_tandas(canciones):
             if not genero:
                 t.avisos.append("Sin género")
         tandas.append(t)
+    final = tandas[-1]
+    if not final.es_cortina and len(final.canciones) == 1 and es_cumparsita(final.canciones["title"].iloc[0]):
+        final.es_cumparsita = True
     return tandas
 
 

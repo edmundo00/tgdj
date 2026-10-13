@@ -16,7 +16,8 @@ from datetime import datetime, timedelta
 from unidecode import unidecode
 
 from src.config.config import carpeta_portatil
-from src.diapos.generador import compositor_para_diapo
+from src.diapos import caracter
+from src.diapos.generador import compositor_para_diapo, es_cumparsita
 from src.utils.buscar_artista import normalizar_nombre
 
 ERROR, AVISO, INFO = "error", "aviso", "info"
@@ -35,8 +36,9 @@ PATRONES = {
     "2-1-1-1": ((2, 1), "T-T-V-T-M"),
 }
 AUTO, LIBRE = "auto", "libre"
-# Orquestas que exigen mucho a la pista: ni para abrir ni en el primer tercio (hasta tener la tabla de carácter)
+# Si la orquesta no está en la tabla de carácter: las que exigen mucho a la pista
 DIFICILES = {"pugliese", "salgan", "piazzolla", "gobbi", "basso"}
+SEGUIDAS_IGUAL_ENERGIA = 3     # tantas tandas seguidas muy tranquilas o muy enérgicas -> consejo
 _EN_NUBE = 0x400000 | 0x1000   # Dropbox "solo en la nube" (como en la biblioteca)
 
 
@@ -114,9 +116,11 @@ def segundos_de_inicio(tandas):
     return salida
 
 
-def _es_dificil(orquesta):
-    palabras = set(normalizar_nombre(orquesta).split())
-    return bool(palabras & DIFICILES)
+def _dificultad(tanda, car):
+    """1 fácil … 3 exige mucho: de la tabla de carácter o, si no está, de DIFICILES."""
+    if car is not None:
+        return car.dificultad
+    return 3 if set(normalizar_nombre(tanda.orquesta).split()) & DIFICILES else 1
 
 
 def _tramos(generos):
@@ -219,7 +223,7 @@ def _revisar_patron(generos, patron, nombre, cuando, en_zona_final):
 
 
 def revisar(tandas, faltan=(), inicio=None, fin=None, carpeta=carpeta_portatil, patron=AUTO,
-            minutos_sin_milonga=MINUTOS_SIN_MILONGA):
+            minutos_sin_milonga=MINUTOS_SIN_MILONGA, archivo_caracter=None):
     """patron: AUTO (detectarlo), LIBRE (no mirar) o una clave de PATRONES."""
     avisos = []
     nombre_carpeta = os.path.relpath(carpeta, os.path.dirname(os.path.dirname(carpeta))) if carpeta else ""
@@ -227,11 +231,13 @@ def revisar(tandas, faltan=(), inicio=None, fin=None, carpeta=carpeta_portatil, 
     for ruta in faltan:
         avisos.append(Aviso(ERROR, f"No existe el archivo: {ruta}"))
 
-    reales = [(i, t) for i, t in enumerate(tandas) if not t.es_cortina]
+    reales = [(i, t) for i, t in enumerate(tandas) if not t.es_cortina and not t.es_cumparsita]
     numero = {i: n for n, (i, _) in enumerate(reales, 1)}      # fila -> número de tanda
 
     def nombre(i):
-        return f"Tanda {numero[i]}" if i in numero else "Cortina"
+        if i in numero:
+            return f"Tanda {numero[i]}"
+        return "La Cumparsita" if tandas[i].es_cumparsita else "Cortina"
 
     # --- Archivos: en el portátil, descargados, una sola vez
     vistas = {}
@@ -253,7 +259,7 @@ def revisar(tandas, faltan=(), inicio=None, fin=None, carpeta=carpeta_portatil, 
         avisos.append(Aviso(INFO, "La playlist empieza con una cortina", 0))
     for i, t in enumerate(tandas):
         siguiente = tandas[i + 1] if i + 1 < len(tandas) else None
-        if not t.es_cortina and siguiente is not None and not siguiente.es_cortina:
+        if not t.es_cortina and siguiente is not None and not siguiente.es_cortina and not siguiente.es_cumparsita:
             avisos.append(Aviso(ERROR, f"Falta una cortina entre la {nombre(i)} ({t.genero}) y la "
                                        f"{nombre(i + 1)} ({siguiente.genero})", i))
         if t.es_cortina:
@@ -266,6 +272,15 @@ def revisar(tandas, faltan=(), inicio=None, fin=None, carpeta=carpeta_portatil, 
             if "cortina" not in t.genero:
                 avisos.append(Aviso(AVISO, f"«{t.canciones['title'].iloc[0]}» no tiene género de tango, vals ni "
                                            f"milonga: ¿es una cortina? (género: «{t.genero or 'vacío'}»)", i))
+
+    # --- La Cumparsita: sola y al final (el último baile), nunca dentro de una tanda
+    for i, t in enumerate(tandas):
+        if t.es_cumparsita:
+            c = t.canciones.iloc[0]
+            avisos.append(Aviso(INFO, f"Cierre con La Cumparsita ({c['artist1']}, {c['ano'] or 'sin año'})", i))
+        elif not t.es_cortina and any(map(es_cumparsita, t.canciones["title"])):
+            avisos.append(Aviso(AVISO, f"{nombre(i)}: tiene La Cumparsita; va sola al final de la noche, "
+                                       f"como último baile, no dentro de una tanda", i))
 
     # --- Cada tanda por dentro
     for i, t in reales:
@@ -332,9 +347,37 @@ def revisar(tandas, faltan=(), inicio=None, fin=None, carpeta=carpeta_portatil, 
                 avisos.append(Aviso(AVISO, f"{nombre(i)}: milonga{cuando(i)} en los últimos {minutos_sin_milonga} min; "
                                            f"al final mejor tango o vals, que los cuerpos ya están cansados", i))
 
-    if reales and _es_dificil(reales[0][1].orquesta):
-        avisos.append(Aviso(INFO, f"Abrir con {reales[0][1].orquesta} puede costar a quien llega: mejor algo rítmico "
-                                  f"y fácil (Canaro años 30, Donato, D'Arienzo, Firpo, OTV…)", reales[0][0]))
+    # --- Carácter de cada tanda (data/caracter_orquestas.csv)
+    car = {i: caracter.de_tanda(t, archivo_caracter) for i, t in reales}
+    dificil = {i: _dificultad(t, car[i]) for i, t in reales}
+    if reales and dificil[reales[0][0]] >= 2:
+        i, t = reales[0]
+        avisos.append(Aviso(INFO, f"Abrir con {t.orquesta} puede costar a quien llega: mejor algo rítmico y fácil "
+                                  f"(Canaro años 30, Donato, D'Arienzo, Firpo, OTV…)", i))
+    for i, t in reales:
+        por_cancion = {}
+        for _, c in t.canciones.iterrows():
+            ca = caracter.de_cancion(c, archivo_caracter)
+            if ca is not None:
+                por_cancion.setdefault(ca.caracter, []).append(c["title"])
+        if len(por_cancion) > 1:
+            avisos.append(Aviso(AVISO, f"{nombre(i)}: mezcla carácter: " + " · ".join(
+                f"{caracter.CARACTERES.get(k, k)} ({', '.join(v)})" for k, v in por_cancion.items()), i))
+    for nivel_energia, texto in ((lambda e: e <= 2, "tranquilas"), (lambda e: e >= 5, "de mucha energía")):
+        racha = []
+        for i, _ in reales + [(None, None)]:
+            if i is not None and car[i] is not None and nivel_energia(car[i].energia):
+                racha.append(i)
+                continue
+            if len(racha) >= SEGUIDAS_IGUAL_ENERGIA:
+                consejo = ("la pista puede dormirse; un D'Arienzo o un Biagi la despierta" if texto == "tranquilas"
+                           else "la pista se cansa; un Di Sarli o un Fresedo la calma")
+                avisos.append(Aviso(INFO, f"{len(racha)} tandas {texto} seguidas ({nombre(racha[0])} a "
+                                          f"{nombre(racha[-1])}): {consejo}", racha[-1]))
+            racha = []
+    sin_tabla = list(dict.fromkeys(t.orquesta for i, t in reales if car[i] is None and t.orquesta))
+    if sin_tabla:
+        avisos.append(Aviso(INFO, "Sin carácter en la tabla (puedes añadirlas): " + ", ".join(sin_tabla)))
 
     for n, (i, t) in enumerate(reales):
         for m in range(n + 1, min(n + DISTANCIA_ORQUESTA, len(reales))):
@@ -356,8 +399,8 @@ def revisar(tandas, faltan=(), inicio=None, fin=None, carpeta=carpeta_portatil, 
 
     if len(reales) >= 6:
         tercio = reales[:len(reales) // 3]
-        for i, t in tercio[1:] if _es_dificil(reales[0][1].orquesta) else tercio:
-            if _es_dificil(t.orquesta):
+        for i, t in tercio[1:] if dificil[reales[0][0]] >= 2 else tercio:
+            if dificil[i] >= 3:
                 avisos.append(Aviso(INFO, f"{t.orquesta} muy pronto ({nombre(i)}): exige mucho a la pista, "
                                           f"mejor en el último tercio", i))
         instrumentales = sum(1 for _, t in reales if not any(c.strip() for c in t.canciones["artist2"]))
