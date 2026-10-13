@@ -39,6 +39,9 @@ AUTO, LIBRE = "auto", "libre"
 # Si la orquesta no está en la tabla de carácter: las que exigen mucho a la pista
 DIFICILES = {"pugliese", "salgan", "piazzolla", "gobbi", "basso"}
 SEGUIDAS_IGUAL_ENERGIA = 3     # tantas tandas seguidas muy tranquilas o muy enérgicas -> consejo
+TOLERANCIA_BPM = 0.10          # un tema más de un 10 % más rápido o lento que el resto de su tanda -> aviso
+BAJADA_BPM = 0.05              # la tanda "baja" si el último tema es un 5 % más lento que el primero
+REFERENCIA_BPM = {"tango": 120, "vals": 205, "milonga": 100}   # para comparar la energía de tandas
 _EN_NUBE = 0x400000 | 0x1000   # Dropbox "solo en la nube" (como en la biblioteca)
 
 
@@ -121,6 +124,29 @@ def _dificultad(tanda, car):
     if car is not None:
         return car.dificultad
     return 3 if set(normalizar_nombre(tanda.orquesta).split()) & DIFICILES else 1
+
+
+def bpms(tanda):
+    """BPM de cada canción de la tanda (None si no se calculó)."""
+    if "bpm" not in tanda.canciones:
+        return [None] * len(tanda.canciones)
+    return [float(v) if v is not None and v == v and v else None for v in tanda.canciones["bpm"]]
+
+
+def bpm_tanda(tanda):
+    valores = sorted(v for v in bpms(tanda) if v)
+    return valores[len(valores) // 2] if valores else None
+
+
+def energia(tanda, car):
+    """Energía para comparar tandas: la de la tabla de carácter, afinada con el BPM (±0,5 cada 10 %)."""
+    if car is None:
+        return None
+    valor = float(car.energia)
+    medio = bpm_tanda(tanda)
+    if medio:
+        valor += max(-1.0, min(1.0, (medio / REFERENCIA_BPM[_genero_corto(tanda.genero)] - 1) * 5))
+    return valor
 
 
 def _tramos(generos):
@@ -375,6 +401,47 @@ def revisar(tandas, faltan=(), inicio=None, fin=None, carpeta=carpeta_portatil, 
                 avisos.append(Aviso(INFO, f"{len(racha)} tandas {texto} seguidas ({nombre(racha[0])} a "
                                           f"{nombre(racha[-1])}): {consejo}", racha[-1]))
             racha = []
+    # --- Velocidad y curva dentro de cada tanda (con el BPM calculado del audio)
+    for i, t in reales:
+        valores = bpms(t)
+        conocidos = [v for v in valores if v]
+        if len(conocidos) < 2:
+            continue
+        g = _genero_corto(t.genero)
+        nivel = INFO if g == "milonga" else AVISO          # en milonga el BPM es menos fiable
+        medio = sorted(conocidos)[len(conocidos) // 2]
+        # solo el que más se aparta (si se apartan varios, es que la tanda entera es irregular)
+        k = max(range(len(valores)), key=lambda n: abs(valores[n] / medio - 1) if valores[n] else -1)
+        v = valores[k]
+        if abs(v / medio - 1) > TOLERANCIA_BPM:
+            otros = [x for n, x in enumerate(valores) if x and n != k]
+            resto = f"{min(otros):.0f}" if min(otros) == max(otros) else f"{min(otros):.0f}–{max(otros):.0f}"
+            como = "más rápido" if v > medio else "más lento"
+            avisos.append(Aviso(nivel, f"{nombre(i)}: «{t.canciones['title'].iloc[k]}» ({v:.0f} BPM) va bastante "
+                                       f"{como} que el resto ({resto})", i))
+        baja = valores[0] and valores[-1] and valores[-1] < valores[0] * (1 - BAJADA_BPM)
+        if baja and valores[-1] == min(conocidos):
+            avisos.append(Aviso(INFO, f"{nombre(i)}: la tanda baja, cierra con el tema más lento "
+                                      f"(«{t.canciones['title'].iloc[-1]}», {valores[-1]:.0f} BPM); "
+                                      f"suele funcionar mejor que suba o se mantenga", i))
+
+    # --- Energía en cada bloque: de menos a más, y la milonga por encima del vals
+    ener = {i: energia(t, car[i]) for i, t in reales}
+    tramos, cola = _tramos(generos)
+    for tangos in [tr[0] for tr in tramos] + [cola]:
+        if len(tangos) < 2 or ener[tangos[0]] is None or ener[tangos[-1]] is None:
+            continue
+        if ener[tangos[-1]] < ener[tangos[0]] - 0.5 and not any(empieza[x] >= zona_final for x in tangos):
+            avisos.append(Aviso(INFO, f"{nombre(tangos[-1])}: el bloque de tangos baja de energía "
+                                      f"({nombre(tangos[0])} {ener[tangos[0]]:.1f} → {ener[tangos[-1]]:.1f}); "
+                                      f"suele ir de menos a más", tangos[-1]))
+    for (_, vals, g1), (_, milonga, g2) in zip(tramos, tramos[1:]):
+        if g1 == "vals" and g2 == "milonga" and ener[vals] is not None and ener[milonga] is not None:
+            if ener[milonga] < ener[vals] - 0.5:
+                avisos.append(Aviso(INFO, f"{nombre(milonga)}: esta milonga tiene menos energía ({ener[milonga]:.1f}) "
+                                          f"que el vals de la {nombre(vals)} ({ener[vals]:.1f}); "
+                                          f"la milonga suele ser el pico del ciclo", milonga))
+
     sin_tabla = list(dict.fromkeys(t.orquesta for i, t in reales if car[i] is None and t.orquesta))
     if sin_tabla:
         avisos.append(Aviso(INFO, "Sin carácter en la tabla (puedes añadirlas): " + ", ".join(sin_tabla)))

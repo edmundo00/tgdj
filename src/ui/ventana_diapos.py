@@ -15,8 +15,9 @@ from src.diapos.generador import (
 )
 from src.diapos import bpm, caracter
 from src.diapos.revision import (
-    revisar, horas_de_inicio, ERROR, AVISO, AUTO, LIBRE, PATRONES, MINUTOS_SIN_MILONGA,
+    revisar, horas_de_inicio, segundos_de_inicio, energia, bpm_tanda, ERROR, AVISO, AUTO, LIBRE, PATRONES, MINUTOS_SIN_MILONGA,
 )
+from src.ui.curva_noche import CurvaNoche
 from src.utils.utils import convertir_segundos
 
 
@@ -140,13 +141,20 @@ class VentanaDiapos(QDialog):
         lay_revision.setContentsMargins(0, 0, 0, 0)
         self.titulo_revision = QLabel("<b>Revisión</b>")
         lay_revision.addWidget(self.titulo_revision)
-        lay_revision.addWidget(self.lista_revision)
+        self.curva = CurvaNoche()
+        self.curva.setToolTip("Energía de cada tanda (tabla de carácter afinada con el BPM). Clic = ir a la tanda")
+        self.curva.tanda_clicada.connect(self.ir_a_fila)
+        abajo_revision = QSplitter(Qt.Horizontal)
+        abajo_revision.addWidget(self.lista_revision)
+        abajo_revision.addWidget(self.curva)
+        abajo_revision.setSizes([800, 550])
+        lay_revision.addWidget(abajo_revision)
 
         division = QSplitter(Qt.Vertical)
         division.addWidget(self.tabla_tandas)
         division.addWidget(self.tabla_canciones)
         division.addWidget(caja_revision)
-        division.setSizes([450, 170, 170])
+        division.setSizes([420, 160, 210])
         lay.addWidget(division, 1)
 
         self.resumen = QLabel()
@@ -311,6 +319,8 @@ class VentanaDiapos(QDialog):
         self.titulo_revision.setText(f"<b>Revisión</b> — {errores} error(es), {avisos} aviso(s)"
                                      + ("" if errores or avisos else " ✔"))
 
+        self.pintar_curva(d)
+
         reales = [x for x in self.tandas if not x.es_cortina]
         musica = sum(x.duracion for x in reales)
         texto = (f"{len(reales)} tandas, {len(self.tandas) - len(reales)} cortinas — música: "
@@ -319,6 +329,26 @@ class VentanaDiapos(QDialog):
         if errores:
             texto += f" — <span style='background:#ffcdd2'>&nbsp;{errores} error(es): mira la revisión&nbsp;</span>"
         self.resumen.setText(texto)
+
+    def pintar_curva(self, d):
+        horas = horas_de_inicio(self.tandas, d["inicio"])
+        empieza = segundos_de_inicio(self.tandas)
+        fin_musica = empieza[-1] + (self.tandas[-1].duracion if self.tandas else 0)
+        zona_final = fin_musica - self.sin_milonga.value() * 60 if self.sin_milonga.value() else None
+        barras, inicio_final = [], None
+        for fila, tanda in enumerate(self.tandas):
+            if tanda.es_cortina or tanda.es_cumparsita:
+                continue
+            if zona_final is not None and inicio_final is None and empieza[fila] >= zona_final:
+                inicio_final = len(barras)
+            barras.append({"fila": fila, "numero": len(barras) + 1, "genero": bpm.tipo(tanda.genero),
+                           "energia": energia(tanda, caracter.de_tanda(tanda)), "bpm": bpm_tanda(tanda),
+                           "hora": horas[fila], "titulo": f"{tanda.titulo_orquesta} · {tanda.subtitulo}"})
+        self.curva.poner(barras, inicio_final)
+
+    def ir_a_fila(self, fila):
+        self.tabla_tandas.selectRow(fila)
+        self.tabla_tandas.scrollToItem(self.tabla_tandas.item(fila, 0))
 
     def ir_a_aviso(self, item):
         fila = item.data(Qt.UserRole)

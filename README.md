@@ -67,6 +67,12 @@ Al cargar la playlist en *Crear diapos* (vale la `.mbp` de MusicBee directamente
   de cada tema, ~0,2 s por canción) y se guarda en `%LOCALAPPDATA%\TangoTags\bpm.sqlite` (la próxima vez sale al
   momento). Cada género se mide en su escala (tango 85–170, vals 150–300, milonga 70–140) para que no salga a la
   mitad o al doble. En las milongas es menos fiable (el ritmo de habanera confunde).
+- **Con el BPM**: aviso si un tema de la tanda va más de un 10 % más rápido o lento que el resto (en milonga solo
+  info); info si la tanda *baja* (cierra con el tema más lento), si un bloque de tangos va de más a menos energía,
+  o si la milonga del ciclo tiene menos energía que su vals.
+- **Curva de la noche** (abajo a la derecha): una barra por tanda, altura = energía (tabla de carácter afinada con
+  el BPM), color = tango / vals / milonga, la hora de inicio y una raya donde empieza el final sin milonga.
+  Clic en una barra = ir a la tanda.
 - **La Cumparsita** al final va sola (aunque no lleve cortina delante): su propia diapo, sin compararla con nada.
   Dentro de una tanda o a mitad de la noche: aviso.
 

@@ -103,5 +103,61 @@ class RevisionCaracterTest(Base):
         self.assertTrue(any("Sin carácter en la tabla" in a.texto and "Héctor Varela" in a.texto for a in avisos))
 
 
+class Fase4Test(Base):
+    """Velocidad dentro de la tanda, curva de la tanda y energía de los bloques (con BPM ya calculados)."""
+
+    def setUp(self):
+        super().setUp()
+        self.tabla = tabla_temporal()
+
+    def tanda_bpm(self, artista, valores, genero="tango", ano=1941):
+        filas = [self.cancion(artista, f"{artista} {n}", ano, genero) for n in range(len(valores))]
+        for f, v in zip(filas, valores):
+            f["bpm"] = v
+        return filas
+
+    def revisar_bpm(self, *tandas):
+        filas = []
+        for n, t in enumerate(tandas):
+            if filas:
+                filas.append(self.cortina(f"c{n}") | {"bpm": None})
+            filas += t
+        return revisar(agrupar_tandas(pd.DataFrame(filas)), carpeta=self.edmundo, minutos_sin_milonga=0,
+                       archivo_caracter=self.tabla)
+
+    def textos(self, avisos, nivel=None):
+        return [a.texto for a in avisos if nivel is None or a.nivel == nivel]
+
+    def test_tema_mucho_mas_lento_en_la_tanda(self):
+        avisos = self.revisar_bpm(self.tanda_bpm("Juan D'Arienzo", [130, 112, 128], ano=1937))
+        txt = self.textos(avisos, AVISO)
+        self.assertEqual(len([t for t in txt if "BPM" in t]), 1)
+        self.assertTrue(any("«Juan D'Arienzo 1» (112 BPM) va bastante más lento que el resto (128–130)" in t
+                            for t in txt))
+
+    def test_tanda_pareja_sin_aviso_y_milonga_solo_info(self):
+        avisos = self.revisar_bpm(self.tanda_bpm("Juan D'Arienzo", [124, 128, 130], ano=1937))
+        self.assertFalse([t for t in self.textos(avisos) if "BPM" in t])
+        avisos = self.revisar_bpm(self.tanda_bpm("Juan D'Arienzo", [90, 120, 92], "tango milonga", 1937))
+        self.assertFalse([t for t in self.textos(avisos, AVISO) if "BPM" in t])
+        self.assertTrue([t for t in self.textos(avisos, INFO) if "BPM" in t])
+
+    def test_la_tanda_baja(self):
+        avisos = self.revisar_bpm(self.tanda_bpm("Juan D'Arienzo", [130, 128, 120], ano=1937))
+        self.assertTrue(any("la tanda baja" in t for t in self.textos(avisos, INFO)))
+
+    def test_bloque_que_baja_y_milonga_por_debajo_del_vals(self):
+        avisos = self.revisar_bpm(
+            self.tanda_bpm("Juan D'Arienzo", [128] * 3, ano=1937),          # energía 5
+            self.tanda_bpm("Osvaldo Fresedo", [118] * 3, ano=1935),         # energía 2
+            self.tanda_bpm("Juan D'Arienzo", [205] * 3, "tango vals", 1937),
+            self.tanda_bpm("Orquesta Típica Victor", [120] * 3, ano=1930),
+            self.tanda_bpm("Orquesta Típica Victor", [120] * 3, ano=1931),
+            self.tanda_bpm("Osvaldo Fresedo", [100] * 3, "tango milonga", 1935))
+        info = self.textos(avisos, INFO)
+        self.assertTrue(any("Tanda 2: el bloque de tangos baja de energía" in t for t in info))
+        self.assertTrue(any("Tanda 6: esta milonga tiene menos energía" in t for t in info))
+
+
 if __name__ == "__main__":
     unittest.main()
