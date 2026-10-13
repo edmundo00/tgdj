@@ -175,6 +175,8 @@ class VentanaDiapos(QDialog):
         self.tabla_canciones.horizontalHeaderItem(6).setToolTip(
             "Volumen medio del centro del tema; entre paréntesis, la diferencia con el resto de la tanda")
         self.tabla_canciones.verticalHeader().hide()
+        self.tabla_canciones.setToolTip("Doble clic: escuchar")
+        self.tabla_canciones.cellDoubleClicked.connect(self.escuchar_cancion)
         self.tabla_canciones.setEditTriggers(QAbstractItemView.NoEditTriggers)
         h = self.tabla_canciones.horizontalHeader()
         h.setSectionResizeMode(QHeaderView.Stretch)
@@ -186,11 +188,25 @@ class VentanaDiapos(QDialog):
         # --- Revisión: lo que conviene mirar antes de crear la presentación (clic = ir a la tanda)
         self.lista_revision = QListWidget()
         self.lista_revision.itemClicked.connect(self.ir_a_aviso)
+        self.lista_revision.itemDoubleClicked.connect(self.escuchar_aviso)
+        self.lista_revision.setToolTip("Clic: ir a la tanda · Doble clic: escuchar el tema del aviso")
         caja_revision = QWidget()
         lay_revision = QVBoxLayout(caja_revision)
         lay_revision.setContentsMargins(0, 0, 0, 0)
         self.titulo_revision = QLabel("<b>Revisión</b>")
-        lay_revision.addWidget(self.titulo_revision)
+        cabecera_revision = QHBoxLayout()
+        cabecera_revision.addWidget(self.titulo_revision)
+        cabecera_revision.addStretch(1)
+        self.sonando = QLabel("")
+        escuchar = QPushButton("▶ Escuchar")
+        escuchar.setToolTip("Escucha el tema del aviso elegido (o doble clic en el aviso o en una canción)")
+        escuchar.clicked.connect(lambda: self.escuchar_aviso(self.lista_revision.currentItem()))
+        parar = QPushButton("■ Parar")
+        parar.clicked.connect(self.parar_musica)
+        cabecera_revision.addWidget(self.sonando)
+        cabecera_revision.addWidget(escuchar)
+        cabecera_revision.addWidget(parar)
+        lay_revision.addLayout(cabecera_revision)
         self.curva = CurvaNoche()
         self.curva.setToolTip("Energía de cada tanda (tabla de carácter afinada con el BPM). Clic = ir a la tanda")
         self.curva.tanda_clicada.connect(self.ir_a_fila)
@@ -557,9 +573,11 @@ class VentanaDiapos(QDialog):
                 medidas = cache.medidas(c["ruta"], c["genre"], tanda.es_cortina, calcular_si_falta=False)
                 for nombre, valor in medidas.items():
                     tanda.canciones.loc[idx, nombre] = valor
-                if any(cache.guardado(c["ruta"], t)[0] is False for t in
-                       ((bpm.ACTIVIDAD, bpm.VOLUMEN) if tanda.es_cortina
-                        else (c["genre"], bpm.VOLUMEN, bpm.SILENCIO_INICIO))):
+                falta = any(cache.guardado(c["ruta"], t)[0] is False for t in
+                            ((bpm.ACTIVIDAD, bpm.VOLUMEN) if tanda.es_cortina
+                             else (c["genre"], bpm.VOLUMEN, bpm.SILENCIO_INICIO)))
+                tanda.canciones.loc[idx, "medido"] = not falta     # la revisión solo juzga el audio ya medido
+                if falta:
                     pendientes.append((fila, idx))
         if pendientes:
             self.progreso.setMaximum(len(pendientes))
@@ -570,6 +588,7 @@ class VentanaDiapos(QDialog):
                 c = tanda.canciones.loc[idx]
                 for nombre, valor in cache.medidas(c["ruta"], c["genre"], tanda.es_cortina).items():
                     tanda.canciones.loc[idx, nombre] = valor
+                tanda.canciones.loc[idx, "medido"] = True
                 self.progreso.setValue(n)
                 QApplication.processEvents()
             self.progreso.hide()
@@ -637,6 +656,7 @@ class VentanaDiapos(QDialog):
         for a in self.avisos:
             item = QListWidgetItem(f"{iconos[a.nivel]}  {a.texto}")
             item.setData(Qt.UserRole, a.fila)
+            item.setData(Qt.UserRole + 1, a.ruta)
             if a.nivel in colores:
                 item.setBackground(colores[a.nivel])
             self.lista_revision.addItem(item)
@@ -683,6 +703,65 @@ class VentanaDiapos(QDialog):
         if fila is not None:
             self.tabla_tandas.selectRow(fila)
             self.tabla_tandas.scrollToItem(self.tabla_tandas.item(fila, 0))
+            # marcar abajo el tema del que habla el aviso
+            ruta = item.data(Qt.UserRole + 1)
+            if ruta and fila < len(self.tandas):
+                rutas = list(self.tandas[fila].canciones["ruta"])
+                if ruta in rutas:
+                    self.tabla_canciones.selectRow(rutas.index(ruta))
+
+    # ------------------------------------------------------------------ escuchar
+    def _escuchar(self, ruta, descripcion):
+        reproductor = self._reproductor()
+        if reproductor is None or not ruta:
+            return
+        if not getattr(self, "_conectado_reproductor", False):
+            reproductor.cambiado.connect(self._cambio_reproductor)
+            reproductor.error.connect(lambda texto: self.sonando.setText(f"<span style='color:#b00'>{texto}</span>"))
+            self._conectado_reproductor = True
+        reproductor.alternar(("diapos", ruta), ruta, descripcion)
+
+    def _cambio_reproductor(self, clave):
+        r = self._reproductor()
+        sonando = clave is not None and isinstance(clave, tuple) and clave[:1] == ("diapos",)
+        self.sonando.setText(f"♪ <b>{r.descripcion}</b>" if sonando and r else "")
+
+    def escuchar_aviso(self, item):
+        if item is None:
+            return
+        self.ir_a_aviso(item)
+        ruta = item.data(Qt.UserRole + 1)
+        fila = item.data(Qt.UserRole)
+        if not ruta and fila is not None and fila < len(self.tandas) and len(self.tandas[fila].canciones):
+            ruta = self.tandas[fila].canciones["ruta"].iloc[0]
+        if ruta:
+            self._escuchar(ruta, self._descripcion(ruta))
+
+    def escuchar_cancion(self, fila_cancion, _columna=0):
+        fila = self._fila_tanda()
+        if fila is None or fila_cancion >= len(self.tandas[fila].canciones):
+            return
+        ruta = self.tandas[fila].canciones["ruta"].iloc[fila_cancion]
+        self._escuchar(ruta, self._descripcion(ruta))
+
+    def _descripcion(self, ruta):
+        for t in self.tandas:
+            iguales = t.canciones[t.canciones["ruta"] == ruta]
+            if len(iguales):
+                c = iguales.iloc[0]
+                return f"{c['title']} — {c['artist']}"
+        return os.path.basename(ruta)
+
+    def parar_musica(self):
+        r = self._reproductor()
+        if r is not None:
+            r.parar()
+
+    def done(self, resultado):
+        r = getattr(self.parent(), "reproductor", None) or getattr(self, "_reproductor_propio", None)
+        if r is not None and isinstance(r.clave, tuple) and r.clave[:1] == ("diapos",):
+            r.parar()
+        super().done(resultado)
 
     def mostrar_canciones(self):
         filas = self.tabla_tandas.selectionModel().selectedRows()

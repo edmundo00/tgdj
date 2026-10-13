@@ -7,7 +7,7 @@ import pandas as pd
 
 from src.diapos import bpm, historial
 from src.diapos.generador import agrupar_tandas
-from src.diapos.revision import revisar, AVISO, INFO
+from src.diapos.revision import revisar, AVISO, ERROR, INFO
 from tests.utils.caracter_test import tabla_temporal
 from tests.utils.revision_test import Base
 
@@ -34,7 +34,7 @@ class CortinasTest(Base):
         c = self.cortina_con("Careless Whisper")
         filas = self.tanda("Juan D'Arienzo") + [c] + self.tanda("Carlos di Sarli") + [dict(c)] + self.tanda("Biagi")
         avisos = self.revisar_cortinas(filas)
-        self.assertTrue(any("la cortina «Careless Whisper» ya sonó" in t for t in self.textos(avisos, AVISO)))
+        self.assertTrue(any("la cortina «Careless Whisper» ya sonó" in t for t in self.textos(avisos, ERROR)))
 
     def test_cortina_muy_corta_y_que_suena_a_tango(self):
         filas = (self.tanda("Juan D'Arienzo") + [self.cortina_con("Corta", dur=15)] + self.tanda("Carlos di Sarli")

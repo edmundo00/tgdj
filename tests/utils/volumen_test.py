@@ -88,6 +88,19 @@ class RevisionVolumenTest(Base):
         self.assertTrue(any(n == INFO and "Tanda 2: suena 8 dB más baja que la anterior" in t for n, t in avisos))
         self.assertTrue(any(n == INFO and "Las cortinas suenan de media" in t for n, t in avisos))
 
+    def test_archivos_que_no_suenan_bien(self):
+        filas = self.tanda("A", titulos=["Dañado", "Mudo", "Cortado"])
+        filas += [self.cancion("A", "Disco entero", 1941, dur=40 * 60), self.cancion("A", "Sin medir", 1941)]
+        for f, vol, medido in zip(filas, [None, -60, -15, -15, None], [True, True, True, True, float("nan")]):
+            f.update(volumen=vol, medido=medido)
+        filas[2]["duration"] = 12
+        textos = [t for n, t in self.revisar_vol(filas) if n == "error"]
+        self.assertTrue(any("no se pudo leer el audio de «Dañado»" in t for t in textos))
+        self.assertTrue(any("«Mudo» casi no suena" in t for t in textos))
+        self.assertTrue(any("«Cortado» dura solo 12 s" in t for t in textos))
+        self.assertTrue(any("«Disco entero» dura 40 min" in t for t in textos))
+        self.assertFalse(any("Sin medir" in t for t in textos))
+
     def test_mp3_de_poca_calidad(self):
         filas = self.tanda("A")
         filas[0]["ruta"] = filas[0]["ruta"].replace(".flac", ".mp3")

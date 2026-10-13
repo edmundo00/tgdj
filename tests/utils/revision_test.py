@@ -25,8 +25,8 @@ class Base(unittest.TestCase):
         return {"ruta": ruta, "title": titulo, "artist": artista, "artist1": orq, "artist2": cantor,
                 "year": str(ano), "ano": str(ano), "genre": genero, "composer": "", "duration": float(dur)}
 
-    def cortina(self, titulo="Cortina"):
-        return self.cancion("Pop", titulo, 2020, "cortina entera", dur=120)
+    def cortina(self, titulo=None):
+        return self.cancion("Pop", titulo or f"Cortina {self.n + 1}", 2020, "cortina entera", dur=120)
 
     def tanda(self, artista, anos=(1941, 1941, 1942), genero="tango", titulos=None):
         titulos = titulos or [f"{artista} {genero} {i}" for i in range(len(anos))]
@@ -202,6 +202,51 @@ class CumparsitaTest(Base):
         tandas, avisos = self.revisar(filas)
         self.assertFalse(any(t.es_cumparsita for t in tandas))
         self.assertTrue(any("va sola al final" in t for t in self.textos(avisos, AVISO)))
+
+
+class RepetidasTest(Base):
+    def test_nada_suena_dos_veces(self):
+        careless = self.cortina("Careless Whisper")
+        otra_copia = dict(careless, ruta=careless["ruta"].replace(".flac", "_copia.flac"))
+        open(otra_copia["ruta"], "wb").close()
+        filas = (self.tanda("Juan D'Arienzo", titulos=["Pensalo bien", "La bruja", "No mientas"]) + [careless]
+                 + self.tanda("Carlos di Sarli") + [dict(careless)]                     # el mismo archivo
+                 + self.tanda("Rodolfo Biagi") + [otra_copia]                           # otro archivo, mismo tema
+                 + [self.cancion("Juan D'Arienzo", "Pensalo bien", 1938)] + self.tanda("Biagi")[:2])
+        _, avisos = self.revisar(filas)
+        errores = self.textos(avisos, ERROR)
+        self.assertTrue(any("la cortina «Careless Whisper» ya sonó" in t and "mismo archivo" in t for t in errores))
+        self.assertTrue(any("la cortina «Careless Whisper»" in t and "otro archivo" in t for t in errores))
+        self.assertTrue(any("el tema «Pensalo bien» (Juan D'Arienzo) ya sonó" in t for t in errores))
+
+    def test_cortina_con_el_titulo_del_tango_que_anuncia_no_es_error(self):
+        filas = (self.tanda("Carlos di Sarli") + [self.cancion("Rocío Márquez", "Trago amargo", 2020, "cortina entera")]
+                 + self.tanda("Juan D'Arienzo / Alberto Echagüe", titulos=["Trago amargo", "b", "c"]))
+        _, avisos = self.revisar(filas)
+        self.assertFalse([t for t in self.textos(avisos) if "Trago amargo" in t and ("sonó" in t or "dos veces" in t)])
+
+    def test_mismo_tango_por_dos_orquestas_es_aviso(self):
+        filas = (self.tanda("Enrique Rodríguez", titulos=["Mi piba", "a", "b"]) + [self.cortina()]
+                 + self.tanda("Ricardo Tanturi", titulos=["Mi piba (Mi piba linda)", "c", "d"]))
+        _, avisos = self.revisar(filas)
+        self.assertTrue(any("suena dos veces (por dos orquestas)" in t for t in self.textos(avisos, AVISO)))
+        self.assertFalse(self.textos(avisos, ERROR))
+
+
+class EscucharTest(Base):
+    def test_cada_aviso_sabe_que_tema_escuchar(self):
+        filas = (self.tanda("Juan D'Arienzo", titulos=["Uno", "Dos", "Tres"]) + [self.cortina()]
+                 + self.tanda("Carlos di Sarli", anos=(1940, 1941, 1955), titulos=["Cuatro", "Cinco", "Seis"]))
+        filas[1]["composer"] = ""
+        filas[1]["duration"] = 180
+        filas[2]["ano"] = ""
+        tandas, avisos = self.revisar(filas)
+        por_texto = {a.texto: a.ruta for a in avisos}
+        sin_ano = next(t for t in por_texto if "sin año: Tres" in t)
+        self.assertEqual(por_texto[sin_ano], filas[2]["ruta"])                  # nombrado sin comillas
+        anos = next(t for t in por_texto if "años muy separados" in t)
+        self.assertEqual(por_texto[anos], filas[4]["ruta"])                     # de la tanda: su primer tema
+        self.assertTrue(all(a.ruta is None for a in avisos if a.fila is None))
 
 
 class LeerMbpTest(unittest.TestCase):

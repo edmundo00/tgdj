@@ -44,10 +44,16 @@ parcial (falta el dato), rojo = distinto.
 ### Revisión antes de crear las diapos
 
 Al cargar la playlist en *Crear diapos* (vale la `.mbp` de MusicBee directamente) se revisa y se ve abajo
-(clic en un aviso = ir a la tanda; en la tabla, la hora a la que empieza cada tanda):
+(clic en un aviso = ir a la tanda y marcar el tema; en la tabla, la hora a la que empieza cada tanda).
+**Para oír el problema**: doble clic en un aviso (o *▶ Escuchar*) pone el tema del que habla (el más rápido, el
+más fuerte, la cortina que no encaja…; si es de toda la tanda, su primer tema); doble clic en una canción de la
+lista de abajo la pone; *■ Parar* para.
 
 - ❌ **Errores**: canciones fuera de `MUSICA\Edmundo` (no estarán en el portátil) o que no existen, falta una
-  cortina entre tandas, el mismo archivo o tema dos veces en una tanda. Si hay errores, pregunta antes de crear.
+  cortina entre tandas, **algo que suena dos veces en la noche** (tango o cortina: el mismo archivo, o el mismo tema
+  del mismo artista desde otro archivo; una cortina con el título del tango que anuncia no cuenta), audio que no
+  se puede leer, temas que casi no suenan, que duran menos de 30 s (¿cortados?) o más de 10 min (¿un disco
+  entero?), y en el portátil (Dropbox en C:) archivos solo en la nube. Si hay errores, pregunta antes de crear.
 - ⚠ **Avisos**: tandas que no son de 3–4 temas, mezcla de orquestas, de instrumentales y cantadas o de cantores,
   años separados más de 8, sin año, cortinas dobles, vals y milonga sin tango en medio, la misma orquesta o
   cantor a menos de 4 tandas, un tema que suena dos veces en la noche, archivos solo en la nube, que la música

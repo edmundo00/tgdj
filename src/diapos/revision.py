@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 
 from unidecode import unidecode
 
-from src.config.config import carpeta_portatil
+from src.config.config import carpeta_portatil, dropbox_path
 from src.diapos import bpm, caracter
 from src.diapos import historial as historial_mod
 from src.diapos.generador import compositor_para_diapo, es_cumparsita
@@ -44,7 +44,12 @@ DIFERENCIA_VOLUMEN = 4         # dB: un tema que se aparta más del resto de su 
 SALTO_VOLUMEN_TANDAS = 6       # dB: una tanda mucho más alta o baja que la anterior -> consejo
 SILENCIO_INICIO_MAX = 3        # s de silencio al principio de un tema -> aviso
 SILENCIO_FIN_MAX = 8           # s de silencio al final (los discos de 78 suelen tener 2-6) -> aviso
-BITRATE_MINIMO = 192           # kbps: un MP3 por debajo -> consejo
+VOLUMEN_MUDO = -45             # dB: un tema que no llega a esto casi no suena -> error
+DURACION_CORTADA = 30          # s: un tema de tanda más corto -> error (archivo cortado)
+DURACION_CORTA = 90            # s: más corto -> aviso
+DURACION_LARGA = 6 * 60        # s: más largo -> aviso
+DURACION_DISCO = 10 * 60       # s: más largo -> error (¿un disco entero en un archivo?)
+BITRATE_MINIMO = 192          # kbps: un MP3 por debajo -> consejo
 CORTINA_MINIMA = 25           # segundos: una cortina más corta no da tiempo a despejar la pista
 TOLERANCIA_BPM = 0.10          # un tema más de un 10 % más rápido o lento que el resto de su tanda -> aviso
 BAJADA_BPM = 0.05              # la tanda "baja" si el último tema es un 5 % más lento que el primero
@@ -57,6 +62,23 @@ class Aviso:
     nivel: str
     texto: str
     fila: int = None           # índice en la lista de tandas (incluidas las cortinas)
+    ruta: str = None           # el tema del que habla (para escucharlo): el de «título» o el primero de la fila
+
+
+def _poner_rutas(avisos, tandas):
+    """A cada aviso de una fila, el tema que hay que escuchar: el que nombra entre «», o el primero de la fila."""
+    for a in avisos:
+        if a.fila is None or a.ruta or not 0 <= a.fila < len(tandas):
+            continue
+        canciones = tandas[a.fila].canciones
+        if canciones.empty:
+            continue
+        a.ruta = canciones["ruta"].iloc[0]
+        nombrados = [t for t in re.findall(r"«(.+?)»", a.texto) if (canciones["title"] == t).any()]
+        if not nombrados:      # también sin comillas ("sin compositor en la diapo: Criolla linda"), el más largo
+            nombrados = sorted((t for t in canciones["title"] if t and t in a.texto), key=len, reverse=True)
+        if nombrados:
+            a.ruta = canciones.loc[canciones["title"] == nombrados[0], "ruta"].iloc[0]
 
 
 def _genero_corto(genero):
@@ -292,22 +314,34 @@ def revisar(tandas, faltan=(), inicio=None, fin=None, carpeta=carpeta_portatil, 
         return f"Cortina tras la Tanda {antes[-1]}" if antes else "Cortina del principio"
 
     # --- Archivos: en el portátil, descargados, una sola vez
-    vistas = {}
+    # --- Nada puede sonar dos veces en la noche (tango o cortina): el mismo archivo, o el mismo tema del mismo
+    #     artista desde otro archivo. (Una cortina con el título del tango que anuncia es a propósito: no cuenta.)
+    vistas, temas = {}, {}
+    en_portatil = dropbox_path.upper().startswith("C:")       # el portátil de la milonga tiene Dropbox en C:
     for i, t in enumerate(tandas):
-        for _, c in t.canciones.iterrows():
+        for k, (_, c) in enumerate(t.canciones.iterrows()):
             ruta = c["ruta"]
             if carpeta and not _dentro_de(ruta, carpeta):
                 avisos.append(Aviso(ERROR, f"{nombre(i)}: «{c['title']}» no está en {nombre_carpeta} "
                                            f"(no estará en el portátil): {ruta}", i))
             elif _en_nube(ruta):
-                avisos.append(Aviso(AVISO, f"{nombre(i)}: «{c['title']}» está solo en la nube en este ordenador", i))
+                if en_portatil:
+                    avisos.append(Aviso(ERROR, f"{nombre(i)}: «{c['title']}» está solo en la nube: si en la milonga "
+                                               f"no hay internet, no sonará (en Dropbox: «Disponible sin conexión»)", i))
+                else:
+                    avisos.append(Aviso(AVISO, f"{nombre(i)}: «{c['title']}» está solo en la nube en este ordenador "
+                                               f"(compruébalo en el portátil)", i))
+            que = "la cortina" if t.es_cortina else "el tema"
             clave = os.path.normcase(ruta)
-            if clave in vistas and not t.es_cortina:
-                avisos.append(Aviso(ERROR, f"{nombre(i)}: «{c['title']}» ya suena en {nombre(vistas[clave])}", i))
-            elif clave in vistas:
-                avisos.append(Aviso(AVISO, f"{nombre(i)}: la cortina «{c['title']}» ya sonó ({nombre(vistas[clave])}); "
-                                           f"mejor no repetir cortinas en la noche", i))
+            tema = (t.es_cortina, normalizar_nombre(c["artist1"]), _titulo(c["title"]))
+            if clave in vistas:
+                avisos.append(Aviso(ERROR, f"{nombre(i)}: {que} «{c['title']}» ya sonó en {nombre(vistas[clave])} "
+                                           f"(el mismo archivo dos veces)", i))
+            elif tema in temas and tema[2]:
+                avisos.append(Aviso(ERROR, f"{nombre(i)}: {que} «{c['title']}» ({c['artist1']}) ya sonó en "
+                                           f"{nombre(temas[tema])} (otro archivo del mismo tema)", i))
             vistas.setdefault(clave, i)
+            temas.setdefault(tema, i)
 
     # --- Estructura: cortina entre tandas, nada de cortinas dobles
     if tandas and tandas[0].es_cortina:
@@ -492,6 +526,26 @@ def revisar(tandas, faltan=(), inicio=None, fin=None, carpeta=carpeta_portatil, 
                 avisos.append(Aviso(AVISO, f"{nombre(i)}: «{t.canciones['title'].iloc[k]}» suena {abs(diferencia):.0f} dB "
                                            f"{como} que el resto de la tanda: ajusta la ganancia", i))
         titulos = list(t.canciones["title"])
+        # archivos que no suenan bien: dañados, mudos, cortados o con un disco entero dentro
+        for (_, c), vol in zip(t.canciones.iterrows(), vols):
+            medido = c.get("medido")
+            medido = medido is not None and medido == medido and bool(medido)       # NaN = sin medir
+            if medido and vol is None and os.path.exists(c["ruta"]):
+                avisos.append(Aviso(ERROR, f"{nombre(i)}: no se pudo leer el audio de «{c['title']}»: "
+                                           f"¿archivo dañado? Pruébalo antes de la milonga", i))
+            elif vol is not None and vol < VOLUMEN_MUDO:
+                avisos.append(Aviso(ERROR, f"{nombre(i)}: «{c['title']}» casi no suena ({vol:.0f} dB)", i))
+            duracion = c["duration"]
+            if 0 < duracion < DURACION_CORTADA:
+                avisos.append(Aviso(ERROR, f"{nombre(i)}: «{c['title']}» dura solo {duracion:.0f} s: "
+                                           f"¿archivo cortado?", i))
+            elif DURACION_CORTADA <= duracion < DURACION_CORTA:
+                avisos.append(Aviso(AVISO, f"{nombre(i)}: «{c['title']}» dura solo {duracion:.0f} s", i))
+            elif duracion > DURACION_DISCO:
+                avisos.append(Aviso(ERROR, f"{nombre(i)}: «{c['title']}» dura {duracion / 60:.0f} min: "
+                                           f"¿es un disco entero en un archivo?", i))
+            elif duracion > DURACION_LARGA:
+                avisos.append(Aviso(AVISO, f"{nombre(i)}: «{c['title']}» dura {duracion / 60:.0f} min", i))
         for n, (sil_ini, sil_fin) in enumerate(zip(medidas_de(t, "silencio_inicio"), medidas_de(t, "silencio_fin"))):
             if sil_ini is not None and sil_ini > SILENCIO_INICIO_MAX:
                 avisos.append(Aviso(AVISO, f"{nombre(i)}: «{titulos[n]}» empieza con {sil_ini:.0f} s de silencio: "
@@ -601,12 +655,15 @@ def revisar(tandas, faltan=(), inicio=None, fin=None, carpeta=carpeta_portatil, 
                 avisos.append(Aviso(AVISO, f"Cantor repetido muy cerca ({', '.join(sorted(comunes)).title()}): "
                                            f"{nombre(i)} y {nombre(j)}", j))
 
+    # el mismo tango por otra orquesta (con la misma orquesta ya es un error, arriba)
     vistos = {}
     for i, t in reales:
-        for titulo, original in zip(map(_titulo, t.canciones["title"]), t.canciones["title"]):
-            if titulo in vistos and vistos[titulo] != i:
-                avisos.append(Aviso(AVISO, f"«{original}» suena dos veces: {nombre(vistos[titulo])} y {nombre(i)}", i))
-            vistos.setdefault(titulo, i)
+        for titulo, original, orquesta in zip(map(_titulo, t.canciones["title"]), t.canciones["title"],
+                                              map(normalizar_nombre, t.canciones["artist1"])):
+            if titulo in vistos and vistos[titulo][0] != i and vistos[titulo][1] != orquesta:
+                avisos.append(Aviso(AVISO, f"«{original}» suena dos veces (por dos orquestas): "
+                                           f"{nombre(vistos[titulo][0])} y {nombre(i)}", i))
+            vistos.setdefault(titulo, (i, orquesta))
 
     if len(reales) >= 6:
         tercio = reales[:len(reales) // 3]
@@ -638,5 +695,6 @@ def revisar(tandas, faltan=(), inicio=None, fin=None, carpeta=carpeta_portatil, 
             else:
                 avisos.append(Aviso(INFO, f"{texto}: quedan {-diferencia} min libres (charla, cumpleaños…)"))
 
+    _poner_rutas(avisos, tandas)
     orden = {ERROR: 0, AVISO: 1, INFO: 2}
     return sorted(avisos, key=lambda a: (orden[a.nivel], a.fila if a.fila is not None else -1))
