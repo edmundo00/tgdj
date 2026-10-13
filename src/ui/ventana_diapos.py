@@ -14,7 +14,7 @@ from src.config.config import m3u_start_path, presentations_start_path, default_
 from src.diapos.generador import (
     leer_playlist, agrupar_tandas, crear_presentacion, duracion_texto, nombre_archivo, compositor_para_diapo,
 )
-from src.diapos import bpm, caracter, catalogo, historial
+from src.diapos import bpm, caracter, catalogo, historial, proyectar, web
 from src.diapos.revision import (
     revisar, horas_de_inicio, segundos_de_inicio, energia, bpm_tanda, ERROR, AVISO, AUTO, LIBRE, PATRONES,
     MINUTOS_SIN_MILONGA,
@@ -235,9 +235,21 @@ class VentanaDiapos(QDialog):
         self.boton_crear.setEnabled(False)
         self.boton_crear.setStyleSheet("QPushButton{font-weight:bold; padding:6px 18px;}")
         self.boton_crear.clicked.connect(self.crear)
+        self.boton_web = QPushButton("Crear presentación web…")
+        self.boton_web.setToolTip("Un solo .html que se ve en cualquier navegador, sin internet ni PowerPoint: "
+                                  "una diapo por tema, cortinas que anuncian la próxima tanda")
+        self.boton_web.setEnabled(False)
+        self.boton_web.clicked.connect(self.crear_web)
+        self.boton_proyectar = QPushButton("📽 Proyectar en vivo…")
+        self.boton_proyectar.setToolTip("Sirve la presentación web y la hace saltar sola a la canción que pone "
+                                        "VirtualDJ; se puede abrir en este ordenador o en la tablet (misma red, "
+                                        "sin internet)")
+        self.boton_proyectar.clicked.connect(self.proyectar)
         cerrar = QPushButton("Cerrar")
         cerrar.clicked.connect(self.close)
         abajo.addWidget(self.boton_crear)
+        abajo.addWidget(self.boton_web)
+        abajo.addWidget(self.boton_proyectar)
         abajo.addWidget(cerrar)
         lay.addLayout(abajo)
 
@@ -282,6 +294,7 @@ class VentanaDiapos(QDialog):
         self.poner_etiqueta()
         self.rellenar_tandas()
         self.boton_crear.setEnabled(bool(self.tandas))
+        self.boton_web.setEnabled(bool(self.tandas))
         for b in (self.boton_tema, self.boton_tanda, self.boton_cortina, self.boton_guardar, self.boton_reserva):
             b.setEnabled(bool(self.tandas))
         self.boton_deshacer.setEnabled(False)
@@ -516,6 +529,73 @@ class VentanaDiapos(QDialog):
                 cambiadas += 1
         if cambiadas:
             self._aplicar(plana, self._fila_tanda())
+
+    # ------------------------------------------------------------------ presentación web y proyectar
+    def crear_web(self):
+        d = self.datos()
+        if not d["milonga"]:
+            QMessageBox.warning(self, "Falta el nombre", "Escribe el nombre de la milonga.")
+            return
+        errores = [a.texto for a in self.avisos if a.nivel == ERROR]
+        if errores and QMessageBox.question(
+                self, "La playlist tiene errores",
+                f"La revisión encontró {len(errores)} error(es):\n\n" + "\n".join(errores[:10])
+                + "\n\n¿Crear la presentación igualmente?",
+                QMessageBox.Yes | QMessageBox.No, QMessageBox.No) != QMessageBox.Yes:
+            return
+        nombre = os.path.splitext(nombre_archivo(d))[0] + ".html"
+        destino, _ = QFileDialog.getSaveFileName(self, "Guardar presentación web",
+                                                 os.path.join(presentations_start_path, nombre),
+                                                 "Página web (*.html)")
+        if not destino:
+            return
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        try:
+            web.crear_web(self.tandas, d, destino)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"No se pudo crear la presentación web:\n{e}")
+            return
+        finally:
+            QApplication.restoreOverrideCursor()
+        self.settings.setValue("ultima_web", destino)
+        if getattr(self, "proyector", None) is not None and self.proyector.activo:
+            self.proyector.cambiar_html(destino)
+        r = QMessageBox.question(self, "Presentación web creada",
+                                 f"Guardada en:\n{destino}\n\nSe abre en cualquier navegador (F = pantalla completa, "
+                                 f"flechas para pasar).\n\n¿Proyectarla ya en vivo (salta sola con VirtualDJ)?",
+                                 QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+        if r == QMessageBox.Yes:
+            self.proyectar(destino)
+
+    def proyectar(self, ruta=None):
+        if not ruta:
+            ruta, _ = QFileDialog.getOpenFileName(self, "Elegir la presentación web",
+                                                  self.settings.value("ultima_web", presentations_start_path) or
+                                                  presentations_start_path, "Página web (*.html)")
+            if not ruta:
+                return
+        self.settings.setValue("ultima_web", ruta)
+        try:
+            if getattr(self, "proyector", None) is None or not self.proyector.activo:
+                self.proyector = proyectar.Proyector(ruta).arrancar()
+            else:
+                self.proyector.cambiar_html(ruta)
+        except OSError as e:
+            QMessageBox.critical(self, "Proyectar", f"No se pudo arrancar:\n{e}")
+            return
+        import webbrowser
+        direcciones = self.proyector.direcciones()
+        webbrowser.open(direcciones[0])
+        suena = proyectar.cancion_que_suena()
+        QMessageBox.information(
+            self, "Proyectando en vivo",
+            f"Se ha abierto en el navegador: {direcciones[0]}\n(F = pantalla completa; llévala a la pantalla del "
+            f"proyector).\n\nDesde la tablet u otro ordenador en la misma red (wifi o «Zona con cobertura "
+            f"inalámbrica móvil» del portátil; no hace falta internet), abre en su navegador:\n"
+            + "\n".join(f"    {x}" for x in direcciones[1:])
+            + f"\n\nLa presentación salta sola a la canción que pone VirtualDJ (ahora: {suena or 'nada'}). "
+              f"Sigue proyectando mientras TangoTags esté abierto. Si Windows pregunta por el firewall, "
+              f"permite el acceso en redes privadas.")
 
     def abrir_reserva(self):
         cat = self._catalogo()

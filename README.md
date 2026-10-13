@@ -41,6 +41,35 @@ La barra de arriba sigue el orden de trabajo:
 **Colores** de la comparación: verde = igual, amarillo = parecido (p. ej. mismo año), naranja =
 parcial (falta el dato), rojo = distinto.
 
+### Presentación web y proyectar en vivo (sin PowerPoint ni internet)
+
+En *Crear diapos*: **Crear presentación web…** guarda un solo `.html` (fotos dentro) que se ve en cualquier
+navegador: portada, **una diapo por tema** (la tanda entera con el tema que suena destacado), cortinas que
+anuncian **la próxima tanda** (orquesta y si es tango, vals o milonga) y La Cumparsita. Orquesta sin foto: emblema
+con sus iniciales. Teclas: flechas / espacio para pasar, **F** pantalla completa (o clic: derecha avanza,
+izquierda retrocede).
+
+**En la tablet sin conexión (modo «por tiempo»)**: se abre el `.html` en la tablet y se **toca una vez al empezar
+cada tanda**; sus temas avanzan solos según su duración y al acabar pasa a la cortina (que anuncia la próxima
+tanda) y espera. Tocar a la derecha avanza, a la izquierda retrocede; ⛶ arriba a la derecha = pantalla completa.
+Las instrucciones están dentro de la propia presentación (salen al abrirla y con **⋯ Más → ? Ayuda**). Abajo,
+botones grandes para el dedo: ◀ ⏸/▶ ▶ **≡ Tandas** (ir directo a una) y **⋯ Más**: 🎂 cumpleaños con confeti,
+💬 mensaje en las cortinas, 🔓/🔒 bloquear toques, Simple (una diapo por tanda), 🎤 ecualizador con el micrófono
+(si no hay permiso, el ecualizador late al BPM del tema), ayuda y pantalla completa. Arriba a la derecha, la hora.
+La portada muestra las fotos de las orquestas de la noche; la cortina y la tanda avisan de la penúltima y la
+última tanda. Encima de los botones,
+un **reproductor** con lo que lleva y lo que queda el tema: tocar o arrastrar la barra lo cuadra con lo que suena.
+El reloj va por la hora real (si la tablet se duerme, al volver se pone al día). En la cortina, cuenta atrás: si
+no se toca, la tanda empieza sola al minuto. Si se cierra o se recarga, vuelve a la misma diapo.
+
+**📽 Proyectar en vivo…** la sirve desde este ordenador y la hace **saltar sola a la canción que suena**: la lee
+del historial de **Mixxx** (su base de datos `%LOCALAPPDATA%\Mixxx\mixxxdb.sqlite`, buscando la diapo por el
+archivo, así que da igual cómo esté escrito el título) o del tracklist de VirtualDJ, lo más reciente. Se abre en el navegador de
+este ordenador (llévalo a la pantalla del proyector y pulsa F) **o en la tablet / otro ordenador** de la misma
+red: la wifi del local o la «Zona con cobertura inalámbrica móvil» del portátil (no hace falta internet); la
+ventana dice qué dirección abrir (`http://192.168.x.x:8765`). Abajo a la derecha, un punto verde = en vivo.
+Sin la app: `python -m src.diapos.proyectar presentacion.html`.
+
 ### Revisión antes de crear las diapos
 
 Al cargar la playlist en *Crear diapos* (vale la `.mbp` de MusicBee directamente) se revisa y se ve abajo

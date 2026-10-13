@@ -1,0 +1,88 @@
+import datetime
+import json
+import os
+import tempfile
+import unittest
+import urllib.request
+
+import pandas as pd
+
+from src.diapos import proyectar, web
+from src.diapos.generador import agrupar_tandas
+from tests.utils.revision_test import Base
+
+DATOS = {"milonga": "Milonga Mia", "fecha": datetime.date(2026, 10, 13), "inicio": "21:00", "fin": "00:00"}
+
+
+class WebTest(Base):
+    def noche(self):
+        filas = (self.tanda("Juan D'Arienzo", titulos=["Uno", "Dos", "Tres"]) + [self.cortina("Clandestina")]
+                 + self.tanda("Orquesta Sin Foto Ninguna", genero="tango vals")
+                 + [self.cancion("Juan D'Arienzo", "La cumparsita", 1951)])
+        return agrupar_tandas(pd.DataFrame(filas))
+
+    def test_una_diapo_por_tema_y_la_cortina_anuncia_la_proxima(self):
+        lista, _ = web.diapos(self.noche(), DATOS)
+        tipos = [d["tipo"] for d in lista]
+        self.assertEqual(tipos, ["portada", "tema", "tema", "tema", "cortina", "tema", "tema", "tema", "cumparsita"])
+        self.assertEqual([d["actual"] for d in lista[1:4]], [0, 1, 2])
+        self.assertEqual(lista[2]["clave"], "Juan D'Arienzo - Dos")
+        self.assertEqual(lista[4]["proxima"]["genero"], "vals")
+        self.assertIsNone(lista[5]["foto"])                       # sin foto: emblema con iniciales
+        self.assertEqual(lista[5]["iniciales"], "SN")
+        self.assertEqual(lista[0]["tandas"][1]["genero"], "vals")
+
+    def test_archivo_html_y_modo_en_vivo(self):
+        dir_ = tempfile.mkdtemp()
+        html = web.crear_web(self.noche(), DATOS, os.path.join(dir_, "milonga.html"))
+        contenido = open(html, encoding="utf-8").read()
+        self.assertIn('"clave": "Juan D\'Arienzo - Tres"', contenido)
+        self.assertNotIn("__DIAPOS__", contenido)
+        tracklist = os.path.join(dir_, "tracklist.txt")
+        with open(tracklist, "w", encoding="utf-8") as f:
+            f.write("21:00 : Juan D'Arienzo - Uno\n21:03 : Juan D'Arienzo - Dos\n\n")
+        sin_mixxx = os.path.join(dir_, "sin_mixxx.sqlite")
+        self.assertEqual(proyectar.cancion_que_suena(tracklist, sin_mixxx), "Juan D'Arienzo - Dos")
+        self.assertEqual(proyectar.cancion_que_suena(os.path.join(dir_, "no_existe.txt"), sin_mixxx), "")
+        p = proyectar.Proyector(html, tracklist=tracklist, puerto=8811, mixxx=sin_mixxx).arrancar()
+        try:
+            base = p.direcciones()[0]
+            self.assertEqual(json.load(urllib.request.urlopen(base + "/ahora"))["texto"], "Juan D'Arienzo - Dos")
+            self.assertIn(b"Milonga Mia", urllib.request.urlopen(base + "/").read())
+        finally:
+            p.parar()
+
+
+def mixxx_falso(ruta, canciones):
+    """Base de datos mínima de Mixxx con su historial: canciones = [(artista, título, archivo, 'AAAA-MM-DD hh:mm:ss')]."""
+    import sqlite3
+    con = sqlite3.connect(ruta)
+    con.executescript("""
+        CREATE TABLE Playlists (id INTEGER PRIMARY KEY, name TEXT, hidden INTEGER);
+        CREATE TABLE PlaylistTracks (id INTEGER PRIMARY KEY, playlist_id INTEGER, track_id INTEGER,
+                                     position INTEGER, pl_datetime_added TEXT);
+        CREATE TABLE library (id INTEGER PRIMARY KEY, artist TEXT, title TEXT, location INTEGER);
+        CREATE TABLE track_locations (id INTEGER PRIMARY KEY, location TEXT);
+        INSERT INTO Playlists VALUES (1, 'una lista normal', 0), (2, '2026-10-13', 2);""")
+    for n, (artista, titulo, archivo, cuando) in enumerate(canciones, 1):
+        con.execute("INSERT INTO track_locations VALUES (?, ?)", (n, archivo))
+        con.execute("INSERT INTO library VALUES (?, ?, ?, ?)", (n, artista, titulo, n))
+        con.execute("INSERT INTO PlaylistTracks VALUES (?, 2, ?, ?, ?)", (n, n, n, cuando))
+    con.commit()
+    con.close()
+
+
+class MixxxTest(unittest.TestCase):
+    def test_lo_ultimo_del_historial_de_mixxx(self):
+        dir_ = tempfile.mkdtemp()
+        db = os.path.join(dir_, "mixxxdb.sqlite")
+        mixxx_falso(db, [("Juan D'Arienzo", "Uno", "D:/Dropbox/TDJ/MUSICA/Edmundo/uno.flac", "2026-10-13 19:01:00"),
+                         ("Juan D'Arienzo", "Dos", "D:/Dropbox/TDJ/MUSICA/Edmundo/dos.flac", "2026-10-13 19:04:00")])
+        r = proyectar.que_suena(tracklist=os.path.join(dir_, "no_hay.txt"), mixxx=db)
+        self.assertEqual(r, {"texto": "Juan D'Arienzo - Dos", "ruta": r"D:\Dropbox\TDJ\MUSICA\Edmundo\dos.flac"})
+        self.assertEqual(proyectar.que_suena(os.path.join(dir_, "a"), os.path.join(dir_, "b")),
+                         {"texto": "", "ruta": ""})
+
+
+if __name__ == "__main__":
+    unittest.main()
