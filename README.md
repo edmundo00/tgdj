@@ -78,6 +78,8 @@ Al cargar la playlist en *Crear diapos* (vale la `.mbp` de MusicBee directamente
   ajustar la ganancia. Aviso si un tema se aparta más de 4 dB del resto de su tanda, si empieza con más de 3 s de
   silencio o acaba con más de 8 (hueco en la pista); info si una tanda suena 6 dB más alta o baja que la anterior,
   si las cortinas suenan de media mucho más fuerte que las tandas, o si un tema es un MP3 de menos de 192 kbps.
+  Si un MP3 (o m4a, wma…) tiene **la misma grabación en FLAC en Edmundo** (misma orquesta, título, cantor y año;
+  sin año no se propone), aviso con el archivo y botón **Usar FLAC (n)**, que los cambia todos (se puede deshacer).
 - **Cortinas**: aviso si una cortina se repite en la noche, dura menos de 25 s o parece de tango (su artista es una
   orquesta); info si hay 3 del mismo artista o dos seguidas. Se mide cuánto «se mueve» cada cortina (columna BPM de
   las canciones: *tranquila / media / animada*, límites sacados de tus cortinas de 5 estrellas) y se aconseja si una

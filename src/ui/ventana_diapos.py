@@ -56,6 +56,7 @@ class VentanaDiapos(QDialog):
         self.faltan = []
         self.avisos = []
         self.historial = []
+        self.alternativas = {}
         self.cambios = []
         self.guardada = True
         self.playlist = None
@@ -141,12 +142,15 @@ class VentanaDiapos(QDialog):
         self.boton_guardar = QPushButton("Guardar playlist…")
         self.boton_guardar.setToolTip("Guarda la playlist con los cambios en un .m3u (no toca la original)")
         self.boton_guardar.clicked.connect(self.guardar_playlist)
+        self.boton_flac = QPushButton("Usar FLAC")
+        self.boton_flac.setToolTip("Cambia los MP3 de la playlist por la misma grabación en FLAC (en Edmundo)")
+        self.boton_flac.clicked.connect(self.usar_flac)
         self.boton_reserva = QPushButton("Reserva…")
         self.boton_reserva.setToolTip("Tandas de reserva (vals de cumpleaños, tango extra, tango para el final) "
                                       "que no repiten nada de la noche, en un .m3u aparte")
         self.boton_reserva.clicked.connect(self.abrir_reserva)
-        for b in (self.boton_tema, self.boton_tanda, self.boton_cortina, self.boton_deshacer, self.boton_guardar,
-                  self.boton_reserva):
+        for b in (self.boton_tema, self.boton_tanda, self.boton_cortina, self.boton_flac, self.boton_deshacer,
+                  self.boton_guardar, self.boton_reserva):
             b.setEnabled(False)
             fila.addWidget(b)
         lay.addLayout(fila)
@@ -462,6 +466,41 @@ class VentanaDiapos(QDialog):
         progreso.close()
         dialogo.rellenar()
 
+    def buscar_alternativas(self):
+        """MP3 de la playlist que tienen la misma grabación en FLAC en Edmundo (solo si hay algún MP3)."""
+        self.alternativas = {}
+        if any(catalogo.con_perdida(r) for t in self.tandas for r in t.canciones["ruta"]):
+            try:
+                QApplication.setOverrideCursor(Qt.WaitCursor)
+                self.alternativas = catalogo.versiones_sin_perdida(catalogo.catalogo(), self.tandas)
+            except Exception:
+                self.alternativas = {}
+            finally:
+                QApplication.restoreOverrideCursor()
+        n = len(self.alternativas)
+        self.boton_flac.setText(f"Usar FLAC ({n})" if n else "Usar FLAC")
+        self.boton_flac.setEnabled(bool(n))
+
+    def usar_flac(self):
+        if not self.alternativas:
+            return
+        cat = self._catalogo()
+        if cat is None:
+            return
+        por_ruta = cat.set_index("ruta")
+        plana = self._plana()
+        cambiadas = 0
+        for n, ruta in enumerate(plana["ruta"]):
+            nueva = self.alternativas.get(ruta)
+            if nueva and nueva in por_ruta.index:
+                fila_cat = por_ruta.loc[nueva]
+                fila_cat = fila_cat.iloc[0] if hasattr(fila_cat, "columns") else fila_cat
+                datos = self._fila_cancion(dict(fila_cat, ruta=nueva))
+                plana.loc[n, list(datos)] = list(datos.values())
+                cambiadas += 1
+        if cambiadas:
+            self._aplicar(plana, self._fila_tanda())
+
     def abrir_reserva(self):
         cat = self._catalogo()
         if cat is None:
@@ -507,6 +546,7 @@ class VentanaDiapos(QDialog):
     def calcular_bpm(self):
         """Medidas del audio de cada canción (BPM, volumen, silencios; en las cortinas actividad y volumen):
         las guardadas al momento, las nuevas (~0,3 s cada canción, una sola vez) con barra."""
+        self.buscar_alternativas()
         try:
             cache = bpm.CacheBpm()
         except Exception:
@@ -568,7 +608,8 @@ class VentanaDiapos(QDialog):
         """Revisa la playlist, colorea las filas con problemas y llena la lista de la revisión."""
         d = self.datos()
         self.avisos = revisar(self.tandas, self.faltan, d["inicio"], d["fin"], patron=self.patron.currentData(),
-                              minutos_sin_milonga=self.sin_milonga.value(), historial=self.historial)
+                              minutos_sin_milonga=self.sin_milonga.value(), historial=self.historial,
+                              alternativas=self.alternativas)
         por_fila = {}
         for a in self.avisos:
             if a.fila is not None:

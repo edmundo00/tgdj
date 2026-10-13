@@ -233,6 +233,36 @@ def proponer_cortinas(cat, tandas, fila, historial=(), solo_5=True):
     return c.sort_values(["_dudosa", "artist", "title"]).drop(columns="_dudosa").reset_index(drop=True)
 
 
+SIN_PERDIDA = (".flac", ".wav", ".aiff", ".aif", ".ape", ".wv")
+CON_PERDIDA = (".mp3", ".m4a", ".wma", ".aac", ".ogg", ".opus", ".mp4")
+
+
+def con_perdida(ruta):
+    return os.path.splitext(ruta)[1].lower() in CON_PERDIDA
+
+
+def versiones_sin_perdida(cat, tandas):
+    """{ruta en MP3 (u otro formato con pérdida) de la noche: ruta en FLAC (o sin pérdida) de la misma grabación
+    en la carpeta del portátil}. Misma grabación = misma orquesta, título, cantor y año; sin año no se propone
+    nada (una orquesta pudo grabar el mismo tema varias veces)."""
+    buscadas = [c for t in tandas for _, c in t.canciones.iterrows() if con_perdida(c["ruta"])]
+    if not buscadas or cat.empty:
+        return {}
+    sin = cat[cat["ruta"].map(lambda r: os.path.splitext(r)[1].lower() in SIN_PERDIDA)]
+    indice = {}
+    for _, c in sin.iterrows():
+        indice.setdefault((normalizar_nombre(c["artist1"]), _titulo(c["title"])), []).append(c)
+    salida = {}
+    for c in buscadas:
+        for otra in indice.get((normalizar_nombre(c["artist1"]), _titulo(c["title"])), []):
+            ano = _ano(c["ano"])
+            misma = ano and ano == _ano(otra["ano"]) and _personas(c["artist2"]) == _personas(otra["artist2"])
+            if misma and os.path.exists(otra["ruta"]):
+                salida[c["ruta"]] = otra["ruta"]
+                break
+    return salida
+
+
 # Tandas de reserva: (clave, para qué, género). Se eligen sin repetir orquesta entre ellas.
 RESERVAS = [
     ("cumple", "Vals de cumpleaños", "vals"),

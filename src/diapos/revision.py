@@ -267,12 +267,14 @@ def _revisar_patron(generos, patron, nombre, cuando, en_zona_final):
 
 
 def revisar(tandas, faltan=(), inicio=None, fin=None, carpeta=carpeta_portatil, patron=AUTO,
-            minutos_sin_milonga=MINUTOS_SIN_MILONGA, archivo_caracter=None, historial=()):
+            minutos_sin_milonga=MINUTOS_SIN_MILONGA, archivo_caracter=None, historial=(), alternativas=None):
     """
     patron: AUTO (detectarlo), LIBRE (no mirar) o una clave de PATRONES.
     historial: milongas anteriores en el mismo sitio (historial.anteriores), para no repetir cortinas ni tandas.
+    alternativas: {ruta en MP3: ruta en FLAC de la misma grabación} (catalogo.versiones_sin_perdida).
     """
     avisos = []
+    alternativas = alternativas or {}
     nombre_carpeta = os.path.relpath(carpeta, os.path.dirname(os.path.dirname(carpeta))) if carpeta else ""
 
     for ruta in faltan:
@@ -511,13 +513,16 @@ def revisar(tandas, faltan=(), inicio=None, fin=None, carpeta=carpeta_portatil, 
             avisos.append(Aviso(INFO, f"Las cortinas suenan de media {diferencia:.0f} dB más fuerte que las tandas: "
                                       f"bájalas con el fader"))
     for i, t in enumerate(tandas):
-        if "bitrate" not in t.canciones:
-            continue
         for (_, c), kbps in zip(t.canciones.iterrows(), medidas_de(t, "bitrate")):
             extension = os.path.splitext(c["ruta"])[1].lower()
-            if kbps and extension in (".mp3", ".m4a", ".wma", ".aac", ".ogg") and kbps < BITRATE_MINIMO:
-                avisos.append(Aviso(INFO, f"{nombre(i)}: «{c['title']}» es un {extension[1:].upper()} de {kbps:.0f} kbps: "
-                                          f"si tienes una versión mejor (FLAC), sonará mejor", i))
+            if c["ruta"] in alternativas:
+                calidad = f" de {kbps:.0f} kbps" if kbps else ""
+                avisos.append(Aviso(AVISO, f"{nombre(i)}: «{c['title']}» es un {extension[1:].upper()}{calidad} y en "
+                                           f"Edmundo tienes la misma grabación sin pérdida: "
+                                           f"{os.path.basename(alternativas[c['ruta']])} (botón «Usar FLAC»)", i))
+            elif kbps and extension in (".mp3", ".m4a", ".wma", ".aac", ".ogg") and kbps < BITRATE_MINIMO:
+                avisos.append(Aviso(INFO, f"{nombre(i)}: «{c['title']}» es un {extension[1:].upper()} de {kbps:.0f} kbps "
+                                          f"(no hay versión FLAC de esa grabación en Edmundo)", i))
 
     # --- Energía en cada bloque: de menos a más, y la milonga por encima del vals
     ener = {i: energia(t, car[i]) for i, t in reales}

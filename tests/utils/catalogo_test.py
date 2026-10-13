@@ -80,6 +80,26 @@ class CatalogoTest(CatalogoBase):
         self.assertNotIn(nueva["ruta"], [c for t in tandas for c in t.canciones["ruta"]])
 
 
+class FlacTest(CatalogoBase):
+    def test_misma_grabacion_en_flac(self):
+        filas = self.tanda("Roberto Firpo", anos=(1942, 1936, 1940), titulos=["Ataniche", "A media luz", "El talento"])
+        for f in filas:
+            f["ruta"] = f["ruta"].replace(".flac", ".mp3")
+            open(f["ruta"], "wb").close()
+        filas[1]["ano"] = ""                                                    # sin año: no se toca
+        buena = self.en_catalogo("Roberto Firpo", "Ataniche", 1942)
+        self.en_catalogo("Roberto Firpo", "A media luz", 1936)
+        self.en_catalogo("Roberto Firpo", "El talento", 1951)                  # otra grabación (otro año)
+        self.en_catalogo("Roberto Firpo", "Ataniche", 1942, carpeta=self.otra)  # fuera del portátil
+        tandas = agrupar_tandas(pd.DataFrame(filas))
+        alt = catalogo.versiones_sin_perdida(self.cat(), tandas)
+        self.assertEqual(alt, {filas[0]["ruta"]: buena["ruta"]})
+        from src.diapos.revision import revisar, AVISO
+        avisos = revisar(tandas, carpeta=self.edmundo, minutos_sin_milonga=0, alternativas=alt)
+        self.assertTrue(any(a.nivel == AVISO and "«Ataniche» es un MP3" in a.texto and "sin pérdida" in a.texto
+                            for a in avisos))
+
+
 class ReservaTest(CatalogoBase):
     def test_reserva(self):
         for orquesta, genero, ano in (("Juan D'Arienzo", "tango vals", 1940),            # ya tiene vals esa noche
