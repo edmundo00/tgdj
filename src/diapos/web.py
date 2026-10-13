@@ -11,11 +11,12 @@ internet ni PowerPoint.
 - Orquesta sin foto: un emblema con sus iniciales.
 """
 import base64
+from urllib.parse import quote_plus
 import io
 import json
 import os
 
-from src.config.config import background_image_folder
+from src.config.config import background_image_folder, redes_milongas
 from src.diapos.generador import (
     FIRMA_DJ, compositor_para_diapo, duracion_texto, fecha_larga, imagen_orquesta,
 )
@@ -160,7 +161,11 @@ def crear_lista(tandas, datos, destino):
             ano = f" <span>{h.escape(str(c['ano']))}</span>" if c["ano"] else ""
             autores = compositor_para_diapo(c["composer"])
             autores = f"<small>{h.escape(autores)}</small>" if autores else ""
-            temas.append(f"<li><b>{h.escape(c['title'])}</b>{ano}{autores}</li>")
+            busqueda = quote_plus(" ".join(x for x in (c["artist1"], c["artist2"], c["title"], str(c["ano"] or ""))
+                                           if x))
+            youtube = (f' <a class="yt" href="https://www.youtube.com/results?search_query={busqueda}" '
+                       f'target="_blank" rel="noopener" title="Escuchar en YouTube">▶</a>')
+            temas.append(f"<li><b>{h.escape(c['title'])}</b>{ano}{youtube}{autores}</li>")
         temas = "".join(temas)
         filas.append(f'<section class="{genero}"><div class="cab"><em>{"" if t.es_cumparsita else str(numero) + " · "}{etiqueta}</em></div>'
                      f'<h2>{h.escape(t.titulo_orquesta)}</h2><p>{h.escape(t.subtitulo)}</p><ol>{temas}</ol></section>')
@@ -168,6 +173,10 @@ def crear_lista(tandas, datos, destino):
         .replace("__MILONGA__", h.escape(datos["milonga"])) \
         .replace("__FECHA__", h.escape(f"{fecha_larga(datos['fecha'])} · de {datos['inicio']} a {datos['fin']}")) \
         .replace("__DJ__", h.escape(FIRMA_DJ)).replace("__TANDAS__", "\n".join(filas))
+    red = redes_milongas.get(datos["milonga"].strip().lower())
+    contenido = contenido.replace(
+        "__REDES__", f'<a class="boton" href="{h.escape(red)}" target="_blank" rel="noopener">Síguelos en Instagram</a>'
+        if red else "")
     with open(destino, "w", encoding="utf-8") as f:
         f.write(contenido)
     return destino
@@ -190,14 +199,37 @@ LISTA = """<!doctype html>
   h2 { margin:2px 0 0; font-size:20px; } section > p { margin:0 0 6px; color:var(--suave); font-style:italic; }
   ol { margin:0; padding-left:20px; } li { margin:4px 0; } li span { color:var(--suave); font-size:14px; }
   li small { display:block; color:var(--suave); font-style:italic; font-size:13px; }
-  footer { text-align:center; color:var(--suave); font-size:13px; padding-bottom:24px; }
+  footer { text-align:center; color:var(--suave); font-size:15px; padding:8px 16px 32px; }
+  footer .gracias { font-size:22px; color:var(--texto); margin-bottom:6px; }
+  footer .firma { font:600 12px system-ui, sans-serif; letter-spacing:.15em; text-transform:uppercase; color:var(--tango); }
+  .intro { margin-top:14px !important; font-style:italic; }
+  .boton { display:inline-block; margin:6px 4px; padding:10px 16px; border-radius:99px; border:0; cursor:pointer;
+    font:600 15px system-ui, sans-serif; background:var(--tango); color:#fff; text-decoration:none; }
+  a.yt { display:inline-block; margin-left:6px; padding:0 7px; border-radius:99px; font:600 12px system-ui, sans-serif;
+    background:#c4302b; color:#fff; text-decoration:none; vertical-align:1px; }
   .cortina { margin:4px 0 4px 6px; padding:4px 10px; font:400 13px system-ui, sans-serif; color:var(--suave); }
   .cortina b { font-weight:600; }
 </style></head>
-<body><header><h1>__MILONGA__</h1><p>__FECHA__</p><p class="dj">TDJ __DJ__</p></header>
+<body><header><h1>__MILONGA__</h1><p>__FECHA__</p><p class="dj">TDJ __DJ__</p>
+<p class="intro">Esta es la música que ha sonado esta noche.<br>Toca ▶ para volver a escuchar un tema en casa.</p></header>
 <main>
 __TANDAS__
-</main><footer>¡Gracias por bailar!</footer></body></html>
+</main>
+<footer>
+  <p class="gracias">¡Gracias por bailar!</p>
+  <p>¿Te ha gustado la música? <b>Díselo al organizador</b> 😊</p>
+  <p>__REDES__ <button class="boton" id="compartir">Compartir esta lista</button></p>
+  <p class="firma">Música: TDJ __DJ__</p>
+</footer>
+<script>
+  // Compartir (WhatsApp, etc.) con el menú del móvil; si no hay, copia el enlace
+  document.getElementById("compartir").addEventListener("click", async () => {
+    const datos = {title: document.title, text: "La música de " + document.title, url: location.href};
+    try { if (navigator.share) { await navigator.share(datos); return; } } catch (e) { return; }
+    try { await navigator.clipboard.writeText(location.href); alert("Enlace copiado"); }
+    catch (e) { prompt("Copia el enlace:", location.href); }
+  });
+</script></body></html>
 """
 
 
@@ -321,7 +353,9 @@ PLANTILLA = r"""<!doctype html>
   body.pausado .eq i { animation-play-state:paused; }
   #qr { position:fixed; left:1vw; top:1vh; display:flex; flex-direction:column; align-items:center; gap:2px;
     padding:4px 4px 3px; border-radius:6px; background:#fff; z-index:5; }
-  #qr svg { width:max(120px, 18vh); height:max(120px, 18vh); display:block; shape-rendering:crispEdges; }
+  #qr svg { width:max(96px, 14vh); height:max(96px, 14vh); display:block; shape-rendering:crispEdges; }
+  #qr { display:none; }
+  body[data-tipo="portada"] #qr, body[data-tipo="cortina"] #qr { display:flex; }   /* no tapar a los músicos */
   #qr span { font:600 max(10px, 1.3vh) system-ui, sans-serif; color:#000; }
   #hora { position:fixed; right:1.6vw; top:1.2vh; font:500 max(14px, 1.5vw) system-ui, sans-serif;
     color:rgba(246,239,228,.45); letter-spacing:.05em; }
@@ -630,7 +664,7 @@ function ir(n, desde) {
   const caja = document.getElementById("diapo");
   caja.classList.add("oculta");
   setTimeout(() => { if (destino !== n) return;
-                     actual = n; caja.innerHTML = pintar(DIAPOS[n]); caja.classList.remove("oculta");
+                     actual = n; document.body.dataset.tipo = DIAPOS[n].tipo; caja.innerHTML = pintar(DIAPOS[n]); caja.classList.remove("oculta");
                      history.replaceState(null, "", "#" + n); }, 180);
 }
 

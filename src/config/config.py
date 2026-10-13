@@ -149,6 +149,10 @@ m3u_start_path = os.path.join(dropbox_path, "TDJ", "playlists","trabajo")
 presentations_start_path = os.path.join(dropbox_path, "TDJ", "Presentacion")
 # Dónde se publican las presentaciones web (GitHub Pages): el QR de la presentación lleva a la lista de la noche
 url_presentaciones_web = "https://edmundo00.github.io/presentaciones-milonga/"
+# Redes de cada milonga (para la lista de la noche: "díselo al organizador"); clave = nombre en minúsculas
+redes_milongas = {
+    "milonga mia": "https://www.instagram.com/milongamia",
+}
 musicbee_start_folder = os.path.join(dropbox_path, "TDJ", "MUSICBEE DATABASES")
 # La única carpeta de música que se sincroniza en el portátil que va a la milonga
 carpeta_portatil = os.path.join(dropbox_path, "TDJ", "MUSICA", "Edmundo")
