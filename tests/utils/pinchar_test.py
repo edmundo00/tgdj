@@ -187,3 +187,40 @@ class LeerTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NocheTest(unittest.TestCase):
+    def pistas(self):
+        from src.pinchar import noche
+        p = lambda d, tanda=None, cortina=False: {"duracion": d, "cortina": cortina, "tanda": tanda,
+                                                  "orquesta": "O", "subtitulo": "", "genero": "tango"}
+        return noche, [p(180, 1), p(180, 1), p(180, 1), p(240, cortina=True), p(150, 2), p(150, 2)]
+
+    def test_bloques(self):
+        noche, ps = self.pistas()
+        self.assertEqual([(b["tipo"], b["indices"]) for b in noche.bloques(ps)],
+                         [("tanda", [0, 1, 2]), ("cortina", [3]), ("tanda", [4, 5])])
+
+    def test_horas_sonando_con_silencio_y_cortina_al_minuto(self):
+        noche, ps = self.pistas()
+        inicios, fin = noche.horas(ps, 1, 30, "sonando", 1000.0, silencio=2, empezadas={0: 700.0})
+        self.assertEqual(inicios[0], 700.0)
+        self.assertEqual(inicios[1], 1000.0 - 30)            # sin anotar: ahora - lo que lleva
+        self.assertEqual(inicios[2], 1000 + 150 + 2)
+        self.assertEqual(inicios[3], 1152 + 180 + 2)
+        self.assertEqual(inicios[4], 1334 + 60 + 2)          # la cortina cuenta un minuto, no 4
+        self.assertEqual(fin, 1396 + 150 + 2 + 150)
+
+    def test_horas_parado_empieza_a_la_hora_de_la_milonga(self):
+        noche, ps = self.pistas()
+        inicios, _ = noche.horas(ps, 0, 0, "parado", 1000.0, silencio=0, inicio_previsto=5000.0)
+        self.assertEqual(inicios[0], 5000.0)
+        inicios, _ = noche.horas(ps, 0, 0, "parado", 1000.0, silencio=0, inicio_previsto=500.0)
+        self.assertEqual(inicios[0], 1000.0)                 # ya pasó la hora: desde ahora
+
+    def test_horas_en_el_silencio_y_al_final(self):
+        noche, ps = self.pistas()
+        inicios, _ = noche.horas(ps, 4, 0, "hueco", 1000.0, silencio=2, hueco=1.5)
+        self.assertEqual(inicios[4], 1001.5)
+        _, fin = noche.horas(ps, 5, 150, "fin", 3000.0, silencio=2)
+        self.assertEqual(fin, 3000.0)
