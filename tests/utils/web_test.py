@@ -173,7 +173,7 @@ class PublicarTest(unittest.TestCase):
         self.assertIn('href="261013-milonga-mia-lista.html"', indice)
         self.assertIn('href="261013-milonga-mia.html"', indice)                    # pantalla grande
         self.assertIn('src="carteles/261013-milonga-mia.jpg"', indice)
-        self.assertIn("1 milonga)", indice)
+        self.assertIn("mis 1 milonga:", indice)
         self.assertEqual(publicar.buscar_cartel("261013-milonga-mia", anuncios), os.path.join(anuncios, "261013_Milonga_Mia.jpg"))
         self.assertEqual(publicar.buscar_cartel("261012-milonga-mia", anuncios), os.path.join(anuncios, "261013_Milonga_Mia.jpg"))
         self.assertIsNone(publicar.buscar_cartel("261020-milonga-mia", anuncios))     # demasiados días

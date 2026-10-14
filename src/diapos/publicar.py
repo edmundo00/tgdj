@@ -184,15 +184,15 @@ INDICE = """<!doctype html>
   :root { --fondo:#fbf7f0; --texto:#2a1f17; --suave:#7a6a5c; --tango:#b9852a; --caja:rgba(127,100,70,.09); }
   @media (prefers-color-scheme: dark) { :root { --fondo:#120c08; --texto:#f6efe4; --suave:#b9ab9b; --caja:rgba(185,133,42,.10); } }
   body { margin:0; background:var(--fondo); color:var(--texto); font:16px/1.45 Georgia, "Palatino Linotype", serif; }
-  header { padding:28px 16px 4px; text-align:center; }
-  .foto { width:150px; height:150px; object-fit:cover; border-radius:50%; border:3px solid var(--tango); }
-  h1 { margin:10px 0 0; font-size:32px; } .frase { margin:6px auto 0; color:var(--suave); max-width:460px; }
+  header { padding:20px 16px 0; display:flex; align-items:center; justify-content:center; gap:16px; text-align:left; }
+  .foto { width:96px; height:96px; flex:none; object-fit:cover; border-radius:50%; border:3px solid var(--tango); }
+  h1 { margin:0; font-size:28px; line-height:1.1; } .frase { margin:4px 0 0; color:var(--suave); font-size:14px; max-width:420px; }
   .dj { font:600 12px system-ui, sans-serif; letter-spacing:.2em; text-transform:uppercase; color:var(--tango); margin:0; }
-  .boton { display:inline-block; margin:14px 4px 0; padding:10px 18px; border-radius:99px; font:600 15px system-ui, sans-serif;
+  .boton { display:inline-block; margin:8px 0 0; padding:7px 14px; border-radius:99px; font:600 14px system-ui, sans-serif;
     background:var(--tango); color:#fff; text-decoration:none; }
   main { max-width:720px; margin:0 auto; padding:8px 16px 40px; }
-  .intro { text-align:center; color:var(--suave); font-style:italic; margin:18px 0 0; }
-  h2 { font-size:22px; margin:26px 0 10px; padding-bottom:4px; border-bottom:1px solid rgba(127,100,70,.3); }
+  .intro { text-align:center; color:var(--suave); font-style:italic; margin:12px 0 0; font-size:15px; }
+  h2 { font-size:22px; margin:14px 0 10px; padding-bottom:4px; border-bottom:1px solid rgba(127,100,70,.3); }
   .noches { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:10px; }
   .noche { display:flex; align-items:center; gap:12px; padding:8px; border-radius:10px; background:var(--caja);
     color:inherit; text-decoration:none; border-left:5px solid var(--tango); }
@@ -203,10 +203,10 @@ INDICE = """<!doctype html>
   .pantalla { display:inline-block; margin:4px 0 0 82px; font:600 13px system-ui, sans-serif; color:var(--tango); }
   footer { text-align:center; color:var(--suave); font:14px system-ui, sans-serif; padding:0 16px 32px; }
 </style></head>
-<body><header>__FOTO__<p class="dj">TDJ</p><h1>__DJ__</h1><p class="frase">__FRASE__</p>
-<a class="boton" href="__INSTAGRAM__" target="_blank" rel="noopener">Sígueme en Instagram</a></header>
+<body><header>__FOTO__<div><p class="dj">TDJ</p><h1>__DJ__</h1><p class="frase">__FRASE__</p>
+<a class="boton" href="__INSTAGRAM__" target="_blank" rel="noopener">Sígueme en Instagram</a></div></header>
 <main>
-<p class="intro">La música de mis milongas (__CUANTAS__). Toca una para ver sus tandas<br>y volver a escuchar los temas en casa.</p>
+<p class="intro">La música de mis __CUANTAS__: toca una para ver sus tandas y escucharlas en casa.</p>
 __NOCHES__
 </main>
 <footer>Música: TDJ __DJ__</footer></body></html>
