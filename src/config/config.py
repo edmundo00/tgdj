@@ -158,6 +158,14 @@ carpeta_repo_presentaciones = os.path.join(os.environ.get("LOCALAPPDATA", os.pat
 redes_milongas = {
     "milonga mia": "https://www.instagram.com/milongamia",
 }
+# El Instagram del DJ (en cada lista y en la página con todas las milongas, que es el enlace de su perfil)
+instagram_dj = "https://www.instagram.com/tdj.edmundo/"
+frase_dj = "Tango DJ · Barcelona e internacional · Sonido analógico (+650 temas en vinilo) y digital (+15.000 FLAC)"
+# Playlists de las noches pasadas («AAMMDD_lugar»): con ellas se rehacen las listas de todas las milongas
+carpeta_noches = os.path.join(dropbox_path, "TDJ", "MUSICBEE DATABASES", "tango", "Playlists")
+# Carteles de cada milonga («AAMMDD_lugar.jpg») y la foto del DJ para la página con todas las milongas
+carpeta_anuncios = os.path.join(dropbox_path, "TDJ", "Fotos DJ", "Anuncios")
+foto_dj = os.path.join(dropbox_path, "TDJ", "Fotos DJ", "IMG_6822.JPG")
 musicbee_start_folder = os.path.join(dropbox_path, "TDJ", "MUSICBEE DATABASES")
 # La única carpeta de música que se sincroniza en el portátil que va a la milonga
 carpeta_portatil = os.path.join(dropbox_path, "TDJ", "MUSICA", "Edmundo")

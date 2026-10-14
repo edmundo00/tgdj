@@ -68,7 +68,15 @@ class ListaYQrTest(Base):
         self.assertIn("Dos", lista)
         self.assertIn("Cortina · <b>Clandestina</b>", lista)   # las cortinas también salen
         self.assertLess(len(lista), 20000)
-        html = open(web.crear_web(tandas, datos, os.path.join(dir_, "p.html"), reconocer=False,
+        self.assertIn("instagram.com/tdj.edmundo", lista)        # el Instagram del DJ
+        self.assertIn('href="./"', lista)                        # vuelta a todas las milongas
+        self.assertIn('src="carteles/261013-milonga-mia.jpg"', lista)
+        self.assertIn("de 21:00 a 00:00", lista)
+        pasada = open(web.crear_lista(tandas, dict(datos, inicio="", fin=""), os.path.join(dir_, "pasada.html")),
+                      encoding="utf-8").read()
+        self.assertNotIn(" · de ", pasada)                       # noche pasada: sin horario
+        self.assertNotIn("__", pasada)
+        html =open(web.crear_web(tandas, datos, os.path.join(dir_, "p.html"), reconocer=False,
                                   url_lista="https://ejemplo.org/lista.html"), encoding="utf-8").read()
         self.assertIn('id="qr"', html)
         self.assertIn("<svg", html)
@@ -141,26 +149,39 @@ class PublicarTest(unittest.TestCase):
             subprocess.run(["git", *args], cwd=semilla, check=True, env=quien)
         noche = os.path.join(dir_, "261013-milonga-mia.html")
         lista = os.path.join(dir_, "261013-milonga-mia-lista.html")
-        for ruta, titulo in ((noche, "Milonga Mia · 13 de octubre"), (lista, "lista")):
+        anuncios = os.path.join(dir_, "anuncios")
+        os.makedirs(anuncios)
+        from PIL import Image
+        for n in ("261013_Milonga_Mia.jpg", "261013_Otra_Cosa.jpg", "261001_Milonga_Mia.png"):
+            Image.new("RGB", (40, 50), "red").save(os.path.join(anuncios, n))
+        for ruta, titulo in ((noche, "Pantalla"), (lista, "Milonga Mia · 13 de octubre de 2026")):
             with open(ruta, "w", encoding="utf-8") as f:
                 f.write(f"<title>{titulo}</title>")
         copia = os.path.join(dir_, "copia")
         antes = dict(os.environ)
         os.environ.update(quien)
         try:
-            url = publicar.publicar([noche, lista], "prueba", carpeta=copia, remoto=remoto)
-            publicar.publicar([noche], "otra vez, sin cambios", carpeta=copia, remoto=remoto)   # no falla
+            url = publicar.publicar([noche, lista], "prueba", carpeta=copia, remoto=remoto, anuncios=anuncios, foto="")
+            publicar.publicar([noche], "otra vez, sin cambios", carpeta=copia, remoto=remoto, anuncios=anuncios,
+                              foto="")   # no falla
         finally:
             os.environ.clear()
             os.environ.update(antes)
         self.assertTrue(url.endswith("/261013-milonga-mia.html"))
         indice = open(os.path.join(copia, "index.html"), encoding="utf-8").read()
-        self.assertIn("Milonga Mia · 13 de octubre", indice)
+        self.assertIn("<b>Milonga Mia</b><small>13 de octubre de 2026</small>", indice)
         self.assertIn('href="261013-milonga-mia-lista.html"', indice)
+        self.assertIn('href="261013-milonga-mia.html"', indice)                    # pantalla grande
+        self.assertIn('src="carteles/261013-milonga-mia.jpg"', indice)
+        self.assertIn("1 milonga)", indice)
+        self.assertEqual(publicar.buscar_cartel("261013-milonga-mia", anuncios), os.path.join(anuncios, "261013_Milonga_Mia.jpg"))
+        self.assertEqual(publicar.buscar_cartel("261012-milonga-mia", anuncios), os.path.join(anuncios, "261013_Milonga_Mia.jpg"))
+        self.assertIsNone(publicar.buscar_cartel("261020-milonga-mia", anuncios))     # demasiados días
+        self.assertIsNone(publicar.buscar_cartel("261013-la-yumba", anuncios))        # otra milonga
         subidos = subprocess.run(["git", "ls-tree", "--name-only", "main"], cwd=remoto, capture_output=True,
                                  text=True).stdout.split()
         self.assertEqual(sorted(subidos), ["261013-milonga-mia-lista.html", "261013-milonga-mia.html", "README.md",
-                                           "index.html"])
+                                           "carteles", "index.html"])
 
 
 if __name__ == "__main__":

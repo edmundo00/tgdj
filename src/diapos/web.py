@@ -16,7 +16,7 @@ import io
 import json
 import os
 
-from src.config.config import background_image_folder, redes_milongas
+from src.config.config import background_image_folder, instagram_dj, redes_milongas
 from src.diapos.generador import (
     FIRMA_DJ, compositor_para_diapo, duracion_texto, fecha_larga, imagen_orquesta,
 )
@@ -237,13 +237,17 @@ def crear_lista(tandas, datos, destino):
         temas = "".join(temas)
         filas.append(f'<section class="{genero}"><div class="cab"><em>{"" if t.es_cumparsita else str(numero) + " · "}{etiqueta}</em></div>'
                      f'<h2>{h.escape(t.titulo_orquesta)}</h2><p>{h.escape(t.subtitulo)}</p><ol>{temas}</ol></section>')
+    # noches pasadas (rehechas de su playlist): sin horario
+    horario = f" · de {datos['inicio']} a {datos['fin']}" if datos.get("inicio") and datos.get("fin") else ""
     contenido = LISTA.replace("__TITULO__", h.escape(f"{datos['milonga']} · {fecha_larga(datos['fecha'])}")) \
         .replace("__MILONGA__", h.escape(datos["milonga"])) \
-        .replace("__FECHA__", h.escape(f"{fecha_larga(datos['fecha'])} · de {datos['inicio']} a {datos['fin']}")) \
-        .replace("__DJ__", h.escape(FIRMA_DJ)).replace("__TANDAS__", "\n".join(filas))
+        .replace("__FECHA__", h.escape(f"{fecha_larga(datos['fecha'])}{horario}")) \
+        .replace("__DJ__", h.escape(FIRMA_DJ)).replace("__TANDAS__", "\n".join(filas)) \
+        .replace("__INSTAGRAM_DJ__", h.escape(instagram_dj)) \
+        .replace("__CARTEL__", "carteles/" + nombre_web(datos)[:-len(".html")] + ".jpg")   # lo pone publicar, si hay
     red = redes_milongas.get(datos["milonga"].strip().lower())
     contenido = contenido.replace(
-        "__REDES__", f'<a class="boton" href="{h.escape(red)}" target="_blank" rel="noopener">Síguelos en Instagram</a>'
+        "__REDES__", f'<a class="boton suave" href="{h.escape(red)}" target="_blank" rel="noopener">La milonga en Instagram</a>'
         if red else "")
     with open(destino, "w", encoding="utf-8") as f:
         f.write(contenido)
@@ -277,16 +281,24 @@ LISTA = """<!doctype html>
     background:#c4302b; color:#fff; text-decoration:none; vertical-align:1px; }
   .cortina { margin:4px 0 4px 6px; padding:4px 10px; font:400 13px system-ui, sans-serif; color:var(--suave); }
   .cortina b { font-weight:600; }
+  .boton.suave { background:transparent; color:var(--tango); border:1px solid var(--tango); }
+  nav { max-width:640px; margin:0 auto; padding:12px 16px 0; font:600 14px system-ui, sans-serif; }
+  nav a, .dj a, footer a:not(.boton) { color:var(--tango); text-decoration:none; }
+  .cartel { display:block; max-width:min(320px, 80%); max-height:420px; margin:0 auto 14px; border-radius:8px;
+    box-shadow:0 6px 20px rgba(0,0,0,.25); }
 </style></head>
-<body><header><h1>__MILONGA__</h1><p>__FECHA__</p><p class="dj">TDJ __DJ__</p>
-<p class="intro">Esta es la música que ha sonado esta noche.<br>Toca ▶ para volver a escuchar un tema en casa.</p></header>
+<body><nav><a href="./">← Todas mis milongas</a></nav>
+<header><img class="cartel" src="__CARTEL__" alt="" onerror="this.remove()"><h1>__MILONGA__</h1><p>__FECHA__</p><p class="dj"><a href="__INSTAGRAM_DJ__" target="_blank" rel="noopener">TDJ __DJ__</a></p>
+<p class="intro">Esta es la música que sonó esa noche.<br>Toca ▶ para volver a escuchar un tema en casa.</p></header>
 <main>
 __TANDAS__
 </main>
 <footer>
   <p class="gracias">¡Gracias por bailar!</p>
   <p>¿Te ha gustado la música? <b>Díselo al organizador</b> 😊</p>
-  <p>__REDES__ <button class="boton" id="compartir">Compartir esta lista</button></p>
+  <p><a class="boton" href="__INSTAGRAM_DJ__" target="_blank" rel="noopener">Sígueme en Instagram</a> __REDES__
+    <button class="boton suave" id="compartir">Compartir esta lista</button></p>
+  <p><a href="./">Todas mis milongas</a></p>
   <p class="firma">Música: TDJ __DJ__</p>
 </footer>
 <script>
