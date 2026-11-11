@@ -4,6 +4,7 @@ Golpe = el volumen de la pista sube de golpe (≥ SUBIDA dB en ~35 ms).
 Fuerza = pico de volumen del golpe, en dB respecto a los golpes fuertes de esa pista (0 dB = fuerte habitual).
 Violines y voz no se cuentan por golpes (son ligados): se mide cuánto suenan en cada corchea.
 """
+import os
 import numpy as np, librosa
 
 HOP = 128
@@ -72,7 +73,8 @@ def calibrar(pistas, sr, P):
             dif.append(t - beats[i])
     off = float(np.median(dif)) if dif else 0.0
     P["beats"] = beats + off
-    reajustar_por_tramos(pistas, sr, P)
+    if os.environ.get("REAJUSTE", "1") != "0":   # reajuste tramo a tramo (evaluar.py lo compara)
+        reajustar_por_tramos(pistas, sr, P)
     return off
 
 
