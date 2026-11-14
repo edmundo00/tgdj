@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ritmo · <!--TITULO--></title>
+<style>
+  :root { --fondo:#17130f; --panel:#221c16; --borde:#3a3026; --texto:#efe6d8; --suave:#a8998a; --oro:#f0c05a;
+          --bajo:#e0913c; --piano:#f1d58a; --band:#c96b8f; --graves:#e0913c; --medios:#f1d58a; --agudos:#7fb7d9; --sel:rgba(240,192,90,.18); }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--fondo); color:var(--texto); font:15px/1.4 "Segoe UI", system-ui, sans-serif; }
+  header { padding:14px 18px 6px; }
+  h1 { margin:0 0 4px; font-size:20px; color:var(--oro); font-weight:650; }
+  .meta { color:var(--suave); font-size:13.5px; }
+  .meta b { color:var(--texto); font-weight:600; }
+  .seguro { color:#8fd18f; } .probable { color:#e9c46a; } .dudoso { color:#ef7f6a; }
+  main { padding:6px 18px 30px; display:grid; gap:12px; }
+  .panel { background:var(--panel); border:1px solid var(--borde); border-radius:10px; padding:10px 12px; }
+  .fila { display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; }
+  .titulo { font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--suave); margin-bottom:6px; }
+  button { background:#2e261e; color:var(--texto); border:1px solid var(--borde); border-radius:7px; padding:5px 10px; font:inherit; cursor:pointer; }
+  button:hover { border-color:var(--oro); }
+  button.grande { font-size:17px; padding:8px 18px; background:var(--oro); color:#1b140c; border:0; font-weight:700; }
+  button.on { background:#4a3a22; border-color:var(--oro); }
+  select, input[type=number] { background:#2e261e; color:var(--texto); border:1px solid var(--borde); border-radius:6px; padding:4px 6px; font:inherit; }
+  label { display:inline-flex; align-items:center; gap:5px; }
+  canvas { width:100%; display:block; border-radius:6px; background:#120e0b; cursor:crosshair; }
+  #vista { height:90px; } #lupa { height:300px; }
+  .punto { display:inline-block; width:10px; height:10px; border-radius:50%; }
+  #dibujos { display:flex; flex-wrap:wrap; gap:6px; }
+  #dibujos button { font-size:13px; }
+  #tramos { margin-top:8px; display:flex; flex-wrap:wrap; gap:6px; font-size:13px; }
+  #tramos button { font-size:12.5px; }
+  .pista { display:flex; align-items:center; gap:6px; font-size:13.5px; }
+  input[type=range] { accent-color:var(--oro); }
+  code { background:#120e0b; padding:2px 6px; border-radius:5px; color:var(--oro); user-select:all; }
+  #info { font-variant-numeric:tabular-nums; }
+  .ayuda { color:var(--suave); font-size:12.5px; }
+  .guia ol { margin:4px 0 6px 20px; padding:0; } .guia li { margin:3px 0; }
+  details summary { cursor:pointer; font-size:15px; }
+  @media (max-width:700px){ #lupa{height:240px;} }
+</style>
+</head>
+<body>
+<header>
+  <h1><!--TITULO--></h1>
+  <div class="meta" id="meta"></div>
+</header>
+<main>
+  <div class="panel guia">
+    <div class="titulo">Cómo se usa</div>
+    <ol>
+      <li><b>Elige un dibujo</b> (abajo, en «Dibujos encontrados»): se marca en amarillo dónde suena en la canción. Pulsa uno de sus trozos para ir allí.</li>
+      <li><b>Pulsa «Escuchar»</b> (o la barra espaciadora). Si quieres comprobar que la herramienta ha oído bien, activa un <b>clic</b> en los golpes de un instrumento: el clic tiene que caer justo con él.</li>
+      <li><b>Mira la lupa</b>: cada punto es un golpe (más grande = más fuerte) y debajo pone en qué casilla cae (1, 1y, 2a…).</li>
+    </ol>
+    <div class="ayuda">Si algo está mal (el compás o dónde cae el 1), abre «Más herramientas» al final de la página.</div>
+  </div>
+
+  <div class="panel">
+    <div class="fila">
+      <button class="grande" id="play" title="Empieza a sonar desde el trozo elegido (o desde donde estés). Barra espaciadora: lo mismo.">▶ Escuchar</button>
+      <label title="Al llegar al final del trozo elegido, vuelve a empezar"><input type="checkbox" id="bucle"> repetir el trozo elegido</label>
+      <span id="info"></span>
+    </div>
+    <div class="fila" style="margin-top:10px" id="clics"></div>
+    <div class="ayuda" style="margin-top:4px">El clic suena en cada golpe que ha encontrado la herramienta. Si cae a destiempo, ese golpe está mal medido.</div>
+  </div>
+
+  <div class="panel">
+    <div class="titulo">La canción entera</div>
+    <div class="ayuda" style="margin-bottom:6px">Haz clic para ir a un sitio. Arrastra para elegir un trozo. El recuadro blanco es lo que se ve en la lupa.</div>
+    <canvas id="vista"></canvas>
+    <div class="titulo" style="margin-top:12px">Dibujos encontrados</div>
+    <div class="ayuda" style="margin-bottom:6px">Un dibujo es una figura de golpes, por ejemplo el 1·4·5·7 de la habanera. Entre paréntesis, cuántos trozos ha encontrado. «A mitad de velocidad» = la misma figura, el doble de larga.</div>
+    <div id="dibujos"></div>
+    <div id="tramos"></div>
+  </div>
+
+  <div class="panel">
+    <div class="fila" style="margin-bottom:6px">
+      <span class="titulo" style="margin:0">Lupa</span>
+      <button id="atras" title="Un compás hacia atrás">◀ compás</button><button id="adelante" title="Un compás hacia delante">compás ▶</button>
+      <label title="Cuántos compases se ven a la vez">se ven <select id="ncomp"><option>1</option><option selected>2</option><option>4</option><option>8</option></select> compases</label>
+      <label title="Cómo se divide cada tiempo con líneas finas">casillas <select id="rejilla"><option value="4">semicorcheas (4 por tiempo)</option><option value="2">corcheas (2)</option><option value="3">tresillos (3)</option></select></label>
+    </div>
+    <div class="ayuda" style="margin-bottom:6px">Línea blanca gruesa = empieza un compás; líneas grises = tiempos; finas = casillas. Arriba, la onda de los graves (el contrabajo). Debajo, una fila por instrumento.</div>
+    <canvas id="lupa"></canvas>
+  </div>
+
+  <details class="panel">
+    <summary><b>Más herramientas</b> <span class="ayuda">(pistas por separado, onda de otra banda, afinar un trozo, corregir el 1)</span></summary>
+
+    <div class="titulo" style="margin-top:12px">Qué se oye</div>
+    <div class="ayuda">Sube el volumen de un instrumento para oírlo solo (si la canción tiene los instrumentos separados).</div>
+    <div class="fila" id="pistas" style="margin-top:6px"></div>
+    <label style="margin-top:6px" title="La lupa avanza sola mientras suena"><input type="checkbox" id="seguir" checked> la lupa sigue la música</label>
+
+    <div class="titulo" style="margin-top:14px">Onda de otra banda de frecuencias</div>
+    <div class="ayuda">La onda amarilla de la lupa es solo una banda de frecuencias. Elige cuál: graves para el contrabajo, medios para el piano…</div>
+    <div class="fila" style="margin-top:6px">
+      <button data-banda="40,200" title="40-200 Hz">contrabajo</button><button data-banda="200,2000" title="200-2000 Hz">piano / medios</button>
+      <button data-banda="2000,10000" title="2000-10000 Hz">agudos</button><button data-banda="20,16000" title="toda la canción">todo</button>
+      <label>desde <input type="range" id="lo" min="20" max="8000" value="40" style="width:130px"> <span id="lo_v"></span> Hz</label>
+      <label>hasta <input type="range" id="hi" min="40" max="12000" value="200" style="width:130px"> <span id="hi_v"></span> Hz</label>
+      <label>de <select id="banda_de"></select></label>
+    </div>
+
+    <div class="titulo" style="margin-top:14px">El trozo elegido (para un vídeo)</div>
+    <div class="fila"><span id="tramo_txt">Arrastra en la canción o en la lupa para elegir un trozo.</span></div>
+    <div class="fila" style="margin-top:6px">
+      <span title="Mover el principio del trozo">principio</span>
+      <button data-mueve="a,-50">−50</button><button data-mueve="a,-10">−10</button><button data-mueve="a,-5">−5</button><button data-mueve="a,-1">−1</button>
+      <button data-mueve="a,1">+1</button><button data-mueve="a,5">+5</button><button data-mueve="a,10">+10</button><button data-mueve="a,50">+50</button>
+      <span style="margin-left:10px" title="Mover el final del trozo">final</span>
+      <button data-mueve="b,-50">−50</button><button data-mueve="b,-10">−10</button><button data-mueve="b,10">+10</button><button data-mueve="b,50">+50</button>
+      <span class="ayuda">milisegundos</span>
+    </div>
+    <div class="fila" style="margin-top:6px">
+      <button id="al_golpe" title="Pone el principio justo en el 1 del compás más cercano">Empezar en el 1 más cercano</button>
+      <button id="exportar" title="Descarga un archivo con el trozo y sus golpes, para hacer el vídeo">Guardar el trozo</button>
+    </div>
+
+    <div class="titulo" style="margin-top:14px">Si el compás o el 1 están mal</div>
+    <div class="ayuda">Escucha, y en un momento en que suene un 1 pulsa el botón. Luego copia la orden que aparece y pégala en una ventana de comandos (o pásamela).</div>
+    <div class="fila" style="margin-top:6px">
+      <button id="es_uno">Aquí suena un 1</button>
+      <label>el compás es <select id="compas_ay"><option value="">el que ha visto</option><option>2/4</option><option>3/4</option><option>4/4</option></select></label>
+    </div>
+    <div style="margin-top:6px"><code id="orden"></code></div>
+  </details>
+</main>
+
+<script>
+const D = /*DATOS*/null;
+const AUD = /*AUDIOS*/null;
+const M = D.meta, P = D.pulsos, G = D.golpes;
+const COL = { contrabajo:"#e0913c", piano:"#f1d58a", bandoneones:"#c96b8f", graves:"#e0913c", medios:"#f1d58a", agudos:"#7fb7d9" };
+const FUENTES = [...new Set(G.map(g => g.fuente))];
+const $ = id => document.getElementById(id);
+const beats = P.map(p => p.seg), unos = P.filter(p => p.tiempo === 1).map(p => p.seg);
+const durBeat = (beats[beats.length - 1] - beats[0]) / (beats.length - 1);
+
+// ---------- cabecera
+const cls = M.seguridad_1.split(" ")[0];
+$("meta").innerHTML = `<b>${M.compas}</b> · ${M.bpm} pulsos/min · ${M.subdivision} · el 1: <span class="${cls}">${M.seguridad_1}</span>
+  · golpes de: ${M.fuentes}${M.ayudas && Object.keys(M.ayudas).length ? " · ayudas: " + JSON.stringify(M.ayudas) : ""}`;
+
+// ---------- audio
+const ctx = new AudioContext();
+const buf = {}, cargando = {};
+function cargar(n) {
+  if (buf[n]) return Promise.resolve(buf[n]);
+  if (!cargando[n]) {
+    $("info").textContent = "cargando el audio…";
+    cargando[n] = fetch(AUD[n]).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b))
+      .then(x => { buf[n] = x; if ($("info").textContent === "cargando el audio…") $("info").textContent = ""; pinta(); return x; });
+  }
+  return cargando[n];
+}
+const vol = {}; Object.keys(AUD).forEach(n => vol[n] = n === "mezcla" ? 1 : 0);
+const clic = {}; FUENTES.forEach(f => clic[f] = false); clic._metro = false;
+let sonando = null, t0Play = 0, offPlay = 0, cursor = 0, sel = null;
+const DUR = () => buf.mezcla ? buf.mezcla.duration : beats[beats.length - 1] + 2;
+
+function ahora() { return sonando ? offPlay + (ctx.currentTime - t0Play) : cursor; }
+
+function pitido(t, f, g, d = 0.03) {
+  const o = ctx.createOscillator(), a = ctx.createGain();
+  o.frequency.value = f; o.type = "square";
+  a.gain.setValueAtTime(0, t); a.gain.linearRampToValueAtTime(g, t + 0.002); a.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  o.connect(a).connect(ctx.destination); o.start(t); o.stop(t + d + 0.01);
+  return o;
+}
+const TONO = { contrabajo:330, graves:330, piano:1320, medios:1320, bandoneones:880, agudos:2200 };
+
+async function escuchar(desde) {
+  parar();
+  await ctx.resume();
+  await Promise.all(Object.keys(AUD).filter(n => vol[n] > 0 || n === "mezcla").map(cargar));
+  const fin = (sel && $("bucle").checked) ? sel.b : DUR();
+  if (sel && $("bucle").checked && (desde < sel.a || desde >= sel.b)) desde = sel.a;
+  const t = ctx.currentTime + 0.08, nodos = [];
+  for (const n of Object.keys(AUD)) {
+    if (!buf[n] || vol[n] <= 0) continue;
+    const s = ctx.createBufferSource(), g = ctx.createGain();
+    s.buffer = buf[n]; g.gain.value = vol[n]; s.connect(g).connect(ctx.destination);
+    s.start(t, desde, fin - desde); nodos.push(s);
+  }
+  for (const gg of G) if (clic[gg.fuente] && gg.seg >= desde && gg.seg < fin)
+    nodos.push(pitido(t + gg.seg - desde, TONO[gg.fuente] || 1000, 0.08 + 0.18 * gg.fuerza));
+  if (clic._metro) for (const p of P) if (p.seg >= desde && p.seg < fin)
+    nodos.push(pitido(t + p.seg - desde, p.tiempo === 1 ? 1760 : 1100, p.tiempo === 1 ? 0.25 : 0.12, 0.02));
+  sonando = { nodos, fin, t }; t0Play = t; offPlay = desde;
+  $("play").textContent = "■ Parar";
+}
+function parar() {
+  if (sonando) { sonando.nodos.forEach(n => { try { n.stop(); } catch (e) {} }); cursor = ahora(); }
+  sonando = null; $("play").textContent = "▶ Escuchar";
+}
+$("play").onclick = () => sonando ? parar() : escuchar(sel ? sel.a : cursor);
+document.addEventListener("keydown", e => { if (e.code === "Space" && e.target.tagName !== "INPUT") { e.preventDefault(); $("play").click(); } });
+
+// ---------- pistas y clics
+for (const n of Object.keys(AUD)) {
+  const d = document.createElement("label"); d.className = "pista";
+  d.innerHTML = `${n === "mezcla" ? "Mezcla" : n[0].toUpperCase() + n.slice(1) + " solo"} <input type="range" min="0" max="1" step="0.05" value="${vol[n]}">`;
+  d.querySelector("input").oninput = e => { vol[n] = +e.target.value; if (sonando) escuchar(ahora()); };
+  $("pistas").appendChild(d);
+}
+$("clics").innerHTML = `<span>Oír un clic en cada golpe de:</span>`;
+for (const f of FUENTES) {
+  const b = document.createElement("button");
+  b.innerHTML = `<span class="punto" style="background:${COL[f] || "#ccc"}"></span> ${f}`;
+  b.onclick = () => { clic[f] = !clic[f]; b.classList.toggle("on", clic[f]); if (sonando) escuchar(ahora()); };
+  $("clics").appendChild(b);
+}
+{ const b = document.createElement("button"); b.textContent = "metrónomo (cada tiempo; el 1 más agudo)"; b.title = "Un clic en cada tiempo, más agudo en el 1";
+  b.onclick = () => { clic._metro = !clic._metro; b.classList.toggle("on", clic._metro); if (sonando) escuchar(ahora()); }; $("clics").appendChild(b); }
+
+// ---------- vista general
+const cv = $("vista"), cl = $("lupa");
+let picos = null, dibSel = null;
+function preparaLienzo(c) { const r = c.getBoundingClientRect(), k = devicePixelRatio || 1; c.width = r.width * k; c.height = r.height * k; const g = c.getContext("2d"); g.setTransform(k, 0, 0, k, 0, 0); return [g, r.width, r.height]; }
+function calcPicos(w) {
+  const d = buf.mezcla.getChannelData(0), n = Math.floor(d.length / w), out = new Float32Array(w);
+  for (let i = 0; i < w; i++) { let m = 0; for (let j = i * n; j < (i + 1) * n; j += 8) m = Math.max(m, Math.abs(d[j])); out[i] = m; }
+  return out;
+}
+function dibujaVista() {
+  const [g, w, h] = preparaLienzo(cv), T = DUR(), x = t => t / T * w;
+  if (buf.mezcla && (!picos || picos.length !== Math.floor(w))) picos = calcPicos(Math.floor(w));
+  if (picos) { g.fillStyle = "#5b4a36"; for (let i = 0; i < picos.length; i++) { const a = picos[i] * h * 0.45; g.fillRect(i, h / 2 - a, 1, 2 * a); } }
+  // compases cada 8
+  g.fillStyle = "#a8998a"; g.font = "11px Segoe UI";
+  unos.forEach((t, i) => { if (i % 8 === 0) { g.fillRect(x(t), 0, 1, 6); g.fillText(String(i + 1), x(t) + 2, 11); } });
+  if (dibSel) { g.fillStyle = "rgba(240,192,90,.45)"; dibSel.tramos.forEach(tr => g.fillRect(x(tr.desde_seg), h - 14, Math.max(2, x(tr.hasta_seg) - x(tr.desde_seg)), 12)); }
+  if (sel) { g.fillStyle = "rgba(240,192,90,.22)"; g.fillRect(x(sel.a), 0, x(sel.b) - x(sel.a), h); }
+  const [v0, v1] = ventana(); g.strokeStyle = "#efe6d8"; g.strokeRect(x(v0), 1, x(v1) - x(v0), h - 2);
+  g.fillStyle = "#f0c05a"; g.fillRect(x(ahora()), 0, 2, h);
+}
+
+// ---------- lupa
+let vIni = unos.length ? unos[0] : beats[0];
+function ventana() {
+  const n = +$("ncomp").value;
+  let i = unos.findIndex(t => t >= vIni - 0.01); if (i < 0) i = 0;
+  const a = unos[i], b = unos[Math.min(i + n, unos.length - 1)] || a + n * 4 * durBeat;
+  return [a, b > a ? b : a + n * 4 * durBeat];
+}
+let env = null, envKey = "";
+function biquad(x, tipo, f, sr) {
+  const w = 2 * Math.PI * Math.min(f, sr * 0.45) / sr, al = Math.sin(w) / (2 * Math.SQRT1_2), c = Math.cos(w);
+  let b0, b1, b2; if (tipo === "lp") { b0 = (1 - c) / 2; b1 = 1 - c; b2 = b0; } else { b0 = (1 + c) / 2; b1 = -(1 + c); b2 = b0; }
+  const a0 = 1 + al, a1 = -2 * c, a2 = 1 - al;
+  let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+  for (let i = 0; i < x.length; i++) { const xi = x[i], y = (b0 * xi + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2) / a0; x2 = x1; x1 = xi; y2 = y1; y1 = y; x[i] = y; }
+}
+async function calcBanda(a, b) {
+  const lo = +$("lo").value, hi = Math.max(+$("hi").value, lo + 10), de = $("banda_de").value || "mezcla";
+  const key = [a, b, lo, hi, de].join("|"); if (key === envKey) return env;
+  const B = await cargar(de); const sr = B.sampleRate;
+  const i0 = Math.max(0, Math.floor(a * sr)), i1 = Math.min(B.length, Math.ceil(b * sr));
+  if (i1 <= i0) return null;
+  // filtro de banda en JavaScript (dos pasa-altos y dos pasa-bajos de 2.º orden): no depende del audio del navegador
+  const r = Float32Array.from(B.getChannelData(0).subarray(i0, i1));
+  biquad(r, "hp", lo, sr); biquad(r, "hp", lo, sr); biquad(r, "lp", hi, sr); biquad(r, "lp", hi, sr);
+  const paso = Math.floor(sr * 0.004), e = [];
+  for (let k = 0; k + paso <= r.length; k += paso) { let m = 0; for (let j = k; j < k + paso; j++) m += r[j] * r[j]; e.push(Math.sqrt(m / paso)); }
+  env = { a, paso: paso / sr, e }; envKey = key; return env;
+}
+async function dibujaLupa() {
+  const [g, w, h] = preparaLienzo(cl), [a, b] = ventana(), x = t => (t - a) / (b - a) * w;
+  const filas = FUENTES.length, altoOnda = h * 0.42, y0 = altoOnda + 18, altoFila = (h - y0 - 6) / filas;
+  // selección
+  if (sel) { g.fillStyle = "rgba(240,192,90,.15)"; g.fillRect(x(sel.a), 0, x(sel.b) - x(sel.a), h); }
+  // rejilla: casillas, pulsos, compases
+  const sub = +$("rejilla").value;
+  for (let i = 0; i < P.length - 1; i++) {
+    const t = P[i].seg, t2 = P[i + 1].seg; if (t2 < a || t > b) continue;
+    for (let k = 1; k < sub; k++) { const tx = x(t + (t2 - t) * k / sub); g.fillStyle = "#2c241c"; g.fillRect(tx, 0, 1, h); }
+    g.fillStyle = P[i].tiempo === 1 ? "#efe6d8" : "#6b5a48"; g.fillRect(x(t), 0, P[i].tiempo === 1 ? 2 : 1, h);
+    g.fillStyle = "#a8998a"; g.font = "12px Segoe UI";
+    g.fillText(P[i].tiempo === 1 ? `compás ${P[i].compas}` : String(P[i].tiempo), x(t) + 4, 13);
+  }
+  // golpes por fuente
+  FUENTES.forEach((f, r) => {
+    const yc = y0 + altoFila * (r + 0.5);
+    g.fillStyle = "#a8998a"; g.font = "11px Segoe UI"; g.fillText(f, 4, yc - altoFila * 0.32);
+    for (const gg of G) {
+      if (gg.fuente !== f || gg.seg < a || gg.seg > b) continue;
+      const rad = 3 + 7 * gg.fuerza; g.globalAlpha = 0.35 + 0.65 * gg.fuerza;
+      g.fillStyle = COL[f] || "#ccc"; g.beginPath(); g.arc(x(gg.seg), yc, rad, 0, 7); g.fill();
+      g.globalAlpha = 1;
+      if (gg.fuerza >= 0.5) { g.fillStyle = "#efe6d8"; g.font = "10px Segoe UI"; g.fillText(gg.casilla, x(gg.seg) - 6, yc + rad + 11); }
+    }
+  });
+  const tn = ahora(); if (tn >= a && tn <= b) { g.fillStyle = "#f0c05a"; g.fillRect(x(tn) - 1, 0, 3, h); }
+  // onda de la banda
+  const clave = [a, b].join("|");
+  const E = await calcBanda(a, b);
+  if (E && clave === ventana().join("|")) {
+    const mx = Math.max(...E.e) || 1; g.strokeStyle = "#f0c05a"; g.lineWidth = 1.5; g.beginPath();
+    E.e.forEach((v, k) => { const tx = x(E.a + k * E.paso), ty = altoOnda + 10 - v / mx * altoOnda; k ? g.lineTo(tx, ty) : g.moveTo(tx, ty); });
+    g.stroke(); g.lineWidth = 1;
+  }
+
+}
+
+// ---------- ratón: ir y elegir
+function arrastre(c, aTiempo) {
+  let ini = null;
+  c.onmousedown = e => { ini = aTiempo(e); };
+  c.onmousemove = e => { if (ini !== null) { const t = aTiempo(e); if (Math.abs(t - ini) > 0.05) { sel = { a: Math.min(ini, t), b: Math.max(ini, t) }; pinta(); } } };
+  c.onmouseup = e => { const t = aTiempo(e); if (ini !== null && Math.abs(t - ini) <= 0.05) { cursor = t; if (c === cv) vIni = unos.filter(u => u <= t).pop() || unos[0]; if (sonando) escuchar(t); } ini = null; pinta(); };
+}
+arrastre(cv, e => { const r = cv.getBoundingClientRect(); return (e.clientX - r.left) / r.width * DUR(); });
+arrastre(cl, e => { const r = cl.getBoundingClientRect(), [a, b] = ventana(); return a + (e.clientX - r.left) / r.width * (b - a); });
+
+// ---------- dibujos
+D.dibujos.filter(d => d.tramos.length).forEach(d => {
+  const b = document.createElement("button"); b.textContent = `${d.nombre.replace(" · en el doble de tiempos", " · a mitad de velocidad")} (${d.tramos.length})`;
+  b.onclick = () => {
+    dibSel = d; [...$("dibujos").children].forEach(x => x.classList.remove("on")); b.classList.add("on");
+    $("tramos").innerHTML = "";
+    d.tramos.forEach(tr => {
+      const t = document.createElement("button");
+      t.textContent = `${tr.desde_seg.toFixed(2)}–${tr.hasta_seg.toFixed(2)} s · ${tr.ventanas} veces · nota ${tr.nota} · ${tr.fuente}`;
+      t.onclick = () => { sel = { a: tr.desde_seg, b: tr.hasta_seg }; cursor = sel.a; vIni = unos.filter(u => u <= sel.a + 0.05).pop() || unos[0]; pinta(); };
+      $("tramos").appendChild(t);
+    });
+    pinta();
+  };
+  $("dibujos").appendChild(b);
+});
+if (!$("dibujos").children.length) $("dibujos").innerHTML = '<span class="ayuda">No ha encontrado ningún dibujo de dibujos.txt.</span>';
+
+// ---------- tramo: afinar y guardar
+function compasDe(t) { let c = 0; for (const p of P) if (p.seg <= t + 1e-3) c = p.compas; return c; }
+function textoTramo() {
+  if (!sel) return;
+  $("tramo_txt").innerHTML = `de <b>${sel.a.toFixed(3)} s</b> (compás ${compasDe(sel.a)}) a <b>${sel.b.toFixed(3)} s</b> (compás ${compasDe(sel.b)}) · ${(sel.b - sel.a).toFixed(2)} s`;
+}
+document.querySelectorAll("[data-mueve]").forEach(b => b.onclick = () => {
+  if (!sel) return; const [q, ms] = b.dataset.mueve.split(","); sel[q] += +ms / 1000; if (sel.b <= sel.a) sel.b = sel.a + 0.05; pinta();
+  if (sonando) escuchar(sel.a);
+});
+$("al_golpe").onclick = () => { if (!sel) return; const u = unos.reduce((m, t) => Math.abs(t - sel.a) < Math.abs(m - sel.a) ? t : m, unos[0]); sel.b += u - sel.a; sel.a = u; pinta(); };
+$("exportar").onclick = () => {
+  if (!sel) { alert("Primero elige un tramo"); return; }
+  const golpes = G.filter(g => g.seg >= sel.a && g.seg < sel.b).map(g => ({ ...g, seg_en_tramo: +(g.seg - sel.a).toFixed(3) }));
+  const pulsos = P.filter(p => p.seg >= sel.a && p.seg < sel.b).map(p => ({ ...p, seg_en_tramo: +(p.seg - sel.a).toFixed(3) }));
+  const out = { cancion: M.cancion, audio: M.audio, compas: M.compas, bpm: M.bpm, desde_seg: +sel.a.toFixed(3), hasta_seg: +sel.b.toFixed(3),
+                compas_inicio: compasDe(sel.a), dibujo: dibSel ? dibSel.nombre : null, pulsos, golpes };
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 1)], { type: "application/json" }));
+  a.download = `tramo_${M.cancion}_${sel.a.toFixed(2)}.json`; a.click();
+};
+
+// ---------- ayuda manual
+function orden(uno) {
+  const c = $("compas_ay").value;
+  $("orden").textContent = `"D:/Dropbox/TDJ/PYTHON/tgdj/herramientas/analizar_tango/ritmo.bat" "${M.audio}"` + (c ? ` --compas ${c}` : "") + (uno != null ? ` --uno ${uno.toFixed(3)}` : "");
+}
+$("es_uno").onclick = () => orden(ahora()); $("compas_ay").onchange = () => orden(null); orden(null);
+
+// ---------- controles de la lupa
+$("atras").onclick = () => { const i = unos.findIndex(t => t >= vIni - 0.01); vIni = unos[Math.max(0, i - 1)]; pinta(); };
+$("adelante").onclick = () => { const i = unos.findIndex(t => t >= vIni - 0.01); vIni = unos[Math.min(unos.length - 1, i + 1)]; pinta(); };
+["ncomp", "rejilla", "banda_de"].forEach(id => $(id).onchange = pinta);
+function bandaTxt() { $("lo_v").textContent = $("lo").value; $("hi_v").textContent = $("hi").value; }
+["lo", "hi"].forEach(id => $(id).oninput = () => { bandaTxt(); pinta(); });
+document.querySelectorAll("[data-banda]").forEach(b => b.onclick = () => { const [l, h] = b.dataset.banda.split(","); $("lo").value = l; $("hi").value = h; bandaTxt(); pinta(); });
+Object.keys(AUD).forEach(n => { const o = document.createElement("option"); o.value = n; o.textContent = n === "mezcla" ? "la mezcla" : "la pista de " + n; $("banda_de").appendChild(o); });
+bandaTxt();
+
+// ---------- bucle de pintado
+let pend = false;
+function pinta() { if (pend) return; pend = true; setTimeout(async () => { pend = false; try { dibujaVista(); textoTramo(); await dibujaLupa(); } catch (e) { console.error(e); } }, 0); }
+function tic() {
+  if (sonando) {
+    const t = ahora();
+    if (t >= sonando.fin - 0.01) { if ($("bucle").checked && sel) escuchar(sel.a); else { parar(); cursor = 0; } }
+    const [a, b] = ventana();
+    if ($("seguir").checked && (t > b || t < a)) vIni = unos.filter(u => u <= t + 0.01).pop() || unos[0];
+    $("info").textContent = `${t.toFixed(2)} s · compás ${compasDe(t)}`;
+    pinta();
+  }
+  requestAnimationFrame(tic);
+}
+window.addEventListener("resize", () => { picos = null; pinta(); });
+cargar("mezcla").then(() => pinta()); pinta(); tic();
+</script>
+</body>
+</html>

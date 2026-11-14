@@ -1,0 +1,19 @@
+# Dibujos de golpes que busca ritmo.py. Una línea por dibujo:
+#   nombre | fuente | casillas | tiempos | golpes
+# fuente:   cualquiera, contrabajo, piano, bandoneones (si hay pistas separadas)
+#           o graves, medios, agudos (bandas de la mezcla). contrabajo<->graves y piano<->medios se cambian solos.
+# casillas: en cuántas partes iguales se divide el trozo
+# tiempos:  cuántos tiempos (pulsos) ocupa el trozo
+# golpes:   las casillas que suenan, empezando en 1
+#
+# Ejemplos: el 3+3+2 son 8 semicorcheas en 2 tiempos; un tresillo de corcheas son 3 casillas en 1 tiempo.
+
+milonga 1·4·5·7 (bajo de la habanera) | cualquiera | 8 | 2 | 1 4 5 7
+bajo de milonga: 1 y 5               | graves | 8 | 2 | 1 5
+3+3+2 (tresillo cubano)               | cualquiera | 8 | 2 | 1 4 7
+tresillo de corcheas (3 en 1 tiempo)  | cualquiera | 3 | 1 | 1 2 3
+tresillo de negras (3 en 2 tiempos)   | cualquiera | 3 | 2 | 1 2 3
+marcato en 4                          | graves | 4 | 4 | 1 2 3 4
+marcato en 2 (el 1 y el 3)            | graves | 4 | 4 | 1 3
+vals: el 1 solo                       | graves | 3 | 3 | 1
+síncopa (4.ª semicorchea anticipada)  | cualquiera | 8 | 2 | 1 4 8

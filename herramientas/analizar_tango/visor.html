@@ -4,7 +4,7 @@
 <script src="indice.js"></script>
 <style>
 :root{--bg:#17120d;--card:#211a13;--tx:#efe6d6;--mu:#a89a85;--ac:#d9a441;--ac2:#f1d58a;--li:#3a3128;--off:#1c1712;
-  --bajo:201,138,58;--piano:241,213,138;--band:217,164,65;--viol:159,184,201;--voz:201,154,181}
+  --bajo:201,138,58;--piano:241,213,138;--band:217,164,65;--viol:159,184,201;--voz:201,154,181;--orq:245,238,224}
 *{box-sizing:border-box}
 body{margin:0;background:radial-gradient(ellipse at 50% 0,#2a2017 0,var(--bg) 60%) fixed;color:var(--tx);font:16px/1.4 "Segoe UI",system-ui,sans-serif}
 main{max-width:1000px;margin:0 auto;padding:22px 16px 40px}
@@ -51,13 +51,14 @@ small,.mu{color:var(--mu)}
 kbd{background:#2c241b;border:1px solid var(--li);border-radius:5px;padding:0 5px;font-size:12px}
 @media(max-width:640px){.grid{grid-template-columns:78px repeat(16,1fr);column-gap:2px}.c{height:38px;border-radius:6px}.c.b0{margin-left:3px}.nm{font-size:9.5px;letter-spacing:0;overflow-wrap:anywhere}.hd.b{font-size:16px}.hd{font-size:10px}}
 </style></head><body><main>
+<p style="background:#3a2a12;border:1px solid #f0c05a;border-radius:8px;padding:8px 12px;margin:0 0 12px">Este es el visor <b>antiguo</b>. Lo nuevo (ritmo, dibujos, juntar canciones) está en <a href="INICIO.html" style="color:#f0c05a;font-weight:700">INICIO.html</a>.</p>
 <div class="pick"><input id="buscar" list="lista" placeholder="Buscar un tango analizado… (escribe parte del nombre)" autocomplete="off"><datalist id="lista"></datalist></div>
 <p id="vacio">Elige un tango en el buscador. Solo aparecen los que ya ha analizado el programa (analizar_tango.bat).</p>
 <div id="todo" class="oculto">
 <div class="kick" id="kick"></div>
 <h1 id="tt"></h1>
 
-<div class="top"><span class="lbl">Orquesta por instrumento</span><span id="bar">COMPÁS –</span></div>
+<div class="top"><span class="lbl" id="lbl">Orquesta por instrumento</span><span id="bar">COMPÁS –</span></div>
 <div class="grid" id="grid"><div id="ph"></div></div>
 <div class="suc" id="suc"></div>
 
@@ -74,7 +75,7 @@ kbd{background:#2c241b;border:1px solid var(--li);border-radius:5px;padding:0 5p
     <span class="mu">Repetir</span>
     <button data-loop="1">1 compás</button><button data-loop="2">2</button><button data-loop="4">4</button><button data-loop="0" class="on">No</button>
     <span class="sep"></span>
-    <span class="mu">Escuchar</span>
+    <span class="mu" id="esc">Escuchar</span>
     <button id="orig">Original</button><button id="sep" class="on">Separadas</button>
     <label style="margin-left:auto"><input type="checkbox" id="click"> Clic en cada tiempo</label>
   </div>
@@ -91,6 +92,10 @@ const LISTA=(window.TANGOS||[]).slice().sort((a,b)=>a.titulo.localeCompare(b.tit
 const dl=document.getElementById('lista');LISTA.forEach(t=>{const o=document.createElement('option');o.value=t.titulo;o.label=`${t.compases} compases · ${t.bpm} pulsos/min`;dl.appendChild(o);});
 const bus=document.getElementById('buscar');
 bus.onchange=()=>{const t=LISTA.find(x=>x.titulo==bus.value)||LISTA.find(x=>x.titulo.toLowerCase().includes(bus.value.toLowerCase()));if(t){location.hash=encodeURIComponent(t.carpeta);location.reload();}};
+// la lista desplegable solo enseña lo que coincide con lo escrito: al entrar se vacía para verlos todos
+let antes='';
+bus.onfocus=()=>{antes=bus.value;bus.placeholder=antes||bus.placeholder;bus.value='';};
+bus.onblur=()=>{if(!bus.value)bus.value=antes;};
 let ELEGIDO=decodeURIComponent(location.hash.slice(1));
 if(!ELEGIDO){try{ELEGIDO=localStorage.getItem('visor_ultimo')||'';}catch(e){}}
 const ACTUAL=LISTA.find(x=>x.carpeta==ELEGIDO);
@@ -106,14 +111,18 @@ const B=D.beats,C=D.compas,T=D.tiempo,NB=B.length;
 // compases: número -> índice del pulso que es su 1
 const BAR={};for(let i=0;i<NB;i++)if(T[i]==1&&C[i]>=1&&BAR[C[i]]===undefined)BAR[C[i]]=i;
 const BARS=Object.keys(BAR).map(Number).filter(c=>BAR[c]+4<NB).sort((a,b)=>a-b);
-const ROWS=[["contrabajo","Contrabajo","bajo"],["piano","Piano","piano"],["bandoneones","Marcato","band"]];
+const TIENE=new Set(D.golpes.map(x=>x[0]));
+// «Orquesta entera»: grandes golpes medidos en la mezcla, sin separar instrumentos (lo mejor para ver la síncopa)
+const ROWS=[["orquesta","Orquesta entera","orq"],["contrabajo","Contrabajo","bajo"],["piano","Piano","piano"],["bandoneones","Marcato","band"]].filter(r=>TIENE.has(r[0]));
+const SEPARADO=D.pistas.length>1;
+if(!SEPARADO){document.getElementById('nota').innerHTML='<small>Análisis rápido, sin separar instrumentos: cada casilla es un golpe de la orquesta entera; más brillo = más fuerte, comparado con el golpe más fuerte de ese compás.</small>';document.getElementById('orig').style.display='none';document.getElementById('esc').style.display='none';document.getElementById('lbl').textContent='Orquesta entera';document.getElementById('sep').style.display='none';}
 const HASV=D.violines.length>0, HASVOZ=D.canta.length>0;
 // pistas de audio: índice por nombre
 const TR={};const auds=D.pistas.map(([n,f])=>{const a=new Audio(encodeURI(BASE+f));a.preload='auto';a.preservesPitch=true;a.mozPreservesPitch=true;a.webkitPreservesPitch=true;const k=f.split('/').pop().replace('.ogg','').replace('.flac','');TR[k]=a;return a;});
 const M=auds[0];
 window._visor={auds,estado:()=>({pend,playing,rate,loop,cur,t:M.currentTime})};  // para depurar
 let modo='sep';const mute={};
-function vols(){auds.forEach((a,i)=>{const k=Object.keys(TR).find(x=>TR[x]===a);a.volume=modo=='orig'?(k=='mezcla'?1:0):(k=='mezcla'?0:(mute[k]?0:1));});}
+function vols(){auds.forEach((a,i)=>{const k=Object.keys(TR).find(x=>TR[x]===a);a.volume=(!SEPARADO||modo=='orig')?(k=='mezcla'?1:0):(k=='mezcla'?0:(mute[k]?0:1));});}
 // golpes por compás
 const HB={};
 D.golpes.forEach(([p,seg,pos,f])=>{const ib=Math.min(Math.floor(pos+1e-6),NB-1),c=C[ib];if(c<1)return;
@@ -125,7 +134,7 @@ g.appendChild(el('hd'));
 for(let k=0;k<16;k++){const d=el('hd'+(k%4==0?' b':''),k%4==0?String(k/4+1):["","e","y","a"][k%4]);if(k%4==0)d.style.marginLeft='6px';g.appendChild(d);}
 const cells={};
 function nameEl(key,label,sub){const n=el('nm');n.innerHTML=label+(sub?`<small>${sub}</small>`:'');n.onclick=()=>{mute[key]=!mute[key];n.classList.toggle('mute',!!mute[key]);vols();};return n;}
-ROWS.forEach(([k,l,v])=>{g.appendChild(nameEl(k,l,k=='bandoneones'?'sobre todo bandoneones':(k=='contrabajo'&&D.contrabajo_aprox?'aprox.':'')));cells[k]=[];
+ROWS.forEach(([k,l,v])=>{g.appendChild(nameEl(k,l,k=='orquesta'?'sin separar':k=='bandoneones'?'sobre todo bandoneones':(k=='contrabajo'&&D.contrabajo_aprox?'aprox.':'')));cells[k]=[];
   for(let j=0;j<16;j++){const c=el('c'+(j%4==0?' b0':''));const h=el('hit');c.appendChild(h);g.appendChild(c);cells[k].push(c);}});
 const bands={};
 function bandRow(key,label,sub){g.appendChild(nameEl(key,label,sub));const b=el('band');for(let j=0;j<8;j++)b.appendChild(el());g.appendChild(b);bands[key]=b;}
@@ -145,7 +154,7 @@ function paint(c){if(c===shown)return;shown=c;
   document.getElementById('suc').textContent=(D.sucesos[c]||'')?'→ '+D.sucesos[c]:'';
   Object.values(mapEl).forEach(d=>d.classList.remove('now'));if(mapEl[c])mapEl[c].classList.add('now');
   ROWS.forEach(([k,l,v])=>cells[k].forEach(cc=>{cc.firstChild.style.background='transparent';cc.querySelectorAll('.tick').forEach(x=>x.remove());cc.dataset.seg='';cc.dataset.a='0';}));
-  (HB[c]||[]).forEach(h=>{const cc=cells[h.p][h.k];if(!cc)return;const v=getComputedStyle(document.documentElement).getPropertyValue(h.p=='contrabajo'?'--bajo':h.p=='piano'?'--piano':'--band');
+  (HB[c]||[]).forEach(h=>{const cc=cells[h.p][h.k];if(!cc)return;const v=getComputedStyle(document.documentElement).getPropertyValue(h.p=='orquesta'?'--orq':h.p=='contrabajo'?'--bajo':h.p=='piano'?'--piano':'--band');
     const a=Math.max(.18,Math.min(1,Math.pow(10,h.f/20)));
     if(!cc.dataset.seg||a>+cc.dataset.a){cc.firstChild.style.background=`rgba(${v},${a})`;cc.dataset.a=a;}
     cc.dataset.seg=(cc.dataset.seg?cc.dataset.seg+',':'')+h.seg;
@@ -195,7 +204,7 @@ function tick(){
   const c=barAt(t);
   if(c!=null){if(!loop)cur=c;paint(c);const x=xInBar(t,c);
     // cursor
-    const r0=cells.contrabajo[0].getBoundingClientRect(),r1=cells.contrabajo[15].getBoundingClientRect(),gr=g.getBoundingClientRect();
+    const r0=cells[ROWS[0][0]][0].getBoundingClientRect(),r1=cells[ROWS[0][0]][15].getBoundingClientRect(),gr=g.getBoundingClientRect();
     ph.style.left=(r0.left-gr.left+x*(r1.right-r0.left)-1)+'px';ph.style.opacity=1;
     // destellos de los golpes que acaban de sonar
     if(playing&&lastT>=0&&t>lastT&&t-lastT<0.5){ROWS.forEach(([k])=>cells[k].forEach(cc=>{if(!cc.dataset.seg)return;

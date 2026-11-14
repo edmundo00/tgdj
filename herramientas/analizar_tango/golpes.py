@@ -154,6 +154,43 @@ def analizar(pistas, sr, P):
     return golpes, niveles
 
 
+def orquesta(mezcla, sr, P, umbral=0.3):
+    """Grandes golpes de la orquesta entera, sin separar instrumentos (sirve para ver la síncopa).
+    En cada corchea del compás (1, 1y, 2, 2y…) se mira cuánto sonido nuevo arranca en la mezcla
+    (envolvente de ataques) y se compara con el golpe más fuerte de ese mismo compás:
+    fuerza 0 dB = el golpe más fuerte del compás; -10 dB = un tercio. Se guardan los de al menos `umbral`.
+    Probado en los ejemplos de síncopa del reel: Nada más (c. 10), El Yaguarón, Te busco."""
+    H = 256
+    env = librosa.onset.onset_strength(y=mezcla, sr=sr, hop_length=H)
+    tf = librosa.frames_to_time(np.arange(len(env)), sr=sr, hop_length=H)
+    w = int(0.035 * sr / H)
+    beats, comp, tiem = P["beats"], P["compas"], P["tiempo"]
+
+    def pico(t):
+        f = int(np.argmin(np.abs(tf - t)))
+        return float(env[max(0, f - w):f + w + 1].max())
+
+    golpes = []
+    for i in range(len(beats) - 4):
+        if tiem[i] != 1 or comp[i] < 1:
+            continue
+        pos, ts = [], []
+        for k in range(4):
+            a, b = beats[i + k], beats[i + k + 1]
+            for h in (0, 1):
+                pos.append(i + k + h / 2)
+                ts.append(a + h * (b - a) / 2)
+        v = np.array([pico(t) for t in ts])
+        v = v / (v.max() + 1e-9)
+        for p, t, x in zip(pos, ts, v):
+            if x >= umbral:
+                ib = int(p)
+                golpes.append(dict(pista="orquesta", seg=round(float(t), 3), compas=int(comp[ib]), tiempo=int(tiem[ib]),
+                                   semi="" if p % 1 == 0 else "y", pos=round(float(p), 2), desvio_ms=0,
+                                   fuerza_db=round(float(20 * np.log10(x)), 1)))
+    return golpes
+
+
 def resumen_compases(golpes, niveles, P):
     """Una fila por compás: dibujo de cada instrumento en 16 semicorcheas y sucesos destacados."""
     comp, tiem = P["compas"], P["tiempo"]

@@ -33,12 +33,14 @@ def main():
     ap = argparse.ArgumentParser(description="Analiza un tango por instrumentos y golpes")
     ap.add_argument("audio", nargs="+", help="uno o varios archivos de audio")
     ap.add_argument("--salida", help="carpeta de salida (solo con un archivo)")
+    ap.add_argument("--rapido", action="store_true",
+                    help="sin separar instrumentos: solo pulso, compases y grandes golpes de la orquesta entera (segundos por tango)")
     a = ap.parse_args()
     for i, f in enumerate(a.audio, 1):
         if len(a.audio) > 1:
             print(f"\n=== {i}/{len(a.audio)}: {os.path.basename(f)}", flush=True)
         try:
-            analizar_uno(f, a.salida if len(a.audio) == 1 else None)
+            (analizar_rapido if a.rapido else analizar_uno)(f, a.salida if len(a.audio) == 1 else None)
         except Exception as e:
             print(f"ERROR con {f}: {e}", flush=True)
     n = informe.actualizar_visor(SALIDA_DEF)
@@ -74,6 +76,7 @@ def analizar_uno(audio, salida):
     print("3/4 Midiendo golpes…", flush=True)
     g, niveles = golpes_mod.analizar(pistas, sr, P)
     filas = golpes_mod.resumen_compases(g, niveles, P)
+    g += golpes_mod.orquesta(mezcla, sr, P)   # fila «Orquesta entera» del visor (sobre la mezcla, sin separar)
 
     print("4/4 Escribiendo resultados…", flush=True)
     # copias ligeras en OGG para la página (el navegador salta mejor en OGG que en FLAC grandes)
@@ -90,6 +93,41 @@ def analizar_uno(audio, salida):
                     o.write(y[i:i + sr])
         rel.append([etiqueta, f"escuchar/{n}.ogg"])
     informe.guardar_todo(out, nombre, P, g, niveles, filas, rel)
+    print(f"Hecho en {time.time() - t0:.0f} s → {out}")
+
+
+def analizar_rapido(audio, salida):
+    """Sin separar instrumentos: pulso, compases y grandes golpes de la orquesta entera.
+    Para ver la síncopa basta (y no se cuela el error del separador). Si ya había un análisis
+    completo de este tango, no se toca: se le añade la fila «Orquesta entera» volviendo a analizarlo entero."""
+    nombre = os.path.splitext(os.path.basename(audio))[0]
+    antigua = os.path.join(SALIDA_DEF, nombre)
+    out = salida or (antigua if os.path.isdir(antigua) else os.path.join(SALIDA_DEF, "_datos", nombre))
+    if os.path.exists(os.path.join(out, "datos.js")) and os.path.exists(os.path.join(out, "pistas", "contrabajo.flac")):
+        print("    ya tiene análisis completo; lo rehago entero para añadir la fila de la orquesta", flush=True)
+        return analizar_uno(audio, salida)
+    os.makedirs(out, exist_ok=True)
+    t0 = time.time()
+    sr = separar.SR
+    mezcla, _ = librosa.load(audio, sr=sr, mono=True)
+    print("1/3 Buscando pulso y compases…", flush=True)
+    P = pulso.compases(mezcla, mezcla, sr)
+    print(f"    {P['bpm']:.0f} pulsos/min, {int(P['compas'].max())} compases", flush=True)
+    print("2/3 Midiendo los grandes golpes de la orquesta…", flush=True)
+    g = golpes_mod.orquesta(mezcla, sr, P)
+    print("3/3 Escribiendo resultados…", flush=True)
+    dir_e = os.path.join(out, "escuchar")
+    os.makedirs(dir_e, exist_ok=True)
+    f = os.path.join(dir_e, "mezcla.ogg")
+    if not os.path.exists(f) or os.path.getsize(f) < 10000:
+        y = np.clip(mezcla, -1, 1).astype("float32")
+        with sf.SoundFile(f, "w", sr, 1, format="OGG", subtype="VORBIS") as o:
+            for i in range(0, len(y), sr):
+                o.write(y[i:i + sr])
+    informe._csv(os.path.join(out, "golpes.csv"), g)
+    informe._csv(os.path.join(out, "pulsos.csv"), [dict(seg=round(float(b), 3), compas=int(c), tiempo=int(t))
+                                                   for b, c, t in zip(P["beats"], P["compas"], P["tiempo"])])
+    informe.datos_visor(os.path.join(out, "datos.js"), nombre, P, g, [["Mezcla completa", "escuchar/mezcla.ogg"]])
     print(f"Hecho en {time.time() - t0:.0f} s → {out}")
 
 

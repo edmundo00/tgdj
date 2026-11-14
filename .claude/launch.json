@@ -6,6 +6,18 @@
       "runtimeExecutable": "C:\\Users\\edmun\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
       "runtimeArgs": ["-m", "http.server", "8765", "--directory", "D:\\Dropbox\\TDJ\\Analisis tangos"],
       "port": 8765
+    },
+    {
+      "name": "compases-habanera",
+      "runtimeExecutable": "C:\\Users\\edmun\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+      "runtimeArgs": ["-m", "http.server", "8791", "--directory", "D:\\Dropbox\\TDJ\\Instagram\\borradores\\habanera\\compases"],
+      "port": 8791
+    },
+    {
+      "name": "alinear-habanera",
+      "runtimeExecutable": "C:\\Users\\edmun\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+      "runtimeArgs": ["-m", "http.server", "8792", "--directory", "D:\\Dropbox\\TDJ\\Instagram\\borradores\\habanera\\alinear"],
+      "port": 8792
     }
   ]
 }
