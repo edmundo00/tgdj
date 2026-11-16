@@ -482,10 +482,11 @@ def main():
     ap.add_argument("--uno", type=float, help="segundo en el que cae un 1")
     ap.add_argument("--pulso", choices=["doble", "mitad"], help="si cuenta el pulso a la mitad o al doble")
     ap.add_argument("--separar", action="store_true", help="separar instrumentos si aún no lo están (más lento, más fino)")
-    ap.add_argument("--no-abrir", action="store_true", help="no abrir la página al terminar")
+    ap.add_argument("--abrir", action="store_true", help="abrir la página al terminar (solo lo pone el .bat; Claude nunca)")
+    ap.add_argument("--no-abrir", action="store_true", help="(obsoleto: ya no se abre salvo con --abrir)")
     a = ap.parse_args()
     for f in a.audio:
-        analizar(f, dict(compas=a.compas, uno=a.uno, pulso=a.pulso, separar=a.separar or None, abrir=not a.no_abrir and len(a.audio) == 1))
+        analizar(f, dict(compas=a.compas, uno=a.uno, pulso=a.pulso, separar=a.separar or None, abrir=a.abrir and len(a.audio) == 1))
 
 
 if __name__ == "__main__":

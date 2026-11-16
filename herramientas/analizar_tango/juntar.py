@@ -62,7 +62,8 @@ def main():
         pass
     ap = argparse.ArgumentParser(description="Juntar 2-4 canciones")
     ap.add_argument("audio", nargs="+")
-    ap.add_argument("--no-abrir", action="store_true")
+    ap.add_argument("--abrir", action="store_true", help="abrir la página al terminar (solo lo pone el .bat; Claude nunca)")
+    ap.add_argument("--no-abrir", action="store_true", help="(obsoleto: ya no se abre salvo con --abrir)")
     a = ap.parse_args()
     if not 2 <= len(a.audio) <= 4:
         sys.exit("Hacen falta entre 2 y 4 canciones.")
@@ -79,7 +80,7 @@ def main():
         print(f"  {c['nombre']}: {c['meta']['compas']}, compás de {c['compas_seg']:.3f} s, {t['tonica']} {t['modo']} ({t['afinacion_cents']:+d} cents)")
     pagina_ritmo.actualizar_indice(ritmo.SALIDA_DEF)
     print(f"Hecho → {ruta}")
-    if not a.no_abrir and os.name == "nt":
+    if a.abrir and os.name == "nt":
         os.startfile(ruta)
 
 
