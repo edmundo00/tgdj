@@ -4,22 +4,30 @@ Uso:
     analizar_tango.bat "D:\\Dropbox\\TDJ\\MUSICA\\...\\Juan D'arienzo - El Flete.flac"
     (opcional) --salida "carpeta"
 
-Para ver los análisis: abre D:\\Dropbox\\TDJ\\Analisis tangos\\visor.html y busca el tango.
+Para verlo: al terminar se le pasa solo ritmo.py (que aprovecha las pistas separadas) y sale en
+HERRAMIENTAS.html con su botón «▶ Ritmo». El visor viejo con gráficas se quitó el 19-11-2026.
 Los datos de cada tango se guardan en Analisis tangos\\_datos\\<canción> (las carpetas antiguas de la raíz se respetan):
     resumen.txt      compás a compás: dibujo de golpes de cada instrumento y sucesos (pianitos, silencios, síncopas…)
     compases.csv     lo mismo en tabla (se abre con Excel)
     golpes.csv       cada golpe: instrumento, segundo, compás, tiempo, semicorchea, adelanto/retraso en ms, fuerza en dB
     pulsos.csv       segundo de cada tiempo, con su compás
-    graficas\\       una imagen cada 8 compases
-    datos.js         lo que lee el visor
-    escuchar\\       copias ligeras (OGG) de las pistas para el visor
+    articulacion.txt cortado o ligado: cuánto baja el sonido entre golpes, compás a compás (articulacion.py)
     pistas\\         contrabajo, piano, voz, bandoneones, violines, resto y mezcla
 """
 import os, sys, argparse, time
 import numpy as np, librosa, soundfile as sf
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import separar, pulso, golpes as golpes_mod, informe
+
+# ffmpeg: si no está en el PATH (p. ej. el PC del trabajo), buscarlo en las carpetas de siempre (como ritmo.py)
+import shutil
+if not shutil.which("ffmpeg"):
+    for _d in (r"C:\ffmpeg\bin", os.path.expandvars(r"%USERPROFILE%\herramientas\ffmpeg\bin")):
+        if os.path.isfile(os.path.join(_d, "ffmpeg.exe")):
+            os.environ["PATH"] = _d + os.pathsep + os.environ.get("PATH", "")
+            break
+
+import separar, pulso, golpes as golpes_mod, informe, articulacion
 
 SALIDA_DEF = r"D:\Dropbox\TDJ\Analisis tangos"
 MODELOS = os.path.join(os.path.expanduser("~"), "venvs", "modelos_separador")
@@ -43,8 +51,13 @@ def main():
             (analizar_rapido if a.rapido else analizar_uno)(f, a.salida if len(a.audio) == 1 else None)
         except Exception as e:
             print(f"ERROR con {f}: {e}", flush=True)
-    n = informe.actualizar_visor(SALIDA_DEF)
-    print(f"\nVisor: {os.path.join(SALIDA_DEF, 'visor.html')} ({n} tangos analizados)", flush=True)
+    if not a.salida:
+        # la página para verlo: ritmo.py, que aprovecha las pistas recién separadas (19-11-2026)
+        import subprocess
+        ritmo = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ritmo.py")
+        for f in a.audio:
+            print(f"\nPágina de ritmo de {os.path.basename(f)}…", flush=True)
+            subprocess.run([sys.executable, ritmo, f])
 
 
 def analizar_uno(audio, salida):
@@ -79,20 +92,8 @@ def analizar_uno(audio, salida):
     g += golpes_mod.orquesta(mezcla, sr, P)   # fila «Orquesta entera» del visor (sobre la mezcla, sin separar)
 
     print("4/4 Escribiendo resultados…", flush=True)
-    # copias ligeras en OGG para la página (el navegador salta mejor en OGG que en FLAC grandes)
-    dir_e = os.path.join(out, "escuchar")
-    os.makedirs(dir_e, exist_ok=True)
-    rel = []
-    for etiqueta, n in [("Mezcla completa", "mezcla"), ("Contrabajo", "contrabajo"), ("Piano", "piano"),
-                        ("Marcato (sobre todo bandoneones)", "bandoneones"), ("Ligado (violines y bandoneones)", "violines"), ("Voz", "voz")]:
-        f = os.path.join(dir_e, f"{n}.ogg")
-        if not os.path.exists(f) or os.path.getsize(f) < 10000:
-            y = np.clip(pistas[n], -1, 1).astype("float32")
-            with sf.SoundFile(f, "w", sr, 1, format="OGG", subtype="VORBIS") as o:
-                for i in range(0, len(y), sr):  # por trozos: de una vez libsndfile falla con archivos largos
-                    o.write(y[i:i + sr])
-        rel.append([etiqueta, f"escuchar/{n}.ogg"])
-    informe.guardar_todo(out, nombre, P, g, niveles, filas, rel)
+    informe.guardar_todo(out, nombre, P, g, niveles, filas)
+    articulacion.guardar(out, mezcla, sr, P["beats"], P["compas"])
     print(f"Hecho en {time.time() - t0:.0f} s → {out}")
 
 
@@ -103,7 +104,7 @@ def analizar_rapido(audio, salida):
     nombre = os.path.splitext(os.path.basename(audio))[0]
     antigua = os.path.join(SALIDA_DEF, nombre)
     out = salida or (antigua if os.path.isdir(antigua) else os.path.join(SALIDA_DEF, "_datos", nombre))
-    if os.path.exists(os.path.join(out, "datos.js")) and os.path.exists(os.path.join(out, "pistas", "contrabajo.flac")):
+    if os.path.exists(os.path.join(out, "resumen.txt")) and os.path.exists(os.path.join(out, "pistas", "contrabajo.flac")):
         print("    ya tiene análisis completo; lo rehago entero para añadir la fila de la orquesta", flush=True)
         return analizar_uno(audio, salida)
     os.makedirs(out, exist_ok=True)
@@ -116,7 +117,7 @@ def analizar_rapido(audio, salida):
     print("2/3 Midiendo los grandes golpes de la orquesta…", flush=True)
     g = golpes_mod.orquesta(mezcla, sr, P)
     print("3/3 Escribiendo resultados…", flush=True)
-    dir_e = os.path.join(out, "escuchar")
+    dir_e = os.path.join(out, "escuchar")   # solo la mezcla: la usa articulacion.py cuando no hay pistas
     os.makedirs(dir_e, exist_ok=True)
     f = os.path.join(dir_e, "mezcla.ogg")
     if not os.path.exists(f) or os.path.getsize(f) < 10000:
@@ -127,7 +128,7 @@ def analizar_rapido(audio, salida):
     informe._csv(os.path.join(out, "golpes.csv"), g)
     informe._csv(os.path.join(out, "pulsos.csv"), [dict(seg=round(float(b), 3), compas=int(c), tiempo=int(t))
                                                    for b, c, t in zip(P["beats"], P["compas"], P["tiempo"])])
-    informe.datos_visor(os.path.join(out, "datos.js"), nombre, P, g, [["Mezcla completa", "escuchar/mezcla.ogg"]])
+    articulacion.guardar(out, mezcla, sr, P["beats"], P["compas"])
     print(f"Hecho en {time.time() - t0:.0f} s → {out}")
 
 

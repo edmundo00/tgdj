@@ -1,6 +1,19 @@
 """Compara un MIDI (o partitura pasada a MIDI) con el análisis de la grabación.
 
 Uso: python comprobar_con_midi.py <archivo.mid> <audio original> <carpeta del análisis> [--desplaz N]
+         [--alinear-con contrabajo|piano|bandoneones] [--tramos a-b,c-d] [--transcripcion [instrumento=]notas.mid ...]
+
+--tramos 15-90,135-180: mide las transcripciones solo en esos segundos del disco (donde la partitura sigue a la
+grabación; elegirlos por el acierto del bajo, no por los modelos).
+--alinear-con: empareja con esa pista separada en vez de con la mezcla (mucho mejor para una parte suelta:
+la parte de contrabajo con la pista de contrabajo). La afinación del disco se mide y se corrige sola.
+
+--transcripcion (18-11-2026): MIDI sacados de la grabación por un modelo (YourMT3+, piano_transcription,
+MuScriptor…), ya en el tiempo del disco. Tras emparejar la partitura, mide para cada uno y cada instrumento
+de la partitura: qué parte de sus ataques tiene un ataque del modelo a ±70 ms, qué parte además con la misma
+nota (sin contar octava), y qué parte de lo que saca el modelo cae en un ataque de la partitura.
+«instrumento=» (contrabajo, piano, bandoneones, violines) = todo el MIDI cuenta como ese instrumento
+(transcripción de una pista separada); sin él (transcripción de la mezcla) valen todas sus notas.
 
 Cómo empareja (cambiado el 16-11-2026: la versión anterior alineaba por croma + DTW en segundos
 y con «Paciencia» de Omar Benítez se perdía por completo):
@@ -78,7 +91,7 @@ def acierto(ref, est):
     return enc, cor
 
 
-def main(mid, audio, carpeta, desplaz_fijo=None):
+def main(mid, audio, carpeta, desplaz_fijo=None, transcripciones=(), alinear_con=None, tramos=None):
     m = pretty_midi.PrettyMIDI(mid)
     pb, pt, pc, golpes = leer_analisis(carpeta)
     pistas = collections.defaultdict(list)
@@ -93,8 +106,13 @@ def main(mid, audio, carpeta, desplaz_fijo=None):
         pistas[t] = sorted(vistas.values(), key=lambda n: n.start)
     print("Pistas del MIDI:", {k: len(v) for k, v in pistas.items()})
 
+    if alinear_con:   # emparejar con una pista separada (p. ej. la parte de contrabajo con la pista de contrabajo)
+        audio = os.path.join(carpeta, "pistas", alinear_con + ".flac")
+        print("Emparejo con la pista separada:", alinear_con)
     y, _ = librosa.load(audio, sr=SR, mono=True)
-    A = librosa.feature.chroma_cqt(y=y, sr=SR, hop_length=HOP)
+    afin = float(librosa.estimate_tuning(y=y, sr=SR))   # los discos viejos suelen ir desafinados (velocidad)
+    print(f"Afinación del disco: {afin:+.2f} semitonos")
+    A = librosa.feature.chroma_cqt(y=y, sr=SR, hop_length=HOP, tuning=afin)
     Ac = croma_por_tiempo(A, pb, SR / HOP)
     Mfull = m.get_chroma(fs=SR / HOP)
 
@@ -106,8 +124,30 @@ def main(mid, audio, carpeta, desplaz_fijo=None):
     #    gruesas). Después, DTW tiempo a tiempo.
     factor = min((1, 2, 0.5), key=lambda f: abs(np.log(len(rejilla_midi(m, f)) / len(pb))))
     mb = rejilla_midi(m, factor)
-    Mc = np.roll(croma_por_tiempo(Mfull, mb, SR / HOP), k, axis=0)
-    D, wp = librosa.sequence.dtw(X=Mc, Y=Ac, metric="cosine")
+    if alinear_con:
+        # con una pista suelta: notas que EMPIEZAN en cada tiempo (partitura) contra lo que suena al empezar cada
+        # pulso (pista). Mucho más fino que la armonía media: con «El Huracán», bajo 48 % frente a 34 % (18-11-2026)
+        Cq = np.abs(librosa.cqt(y, sr=SR, hop_length=256, fmin=librosa.note_to_hz("C1"), n_bins=72, tuning=afin))
+        Ac = np.zeros((12, len(pb)))
+        for j, t in enumerate(pb):
+            f = int((t + 0.03) * SR / 256)
+            Ac[:, j] = Cq[:, f:f + 6].mean(1).reshape(6, 12).sum(0)
+        Ac /= np.linalg.norm(Ac, axis=0) + 1e-9
+        Mc = np.zeros((12, len(mb)))
+        cuarto = np.median(np.diff(mb)) / 4
+        for ins in m.instruments:
+            for n in ins.notes:
+                i = int(np.argmin(np.abs(mb - n.start)))
+                if abs(mb[i] - n.start) <= cuarto:
+                    Mc[(n.pitch + k) % 12, i] += 1
+        llenos = np.linalg.norm(Mc, axis=0) > 0
+        Mc[:, llenos] /= np.linalg.norm(Mc[:, llenos], axis=0)
+        Cm = 1 - Mc.T @ Ac
+        Cm[~llenos, :] = 0.5   # tiempos sin nota en la partitura: ni ayudan ni estorban
+        D, wp = librosa.sequence.dtw(C=Cm)
+    else:
+        Mc = np.roll(croma_por_tiempo(Mfull, mb, SR / HOP), k, axis=0)
+        D, wp = librosa.sequence.dtw(X=Mc, Y=Ac, metric="cosine")
     coste, wp = D[-1, -1] / len(wp), wp[::-1]
     print(f"Tiempos del MIDI: {len(mb)} (rejilla x{factor}) · pulsos del análisis: {len(pb)}")
     print(f"Transposición del MIDI: {k} semitonos · coste {coste:.3f} (0 = idéntico)")
@@ -128,7 +168,7 @@ def main(mid, audio, carpeta, desplaz_fijo=None):
     Cb = None
     if os.path.exists(ruta_bajo):
         yb, _ = librosa.load(ruta_bajo, sr=SR, mono=True)
-        Cb = np.abs(librosa.cqt(yb, sr=SR, hop_length=256, fmin=librosa.note_to_hz("E1"), n_bins=48))
+        Cb = np.abs(librosa.cqt(yb, sr=SR, hop_length=256, fmin=librosa.note_to_hz("E1"), n_bins=48, tuning=afin))
         umbral = np.percentile(Cb, 60)
 
     def notas_bajo(s):
@@ -150,7 +190,9 @@ def main(mid, audio, carpeta, desplaz_fijo=None):
         return ok / max(tot, 1), tot
 
     # 3. afinar el desplazamiento
-    if desplaz_fijo is None:
+    if desplaz_fijo is None and not pistas["contrabajo"]:
+        s = 0   # sin bajo en el MIDI no hay con qué afinar (antes elegía +3 por un nan)
+    elif desplaz_fijo is None:
         tabla = []
         for s in range(-3, 4):
             nb, _ = notas_bajo(s)
@@ -215,11 +257,100 @@ def main(mid, audio, carpeta, desplaz_fijo=None):
 
     informe(s, "MIDI emparejado")
     informe(s + 5, "Al azar (MIDI corrido 5 tiempos), para comparar")
+    if transcripciones:
+        medir_transcripciones(transcripciones, pistas, a_grabacion, s, k, tramos, carpeta, afin)
+
+
+def medir_transcripciones(transcripciones, pistas, a_grabacion, s, k, tramos=None, carpeta=None, afin=0.0):
+    """Compara MIDI de modelos de transcripción con la partitura ya emparejada (y corrida 5 tiempos = al azar)."""
+    print("\n== Transcripciones contra la partitura (±70 ms; nota = misma nota sin contar octava) ==")
+    print("modelo | instrumento partitura | ataques de la partitura encontrados | con la nota bien | "
+          "lo del modelo que cae en la partitura    (entre paréntesis: al azar)")
+    filas = []
+
+    def notas_partitura(nombre, ss):
+        r = a_grabacion(np.array([n.start for n in pistas[nombre]]), ss)
+        pc = np.array([(n.pitch + k) % 12 for n in pistas[nombre]])
+        ok = ~np.isnan(r)
+        if tramos:
+            ok &= np.any([(r >= a) & (r < b) for a, b in tramos], axis=0)
+        return r[ok], pc[ok]
+
+    # ¿la partitura sigue al disco? Sin modelo: la nota de la partitura, ¿es de las 3 que más suenan en la pista
+    # separada al empezar? (la del bajo: ¿la que más suena?). Si esto no supera al azar, la partitura no vale
+    # para medir ese instrumento y los números de los modelos tampoco dicen nada.
+    for nombre in ("contrabajo", "piano", "bandoneones", "violines"):
+        ruta = os.path.join(carpeta or "", "pistas", nombre + ".flac")
+        if not pistas.get(nombre) or not carpeta or not os.path.exists(ruta):
+            continue
+        yy, _ = librosa.load(ruta, sr=SR, mono=True)
+        Cq = np.abs(librosa.cqt(yy, sr=SR, hop_length=256, fmin=librosa.note_to_hz("C1"), n_bins=84, tuning=afin))
+        cuantas = 1 if nombre == "contrabajo" else 3
+        res = []
+        for ss in (s, s + 5):
+            r, pc = notas_partitura(nombre, ss)
+            bien = []
+            for t, p in zip(r, pc):
+                f = int((t + 0.03) * SR / 256)
+                if f + 6 >= Cq.shape[1]:
+                    continue
+                cr = Cq[:, f:f + 6].mean(1).reshape(7, 12).sum(0)
+                bien.append(p in np.argsort(cr)[-cuantas:])
+            res.append(np.mean(bien) if bien else np.nan)
+        print(f"   {'(sin modelo) pista separada':28} | {nombre:11} | nota entre las {cuantas} que más suenan: {res[0]:4.0%} ({res[1]:4.0%})")
+    for spec in transcripciones:
+        inst, ruta = spec.split("=", 1) if "=" in spec and not os.path.exists(spec) else (None, spec)
+        if not os.path.exists(ruta):
+            print(f"   (no está: {ruta})"); continue
+        tm = pretty_midi.PrettyMIDI(ruta)
+        notas = sorted((n.start, n.pitch % 12) for ins in tm.instruments if not ins.is_drum for n in ins.notes)
+        if not notas:
+            continue
+        ton, tpc = np.array([n[0] for n in notas]), np.array([n[1] for n in notas])
+        nombres = [inst] if inst else [x for x in ("contrabajo", "piano", "bandoneones", "violines") if pistas[x]]
+        for nombre in nombres:
+            if not pistas.get(nombre):
+                continue
+            # Con un disco desafinado a medio camino entre dos notas (El Pescante, Demare, −0,28 en la pista y +0,05 en
+            # la mezcla), la transposición elegida puede salir medio tono corrida respecto al modelo, que oye la
+            # nota «redondeada» al otro lado (19-11-2026). Se prueba el modelo tal cual y ±1 semitono y se queda lo
+            # mejor; al azar se le hace lo mismo, para que la comparación siga siendo justa.
+            def medir(ss, dk):
+                r, pc = notas_partitura(nombre, ss)
+                if len(r) == 0:
+                    return (np.nan,) * 3
+                # el modelo solo cuenta dentro del trozo que cubre la partitura
+                dentro = (ton >= r.min() - TOL) & (ton <= r.max() + TOL)
+                if tramos:
+                    dentro &= np.any([(ton >= a) & (ton < b) for a, b in tramos], axis=0)
+                t2, p2 = ton[dentro], (tpc[dentro] + dk) % 12
+                enc = bien = 0
+                for t, p in zip(r, pc):
+                    cerca = np.abs(t2 - t) <= TOL
+                    enc += cerca.any(); bien += (cerca & (p2 == p)).any()
+                ru = np.unique(np.round(r, 3))
+                cae = np.mean([np.min(np.abs(ru - x)) <= TOL for x in t2]) if len(t2) else np.nan
+                return (enc / len(r), bien / len(r), cae)
+            mejor = lambda ss: max(((medir(ss, dk), dk) for dk in (0, -1, 1)), key=lambda z: np.nan_to_num(z[0][1], nan=-1))
+            ((e, b, c), dk), ((ea, ba, ca), _) = mejor(s), mejor(s + 5)
+            modelo = os.path.splitext(os.path.basename(ruta))[0]
+            carpeta_m = os.path.basename(os.path.dirname(os.path.abspath(ruta)))
+            etiqueta = f"{carpeta_m}/{modelo}" + (f" [{dk:+d} st]" if dk else "")
+            filas.append((etiqueta, nombre, e, b, c, ea, ba, ca))
+            print(f"   {etiqueta:28} | {nombre:11} | {e:4.0%} ({ea:4.0%}) | {b:4.0%} ({ba:4.0%}) | {c:4.0%} ({ca:4.0%})")
+    return filas
 
 
 if __name__ == "__main__":
     args = sys.argv[1:]
     d = None
+    tr, al, tram = [], None, None
+    if "--tramos" in args:   # p. ej. 15-90,135-180 (segundos del disco donde la partitura sigue a la grabación)
+        i = args.index("--tramos"); tram = [tuple(map(float, x.split("-"))) for x in args[i + 1].split(",")]; del args[i:i + 2]
+    if "--alinear-con" in args:
+        i = args.index("--alinear-con"); al = args[i + 1]; del args[i:i + 2]
+    if "--transcripcion" in args:
+        i = args.index("--transcripcion"); tr = args[i + 1:]; del args[i:]
     if "--desplaz" in args:
         i = args.index("--desplaz"); d = int(args[i + 1]); del args[i:i + 2]
-    main(*args[:3], desplaz_fijo=d)
+    main(*args[:3], desplaz_fijo=d, transcripciones=tr, alinear_con=al, tramos=tram)

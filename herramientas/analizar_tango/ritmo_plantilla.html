@@ -3,148 +3,694 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ritmo · <!--TITULO--></title>
+<title>Ritmo de un tango</title>
 <style>
-  :root { --fondo:#17130f; --panel:#221c16; --borde:#3a3026; --texto:#efe6d8; --suave:#a8998a; --oro:#f0c05a;
-          --bajo:#e0913c; --piano:#f1d58a; --band:#c96b8f; --graves:#e0913c; --medios:#f1d58a; --agudos:#7fb7d9; --sel:rgba(240,192,90,.18); }
+  :root { --fondo:#15110d; --panel:#1f1914; --panel2:#2a221b; --borde:#3a3026; --texto:#f1e8da; --suave:#a8998a; --tenue:#7a6c5e;
+          --oro:#f0c05a; --oro2:#ffd47a; --sel:rgba(240,192,90,.16); }
   * { box-sizing:border-box; }
-  body { margin:0; background:var(--fondo); color:var(--texto); font:15px/1.4 "Segoe UI", system-ui, sans-serif; }
-  header { padding:14px 18px 6px; }
-  h1 { margin:0 0 4px; font-size:20px; color:var(--oro); font-weight:650; }
-  .meta { color:var(--suave); font-size:13.5px; }
+  html { scroll-padding-top:90px; }
+  body { margin:0; background:var(--fondo); color:var(--texto); font:15px/1.45 "Segoe UI", system-ui, sans-serif; }
+  .ancho { max-width:2600px; margin:0 auto; padding:0 18px; }
+
+  /* cabecera */
+  header { padding:10px 0 6px; }
+  header .ancho { display:flex; flex-wrap:wrap; align-items:center; gap:6px 18px; }
+  header .meta { margin-left:auto; }
+  #ver_meta { padding:4px 10px; font-size:15px; }
+  body.con_cancion > header { display:none; }
+  #barra .elige { gap:6px; flex-wrap:nowrap; min-width:0; }
+  #barra .elige > a { font-size:20px; text-decoration:none; }
+  #cancion { max-width:min(380px, 40vw); overflow:hidden; text-overflow:ellipsis; }
+  #barra #cancion { max-width:min(380px, 40vw); }
+  @media (max-width:700px) { #barra #cancion { max-width:60vw; font-size:17px; } }
+  #m_cancion .pop { width:min(620px, 92vw); max-width:none; }
+  #buscar_c { font:inherit; font-size:15px; padding:7px 10px; background:var(--panel2); color:var(--texto); border:1px solid var(--borde); border-radius:8px; }
+  #lista_c { max-height:min(60vh, 520px); overflow:auto; display:flex; flex-direction:column; gap:3px; }
+  #lista_c a { display:block; padding:5px 9px; border-radius:7px; color:var(--texto); text-decoration:none; font-size:14px; }
+  #lista_c a:hover, #lista_c a.on { background:var(--panel2); } #lista_c a span { display:block; color:var(--tenue); font-size:12px; }
+  #m_meta .pop { flex-direction:row; flex-wrap:wrap; gap:6px; color:var(--suave); font-size:14px; }
+  #m_vel .pop, #m_ncomp .pop { padding:6px; }
+  #chip_golpes { padding:3px 9px; font-size:13px; border-color:#d9734a; color:#f1b89d; background:#2a1a12; }
+  h1.oculto { display:none; }
+  h1 { margin:0; font-size:21px; color:var(--oro); font-weight:650; flex:1 1 auto; min-width:0; }
+  .meta { color:var(--suave); font-size:14px; display:flex; flex-wrap:wrap; gap:4px 8px; }
+  .meta span.dato { background:var(--panel); border:1px solid var(--borde); border-radius:20px; padding:1px 10px; }
   .meta b { color:var(--texto); font-weight:600; }
-  .seguro { color:#8fd18f; } .probable { color:#e9c46a; } .dudoso { color:#ef7f6a; }
-  main { padding:6px 18px 30px; display:grid; gap:12px; }
-  .panel { background:var(--panel); border:1px solid var(--borde); border-radius:10px; padding:10px 12px; }
+  .seguro { color:#8fd18f !important; } .probable { color:#e9c46a !important; } .dudoso { color:#ef7f6a !important; }
+
+  /* barra fija: escuchar y velocidad */
+  #barra { position:sticky; top:0; z-index:10; background:rgba(21,17,13,.96); border-bottom:1px solid var(--borde);
+           backdrop-filter:blur(4px); }
+  #barra .ancho { display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; padding-top:8px; padding-bottom:6px; }
+  #barra .ancho + .ancho { padding-top:0; padding-bottom:8px; display:block; }
+  #saltos button { font-size:17px; padding:6px 13px; }
+  label.ir { display:inline-flex; align-items:center; gap:5px; color:var(--suave); font-size:13.5px; }
+  label.ir input { width:4.2em; font:inherit; font-size:15px; font-weight:650; color:var(--oro); background:var(--panel2);
+                   border:1px solid var(--borde); border-radius:7px; padding:5px 6px; text-align:center; }
+  label.ir input:focus { outline:none; border-color:var(--oro); }
+  .grupo.repetir { gap:6px; }
+  .grupo.repetir:has(#bucle:checked) label.ir input { border-color:#6aa3d9; color:#bcdcff; }
+  #play { font-size:18px; font-weight:700; padding:10px 22px; min-width:150px; background:var(--oro); color:#1b140c; border:0; border-radius:10px; }
+  #play:hover { background:var(--oro2); }
+  #play.sonando { background:#e9795f; color:#1b0f0a; }
+  #info { font-variant-numeric:tabular-nums; font-size:16px; min-width:150px; }
+  #info b { color:var(--oro); font-weight:650; }
+  .grupo { display:flex; flex-wrap:wrap; align-items:center; gap:8px; min-width:0; }
+  .grupo > .nombre { color:var(--suave); font-size:13.5px; }
+
+  main { padding:14px 0 40px; display:grid; grid-template-columns:minmax(0,1fr); gap:14px; }
+  main > * { min-width:0; }
+  /* con vídeo (19-11-2026): dos columnas, a la izquierda lo de siempre y a la derecha el vídeo, fijo bajo la barra */
+  main { display:flex; align-items:flex-start; gap:14px; }
+  #col { flex:1 1 auto; min-width:0; display:grid; grid-template-columns:minmax(0,1fr); gap:14px; }
+  #panel_video { flex:0 0 auto; position:sticky; top:calc(var(--barra, 100px) + 8px); padding:8px 10px; display:flex; flex-direction:column; gap:6px; }
+  #panel_video[hidden] { display:none; }
+  #cab_video { display:flex; align-items:center; gap:8px; font-size:13.5px; color:var(--suave); }
+  #cab_video #video_nombre { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #video_cerrar { padding:2px 9px; }
+  #caja_video { position:relative; background:#000; border-radius:8px; overflow:hidden; align-self:center; }
+
+  #video { display:block; cursor:pointer; }
+  #estrellas { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; background:transparent; border-radius:0; }
+  body.marcando #video { cursor:crosshair; }
+  #video_fuera { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; text-align:center; padding:20px;
+                 background:rgba(16,12,9,.78); color:var(--texto); font-size:15px; cursor:pointer; }
+  #video_fuera:empty { display:none; }
+  #video_fuera b { color:var(--oro); }
+  #cuadrar_video { gap:6px; }
+  #cab_video .seg button { padding:3px 9px; }
+  #cab_video > button, #cab_video .abre { padding:3px 9px; font-size:13.5px; }
+  #m_vcuadrar .pop { left:auto; right:0; }
+  #marcar.on { background:#3d2a4f; border-color:#c58af0; color:#f3e2ff; }
+  #cab_video { flex-wrap:nowrap; } #cab_video #video_nombre { min-width:0; }
+  /* marcar (20-11-2026): los botones en una columna a la IZQUIERDA del vídeo, y el vídeo tan alto como la pantalla */
+  #caja_marcar { display:flex; flex-direction:column; gap:10px; font-size:13px; }
+  body.marcando #panel_video { display:grid; grid-template-columns:150px auto; grid-template-areas:"cab cab" "marcar video";
+    align-items:start; column-gap:10px; row-gap:6px; }
+  body.marcando #panel_video[hidden] { display:none; }
+  body.marcando #cab_video { grid-area:cab; } body.marcando #caja_video { grid-area:video; } body.marcando #caja_marcar { grid-area:marcar; }
+  body.marcando #video_txt { display:none; }
+  #caja_marcar .bail { display:flex; flex-direction:column; gap:3px; }
+  #caja_marcar .rol { font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--c, var(--tenue)); opacity:.8; }
+  #caja_marcar input.bailarin { font:inherit; font-weight:650; font-size:14px; color:var(--c, var(--texto)); background:transparent;
+    border:1px solid transparent; border-radius:7px; padding:1px 4px; margin-left:-5px; min-width:0; width:100%; }
+  #caja_marcar input.bailarin:hover, #caja_marcar input.bailarin:focus { border-color:var(--borde); background:var(--panel2); outline:none; }
+  #caja_marcar .pies { display:grid; grid-template-columns:1fr 1fr; gap:5px; }
+  #caja_marcar .tecla { position:relative; padding:7px 4px; font-size:20px; font-weight:700; line-height:1.1; border:2px solid var(--c, var(--borde));
+    color:var(--c, var(--texto)); background:color-mix(in srgb, var(--c, #888) 12%, var(--panel2)); }
+  #caja_marcar .tecla small { position:absolute; right:5px; bottom:2px; font-size:10px; font-weight:500; opacity:.65; }
+  #caja_marcar .tecla.flash { background:var(--c); color:#15110d; }
+  #caja_marcar .etq { color:var(--suave); font-size:12.5px; margin-bottom:3px; }
+  #caja_marcar #seg_iman { display:grid; grid-template-columns:1fr 1fr; gap:3px; border:0; background:none; }
+  #caja_marcar #seg_iman button { padding:4px 3px; font-size:12.5px; border:1px solid var(--borde); border-radius:6px; }
+  #caja_marcar .botones { display:flex; flex-direction:column; gap:5px; }
+  #caja_marcar .botones button { text-align:left; font-size:12.5px; padding:5px 7px; display:flex; justify-content:space-between; align-items:center; gap:4px; }
+  #caja_marcar .botones kbd { font-size:10.5px; }
+  #estrellas_pis.apagado { opacity:.55; text-decoration:line-through; }
+  #pis_n { color:var(--suave); font-size:12.5px; }
+  #caja_marcar .mas_marcar summary { cursor:pointer; color:var(--suave); font-size:12.5px; }
+  #caja_marcar .mas_marcar[open] { display:flex; flex-direction:column; gap:5px; }
+  #caja_marcar .mas_marcar button { text-align:left; font-size:12.5px; padding:5px 7px; }
+  #caja_marcar .mas_marcar input { width:3.4em; font-size:12.5px; padding:2px 3px; }
+  #caja_marcar .pista_marcar { font-size:11.5px; line-height:1.45; }
+  #lupa_pie { position:absolute; border-radius:14px; border:2px solid #fff; box-shadow:0 2px 12px rgba(0,0,0,.6);
+    pointer-events:none; background:#000; }
+  #caja_marcar.oculto { display:none !important; }
+  #cuadrar_video .seg button { padding:4px 7px; font-size:12.5px; }
+  #video_txt { font-size:12px; max-width:100%; }
+  #video_txt:empty { display:none; }
+  #ver_video.on { background:#57431f; border-color:var(--oro); color:#fff3d6; }
+  @media (max-width:900px) and (orientation:portrait) {
+    main { flex-direction:column; align-items:stretch; }
+    #panel_video { order:-1; position:static; align-self:center; max-width:100%; }
+    body.marcando #panel_video { display:flex; } body.marcando #panel_video[hidden] { display:none; }
+    #caja_marcar { display:grid; grid-template-columns:1fr 1fr; }
+    #caja_marcar .pista_marcar, #caja_marcar .mas_marcar { grid-column:1 / -1; }
+  }
+  .panel { background:var(--panel); border:1px solid var(--borde); border-radius:12px; padding:12px 14px; }
   .fila { display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; }
-  .titulo { font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--suave); margin-bottom:6px; }
-  button { background:#2e261e; color:var(--texto); border:1px solid var(--borde); border-radius:7px; padding:5px 10px; font:inherit; cursor:pointer; }
+  h2 { margin:0; font-size:13px; letter-spacing:.07em; text-transform:uppercase; color:var(--suave); font-weight:600; }
+  .ayuda { color:var(--tenue); font-size:13px; }
+  .aviso { margin:8px 0; padding:8px 12px; border-left:4px solid #d9734a; background:#2a1a12; color:#f1dccb; font-size:13.5px; border-radius:4px; }
+  .aviso:empty { display:none; }
+  .aviso.suave { border-left-color:var(--oro); background:var(--panel2); color:var(--tenue); }
+
+  button { background:var(--panel2); color:var(--texto); border:1px solid var(--borde); border-radius:8px; padding:6px 11px;
+           font:inherit; font-size:14px; cursor:pointer; white-space:nowrap; }
   button:hover { border-color:var(--oro); }
-  button.grande { font-size:17px; padding:8px 18px; background:var(--oro); color:#1b140c; border:0; font-weight:700; }
-  button.on { background:#4a3a22; border-color:var(--oro); }
-  select, input[type=number] { background:#2e261e; color:var(--texto); border:1px solid var(--borde); border-radius:6px; padding:4px 6px; font:inherit; }
-  label { display:inline-flex; align-items:center; gap:5px; }
-  canvas { width:100%; display:block; border-radius:6px; background:#120e0b; cursor:crosshair; }
-  #vista { height:90px; } #lupa { height:300px; }
-  .punto { display:inline-block; width:10px; height:10px; border-radius:50%; }
-  #dibujos { display:flex; flex-wrap:wrap; gap:6px; }
-  #dibujos button { font-size:13px; }
-  #tramos { margin-top:8px; display:flex; flex-wrap:wrap; gap:6px; font-size:13px; }
-  #tramos button { font-size:12.5px; }
-  .pista { display:flex; align-items:center; gap:6px; font-size:13.5px; }
+  button.on { background:#57431f; border-color:var(--oro); color:#fff3d6; }
+  /* botones pegados (elige uno) */
+  .seg { display:inline-flex; border:1px solid var(--borde); border-radius:9px; overflow:hidden; }
+  .seg button { border:0; border-radius:0; border-left:1px solid var(--borde); padding:6px 11px; }
+  .seg button:first-child { border-left:0; }
+  .seg button.on { background:var(--oro); color:#1b140c; font-weight:650; }
+  /* interruptores (sí / no) */
+  label.interruptor { display:inline-flex; align-items:center; gap:6px; cursor:pointer; background:var(--panel2); border:1px solid var(--borde);
+                      border-radius:8px; padding:6px 11px; font-size:14px; user-select:none; white-space:nowrap; }
+  label.interruptor:hover { border-color:var(--oro); }
+  label.interruptor:has(input:checked) { background:#57431f; border-color:var(--oro); color:#fff3d6; }
+  label.interruptor input { accent-color:var(--oro); margin:0; }
+  .punto { display:inline-block; width:11px; height:11px; border-radius:50%; vertical-align:-1px; margin-right:3px; }
+  select, input[type=number] { background:var(--panel2); color:var(--texto); border:1px solid var(--borde); border-radius:7px; padding:5px 7px; font:inherit; font-size:14px; }
   input[type=range] { accent-color:var(--oro); }
-  code { background:#120e0b; padding:2px 6px; border-radius:5px; color:var(--oro); user-select:all; }
-  #info { font-variant-numeric:tabular-nums; }
-  .ayuda { color:var(--suave); font-size:12.5px; }
-  .guia ol { margin:4px 0 6px 20px; padding:0; } .guia li { margin:3px 0; }
-  details summary { cursor:pointer; font-size:15px; }
-  @media (max-width:700px){ #lupa{height:240px;} }
+  .oculto { display:none !important; }
+
+  /* clics */
+  #clics, #clics_rejilla { display:flex; flex-wrap:wrap; gap:6px; }
+
+  /* lupa */
+  #cab_lupa { display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; margin-bottom:8px; }
+  /* menús desplegables (19-11-2026): lo que antes eran 3 líneas de botones encima de la lupa */
+  .menu { position:relative; }
+  .menu > .abre.on, .menu.abierto > .abre { border-color:var(--oro); color:#fff3d6; background:#57431f; }
+  .pop { display:none; position:absolute; top:calc(100% + 6px); left:0; z-index:30; background:var(--panel); border:1px solid var(--oro);
+         border-radius:10px; padding:10px 12px; width:max-content; max-width:min(560px, 92vw); box-shadow:0 8px 28px rgba(0,0,0,.55);
+         display:none; flex-direction:column; gap:8px; }
+  .menu.abierto > .pop { display:flex; }
+  .pop .fila { display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; }
+  #caja_lupa { position:relative; }
+  #menu_fila:not([hidden]) { display:flex; min-width:210px; }
+  #pis_sel:not([hidden]) { display:flex; flex-direction:row; flex-wrap:wrap; align-items:center; gap:6px; max-width:min(720px, 94%); }
+  #pis_sel button { padding:4px 9px; font-size:13px; }
+  #pis_sel_que { font-weight:650; font-size:14px; }
+  #menu_fila b { font-size:15px; }
+  #menu_fila button { text-align:left; }
+  #menu_fila button.on { background:#57431f; border-color:var(--oro); color:#fff3d6; }
+  #activos { display:inline-flex; flex-wrap:wrap; gap:6px; }
+  #activos button { padding:3px 9px; font-size:13px; border-color:var(--oro); background:#3a2d17; }
+  #activos button::after { content:" ✕"; color:var(--tenue); }
+  #donde { font-size:17px; font-weight:650; color:var(--oro); min-width:118px; font-variant-numeric:tabular-nums; }
+  .nav { display:inline-flex; gap:4px; }
+  .nav button { padding:6px 12px; font-size:15px; }
+  canvas { width:100%; display:block; border-radius:8px; background:#100c09; cursor:crosshair; }
+  /* 20-11-2026: sin esto «display:block» ganaba a «hidden» y la lupa del pie no se escondía nunca */
+  canvas[hidden] { display:none !important; }
+  #lupa { touch-action:pan-y; }
+  #vista { height:46px; touch-action:pan-y; }
+  .leyenda { display:flex; flex-wrap:wrap; gap:4px 18px; margin-top:8px; color:var(--tenue); font-size:13px; }
+  .leyenda i { font-style:normal; color:var(--suave); }
+
+  /* canción entera y dibujos */
+  #dibujos, #tramos { display:flex; flex-wrap:wrap; gap:6px; }
+  #dibujos button .n { display:inline-block; margin-left:6px; background:#120e0b; border-radius:10px; padding:0 7px; font-size:12px; color:var(--suave); }
+  #dibujos button.on .n { color:var(--oro); }
+  #tramos:not(:empty) { margin-top:8px; padding-top:8px; border-top:1px dashed var(--borde); }
+  #tramos button { font-size:13px; }
+  #dibujos button { white-space:normal; text-align:left; }
+
+  /* más herramientas */
+  details.panel > summary { cursor:pointer; font-size:15px; font-weight:600; color:var(--suave); list-style:none; }
+  details.panel > summary::before { content:"▸ "; color:var(--oro); }
+  details.panel[open] > summary::before { content:"▾ "; }
+  .caja { margin-top:14px; padding-top:12px; border-top:1px solid var(--borde); }
+  .caja h3 { margin:0 0 4px; font-size:14.5px; color:var(--texto); font-weight:600; }
+  .caja .fila { margin-top:8px; }
+  .pista { display:inline-flex; align-items:center; gap:6px; font-size:14px; }
+  code { background:#100c09; padding:4px 8px; border-radius:6px; color:var(--oro); user-select:all; display:inline-block; word-break:break-all; font-size:13px; }
+  details.ayuda_uso { font-size:13.5px; color:var(--suave); }
+  details.ayuda_uso summary { cursor:pointer; color:var(--oro); }
+  details.ayuda_uso ul { margin:6px 0 0 18px; padding:0; } details.ayuda_uso li { margin:2px 0; }
+  kbd { background:var(--panel2); border:1px solid var(--borde); border-bottom-width:2px; border-radius:4px; padding:0 5px; font:12px "Segoe UI", sans-serif; color:var(--texto); }
+
+  @media (max-width:700px) {
+    .ancho { padding:0 10px; }
+    h1 { font-size:18px; }
+    #play { min-width:0; padding:9px 16px; font-size:17px; }
+    #info { min-width:0; font-size:14.5px; }
+    #barra .ancho { gap:6px 8px; }
+    #vista { height:38px; }
+    label.ir input { width:3.4em; }
+    #saltos button { padding:6px 10px; }
+    .grupo > .nombre { display:none; }
+    .seg button { padding:6px 8px; font-size:13.5px; }
+    .panel { padding:10px; }
+    .meta { font-size:12.5px; }
+    label.interruptor, button { font-size:13.5px; }
+    #cab_lupa { gap:8px 10px; }
+    #donde { min-width:0; }
+  }
+  /* partitura (19-11-2026): verovio, guardado en lib/; datos en _ritmo/<canción>/partitura_datos.js */
+  #panel_partitura > summary .ayuda { font-weight:400; }
+  /* «Las dos» / «Partitura»: fuera lo que se puede leer en «¿Cómo se usa?», para dejar más alto a la partitura */
+  body[data-vista=dos] #panel_lupa .leyenda, body[data-vista=dos] #partitura_aviso,
+  body[data-vista=dos] #panel_partitura > summary, body[data-vista=partitura] #panel_partitura > summary { display:none; }
+  body[data-vista=dos] #panel_partitura, body[data-vista=dos] #panel_lupa { padding-top:8px; padding-bottom:8px; }
+  body[data-vista=dos] #partitura { margin-top:6px; }
+  #partitura { margin-top:10px; height:62vh; min-height:220px; overflow:auto; background:#f4ecdf; border-radius:8px; padding:6px 4px;
+               color:#1b140c; position:relative; touch-action:pan-x pan-y; }
+  #partitura .pag { width:100%; }
+  #partitura .pag svg { display:block; width:100%; height:100%; }
+  #partitura .cargando { color:#5e4c38; padding:20px; font-size:15px; }
+  #partitura g.measure { cursor:pointer; }
+  #partitura rect.marca { fill:#f0c05a; fill-opacity:.42; }
+  #partitura rect.marca_lupa { fill:#b0874a; fill-opacity:.10; }
+  #partitura rect.marca_trozo { fill:#7fb7d9; fill-opacity:.22; }
+  #partitura rect.marca_ancla { fill:none; stroke:#2a7bc0; stroke-width:30; stroke-dasharray:90 60; }
+  #partitura line.aguja { stroke:#d9734a; stroke-width:40; stroke-opacity:.85; }
+  #cab_partitura { display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; margin-top:10px; }
+  #anclas_txt { white-space:pre-wrap; }
+  #marcas_txt:empty { display:none; }
+  #m_comparar .pop { width:min(520px, 92vw); max-width:none; }
+  #buscar_cmp { font:inherit; font-size:14px; padding:6px 9px; background:var(--panel2); color:var(--texto); border:1px solid var(--borde); border-radius:8px; }
+  #lista_cmp { max-height:min(45vh, 380px); overflow:auto; display:flex; flex-direction:column; gap:2px; }
+  #lista_cmp button { text-align:left; white-space:normal; border:0; background:transparent; padding:4px 8px; }
+  #lista_cmp button:hover { background:var(--panel2); } #lista_cmp button.igual { color:var(--oro); }
+  #cmp_off:disabled { opacity:1; color:var(--texto); cursor:default; }
+  #lista_marcas button { font-size:13px; padding:3px 9px; border-color:#3f6b4b; }
+  #anclas_txt:empty { display:none; }
+  #filas button { padding:5px 9px; }
+  #seg_partes { flex-wrap:wrap; }
+  #filas button:not(.on) { opacity:.55; text-decoration:line-through; }
+  /* elegir canción (una sola página para todas: ritmo.html?c=<carpeta>) */
+  .elige { display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-size:14px; }
+  .elige a { color:var(--oro); text-decoration:none; } .elige a:hover { text-decoration:underline; }
+  @media (max-width:700px) { #cancion { font-size:17px; max-width:100%; } .elige { flex-wrap:nowrap; min-width:0; max-width:100%; }
+    .elige a { font-size:20px; } .elige a .txt { display:none; }
+    #cancion { max-width:52vw; } }
+  #cancion { background:transparent; color:var(--oro); border:1px solid transparent; border-radius:8px; padding:2px 6px;
+             max-width:min(640px, 100%); min-width:0; field-sizing:content; text-overflow:ellipsis;
+             font:inherit; font-size:21px; font-weight:650; cursor:pointer; }
+  #cancion:hover, #cancion:focus { border-color:var(--borde); background:var(--panel); outline:none; }
+  #cancion option { font-size:15px; font-weight:400; color:var(--texto); background:var(--panel); }
+  #elegir { max-width:900px; margin:0 auto; padding:10px 18px 40px; }
+  #elegir input { width:100%; font:inherit; font-size:16px; padding:10px 12px; background:var(--panel); color:var(--texto); border:1px solid var(--borde); border-radius:9px; }
+  #elegir a { display:block; background:var(--panel); border:1px solid var(--borde); border-radius:9px; padding:9px 14px; margin:6px 0; color:var(--texto); text-decoration:none; }
+  #elegir a:hover { border-color:var(--oro); } #elegir a span { display:block; color:var(--suave); font-size:13.5px; }
 </style>
 </head>
 <body>
 <header>
-  <h1><!--TITULO--></h1>
-  <div class="meta" id="meta"></div>
+  <div class="ancho">
+    <h1 id="titulo">Ritmo de un tango</h1>
+    <div class="elige"><a href="../HERRAMIENTAS.html" title="Todas las herramientas">☰</a>
+      <div class="menu" id="m_cancion"><button class="abre" id="cancion" title="Cambiar de canción (escribe para buscar)">— elegir canción — ▾</button>
+        <div class="pop"><input id="buscar_c" placeholder="Buscar: orquesta, cantor, título…" autocomplete="off"><div id="lista_c"></div></div></div>
+      <div class="menu" id="m_meta"><button class="abre" id="ver_meta" title="Datos del análisis: compás, pulsos, el 1…">ⓘ</button><div class="pop meta" id="meta"></div></div>
+    </div>
+  </div>
 </header>
-<main>
-  <div class="panel guia">
-    <div class="titulo">Cómo se usa</div>
-    <ol>
-      <li><b>Elige un dibujo</b> (abajo, en «Dibujos encontrados»): se marca en amarillo dónde suena en la canción. Pulsa uno de sus trozos para ir allí.</li>
-      <li><b>Pulsa «Escuchar»</b> (o la barra espaciadora). Si quieres comprobar que la herramienta ha oído bien, activa un <b>clic</b> en los golpes de un instrumento: el clic tiene que caer justo con él.</li>
-      <li><b>Mira la lupa</b>: cada punto es un golpe (más grande = más fuerte) y debajo pone en qué casilla cae (1, 1y, 2a…).</li>
-    </ol>
-    <div class="ayuda">Si algo está mal (el compás o dónde cae el 1), abre «Más herramientas» al final de la página.</div>
+
+<section id="elegir" hidden>
+  <p style="color:var(--suave)">Elige una canción analizada (las nuevas aparecen solas al pasarles <code>ritmo.bat</code>).</p>
+  <input id="buscar" placeholder="Buscar por orquesta, cantor o título…" autofocus>
+  <div id="lista"></div>
+</section>
+<div id="barra">
+  <div class="ancho">
+    <button id="play" title="Escuchar / parar (barra espaciadora)">▶ Escuchar</button>
+    <div class="seg" id="saltos">
+      <button id="compas_menos" title="Un compás atrás (tecla ←). Si ya va por la mitad del compás, vuelve a su principio">⏮</button><button id="compas_mas" title="Un compás adelante (tecla →)">⏭</button>
+    </div>
+    <label class="ir" title="Escribe un número de compás y pulsa Intro para ir ahí">compás <input id="ir_compas" type="number" min="1" inputmode="numeric" autocomplete="off"> <span id="de_n"></span></label>
+    <span id="info"></span>
+    <div class="menu" id="m_vel" title="Velocidad: más despacio con el mismo tono (teclas ↑ ↓)">
+      <button class="abre" id="vel_btn">⏱ 100 % ▾</button>
+      <div class="pop"><div class="seg" id="velocidad">
+        <button data-vel="1" class="on">100 %</button><button data-vel="0.75">75 %</button><button data-vel="0.6">60 %</button><button data-vel="0.5">50 %</button><button data-vel="0.25">25 %</button>
+      </div></div>
+    </div>
+    <div class="grupo oculto" id="grupo_vista" title="Qué se ve debajo: la lupa, la partitura o las dos a la vez (cabe todo en la pantalla)">
+      <span class="nombre">Ver</span>
+      <div class="seg" id="seg_vista"><button data-vista="lupa">Lupa</button><button data-vista="partitura">Partitura</button><button data-vista="dos">Las dos</button></div>
+    </div>
+    <button id="ver_video" title="Vídeo de bailarines: enseñarlo u ocultarlo (va con la música). Si no hay, elegir uno de este ordenador: la página lo cuadra sola con la grabación">🎬 Vídeo</button>
+    <div class="grupo repetir" title="Repetir sin parar del compás «de» al compás «a» (tecla R). También se elige arrastrando en la canción, en la lupa o en la partitura">
+      <label class="interruptor"><input type="checkbox" id="bucle" autocomplete="off"> 🔁 repetir</label>
+      <label class="ir">de <input id="rep_de" type="number" min="1" inputmode="numeric" autocomplete="off"></label>
+      <label class="ir">a <input id="rep_a" type="number" min="1" inputmode="numeric" autocomplete="off"></label>
+    </div>
   </div>
+  <div class="ancho"><canvas id="vista" title="La canción entera: clic = ir ahí · arrastrar = elegir el trozo que se repite"></canvas></div>
+</div>
 
-  <div class="panel">
-    <div class="fila">
-      <button class="grande" id="play" title="Empieza a sonar desde el trozo elegido (o desde donde estés). Barra espaciadora: lo mismo.">▶ Escuchar</button>
-      <label title="Al llegar al final del trozo elegido, vuelve a empezar"><input type="checkbox" id="bucle"> repetir el trozo elegido</label>
-      <span id="info"></span>
+<main class="ancho">
+<div id="col">
+  <!-- lupa -->
+  <section class="panel" id="panel_lupa">
+    <div id="cab_lupa">
+      <div class="nav"><button id="atras" title="Mover la lupa un compás hacia atrás, sin cambiar lo que suena (Mayús + ←)">◀</button><button id="adelante" title="Mover la lupa un compás hacia delante, sin cambiar lo que suena (Mayús + →)">▶</button></div>
+      <span id="donde"></span>
+      <div class="menu" id="m_ncomp" title="Cuántos compases se ven en la lupa (también Ctrl + rueda del ratón, o pellizcar)">
+        <button class="abre" id="ncomp_btn">🔍 2 compases ▾</button>
+        <div class="pop"><div class="seg" id="seg_ncomp"><button data-ncomp="1">1</button><button data-ncomp="2">2</button><button data-ncomp="4">4</button><button data-ncomp="8">8</button></div></div>
+      </div>
+      <div class="menu" id="m_comprobar">
+        <button class="abre" title="Clics para comprobar el ritmo de oído">🔔 Comprobar ▾</button>
+        <div class="pop">
+          <div class="fila" id="clics"></div>
+          <div class="fila"><span class="ayuda">Clic de rejilla:</span><div id="clics_rejilla" class="fila"></div></div>
+          <label class="interruptor" title="Al pulsar Escuchar, un compás de clics antes de que empiece la música (para entrar a tiempo)"><input type="checkbox" id="cuenta" autocomplete="off"> 1·2·3·4 cuenta de entrada</label>
+          <div class="ayuda">¿Tresillo o semicorcheas? Enciende el metrónomo y uno de los tres, y escucha a 60 % o 50 %: el que va pegado a la música es el bueno.
+            El clic en los golpes de un instrumento se enciende en el nombre de su fila (en la lupa).</div>
+        </div>
+      </div>
+      <div class="menu" id="m_ver">
+        <button class="abre" title="Qué se ve en la lupa">⚙ Ver ▾</button>
+        <div class="pop">
+          <div class="fila"><span class="ayuda">Casillas</span>
+            <div class="seg" id="seg_rejilla"><button data-sub="4" title="4 por tiempo">semicorcheas</button><button data-sub="2" title="2 por tiempo">corcheas</button><button data-sub="3" title="3 por tiempo">tresillos</button></div></div>
+          <div class="fila">
+            <label class="interruptor" title="Puntos = golpes medidos (subidas de volumen). Sin pistas separadas no son fiables"><input type="checkbox" id="ver_golpes" checked> ● golpes</label>
+            <label class="interruptor" title="Rombos = cuando cambia la nota, aunque no haya golpe (notas ligadas)"><input type="checkbox" id="ver_notas" checked> ◆ cambios de nota</label>
+            <label class="interruptor" id="lbl_ondas" title="Detrás de cada fila, la onda de su pista separada: se ve quién suena y cuándo"><input type="checkbox" id="ver_ondas" checked> 〰 ondas</label>
+            <label class="interruptor oculto" id="lbl_partitura_lupa" title="Rayas azules P… = dónde empieza cada compás de la partitura (se pueden arrastrar para cuadrarla)"><input type="checkbox" id="ver_partitura_lupa" checked> 𝄞 compases de la partitura</label>
+          </div>
+          <div class="fila">
+            <label class="interruptor" title="Filas más altas: puntos y rombos más grandes, pero la lupa ocupa más"><input type="checkbox" id="filas_altas" autocomplete="off"> filas altas</label>
+            <label class="interruptor" title="La lupa pasa sola de página mientras suena"><input type="checkbox" id="seguir" checked> la lupa sigue la música</label>
+          </div>
+          <div class="fila">
+            <label class="interruptor" title="Arriba de la lupa, la onda de una banda de frecuencias de la mezcla (graves = contrabajo, medios = piano…)"><input type="checkbox" id="ver_banda" autocomplete="off"> onda de una banda arriba</label>
+            <div class="seg"><button data-banda="40,200" title="40-200 Hz">graves</button><button data-banda="200,2000" title="200-2000 Hz">medios</button><button data-banda="2000,10000" title="2000-10000 Hz">agudos</button><button data-banda="20,16000" title="toda la mezcla">todo</button></div>
+          </div>
+          <div class="ayuda" id="ayuda_golpes"></div>
+          <div class="fila" id="filas" title="Qué instrumentos se ven en la lupa (clic para ocultar o enseñar)"><span class="ayuda">Filas</span></div>
+        </div>
+      </div>
+      <div class="menu" id="m_comparar">
+        <button class="abre" id="cmp_btn" title="Comparar con otra grabación: su onda sale como una fila más, cuadrada compás a compás con esta">⇄ comparar ▾</button>
+        <div class="pop">
+          <input id="buscar_cmp" placeholder="Otra grabación: orquesta, título…" autocomplete="off">
+          <div id="lista_cmp"></div>
+          <div class="fila oculto" id="cmp_ajuste"><span class="ayuda">si empiezan distinto: su compás =</span>
+            <div class="seg"><button data-cmpoff="-1">−1</button><button id="cmp_off" disabled>este + 0</button><button data-cmpoff="1">+1</button></div>
+            <button id="cmp_quitar">quitar</button></div>
+        </div>
+      </div>
+      <button id="chip_golpes" class="oculto" title="Esta canción no tiene los instrumentos separados (clic para leer más)">⚠ golpes no fiables</button>
+      <span id="activos" title="Lo que está encendido (clic = apagarlo)"></span>
     </div>
-    <div class="fila" style="margin-top:10px" id="clics"></div>
-    <div class="ayuda" style="margin-top:4px">El clic suena en cada golpe que ha encontrado la herramienta. Si cae a destiempo, ese golpe está mal medido.</div>
-  </div>
+    <div id="aviso_golpes" class="aviso oculto"></div>
+    <div id="caja_lupa"><canvas id="lupa"></canvas><div id="menu_fila" class="pop" hidden></div>
+      <div id="pis_sel" class="pop" hidden>
+        <span id="pis_sel_que"></span>
+        <div class="seg"><button data-pmueve="-1" title="Un fotograma antes (←)">◀ 1 fot.</button><button data-pmueve="1" title="Un fotograma después (→)">1 fot. ▶</button></div>
+        <span class="ayuda">🧲 a</span>
+        <div class="seg"><button data-piman="1" title="Al tiempo más cercano">1 tiempo</button><button data-piman="2" title="A la corchea más cercana (½ tiempo)">½</button><button data-piman="4" title="A la semicorchea más cercana (¼ de tiempo)">¼</button><button data-piman="3" title="Al tresillo más cercano (⅓ de tiempo)">tresillo</button></div>
+        <button id="pis_pie" title="Cambiar de pie (izquierdo ↔ derecho)">I ↔ D</button>
+        <button id="pis_tipo" title="Apoyo (peso) o adorno (sin peso)">adorno</button>
+        <button id="pis_borrar" title="Borrar esta pisada (Supr)">🗑</button>
+        <button id="pis_cerrar" title="Soltar (Esc)">✕</button>
+      </div></div>
+  </section>
 
-  <div class="panel">
-    <div class="titulo">La canción entera</div>
-    <div class="ayuda" style="margin-bottom:6px">Haz clic para ir a un sitio. Arrastra para elegir un trozo. El recuadro blanco es lo que se ve en la lupa.</div>
-    <canvas id="vista"></canvas>
-    <div class="titulo" style="margin-top:12px">Dibujos encontrados</div>
-    <div class="ayuda" style="margin-bottom:6px">Un dibujo es una figura de golpes, por ejemplo el 1·4·5·7 de la habanera. Entre paréntesis, cuántos trozos ha encontrado. «A mitad de velocidad» = la misma figura, el doble de larga.</div>
-    <div id="dibujos"></div>
-    <div id="tramos"></div>
-  </div>
-
-  <div class="panel">
-    <div class="fila" style="margin-bottom:6px">
-      <span class="titulo" style="margin:0">Lupa</span>
-      <button id="atras" title="Un compás hacia atrás">◀ compás</button><button id="adelante" title="Un compás hacia delante">compás ▶</button>
-      <label title="Cuántos compases se ven a la vez">se ven <select id="ncomp"><option>1</option><option selected>2</option><option>4</option><option>8</option></select> compases</label>
-      <label title="Cómo se divide cada tiempo con líneas finas">casillas <select id="rejilla"><option value="4">semicorcheas (4 por tiempo)</option><option value="2">corcheas (2)</option><option value="3">tresillos (3)</option></select></label>
+  <!-- partitura (solo si la canción tiene partitura_datos.js; se dibuja al abrir el panel) -->
+  <details class="panel" id="panel_partitura" hidden>
+    <summary>Partitura <span class="ayuda" id="partitura_que"></span></summary>
+    <div id="cab_partitura">
+      <div class="grupo"><span class="nombre">Partes</span><div class="seg" id="seg_partes"></div></div>
+      <div class="grupo"><span class="nombre">Tamaño</span><div class="seg"><button data-zoom="-1" title="Más pequeña">A−</button><button data-zoom="1" title="Más grande">A+</button></div></div>
+      <label class="interruptor" title="La partitura se mueve sola para que se vea el compás que suena"><input type="checkbox" id="partitura_sigue" checked> sigue la música</label>
+      <button id="ir_cuadrar" title="Si la partitura va corrida: cómo cuadrarla con la grabación (en «Herramientas»)">⚓ cuadrar…</button>
     </div>
-    <div class="ayuda" style="margin-bottom:6px">Línea blanca gruesa = empieza un compás; líneas grises = tiempos; finas = casillas. Arriba, la onda de los graves (el contrabajo). Debajo, una fila por instrumento.</div>
-    <canvas id="lupa"></canvas>
-  </div>
-
-  <details class="panel">
-    <summary><b>Más herramientas</b> <span class="ayuda">(pistas por separado, onda de otra banda, afinar un trozo, corregir el 1)</span></summary>
-
-    <div class="titulo" style="margin-top:12px">Qué se oye</div>
-    <div class="ayuda">Sube el volumen de un instrumento para oírlo solo (si la canción tiene los instrumentos separados).</div>
-    <div class="fila" id="pistas" style="margin-top:6px"></div>
-    <label style="margin-top:6px" title="La lupa avanza sola mientras suena"><input type="checkbox" id="seguir" checked> la lupa sigue la música</label>
-
-    <div class="titulo" style="margin-top:14px">Onda de otra banda de frecuencias</div>
-    <div class="ayuda">La onda amarilla de la lupa es solo una banda de frecuencias. Elige cuál: graves para el contrabajo, medios para el piano…</div>
-    <div class="fila" style="margin-top:6px">
-      <button data-banda="40,200" title="40-200 Hz">contrabajo</button><button data-banda="200,2000" title="200-2000 Hz">piano / medios</button>
-      <button data-banda="2000,10000" title="2000-10000 Hz">agudos</button><button data-banda="20,16000" title="toda la canción">todo</button>
-      <label>desde <input type="range" id="lo" min="20" max="8000" value="40" style="width:130px"> <span id="lo_v"></span> Hz</label>
-      <label>hasta <input type="range" id="hi" min="40" max="12000" value="200" style="width:130px"> <span id="hi_v"></span> Hz</label>
-      <label>de <select id="banda_de"></select></label>
-    </div>
-
-    <div class="titulo" style="margin-top:14px">El trozo elegido (para un vídeo)</div>
-    <div class="fila"><span id="tramo_txt">Arrastra en la canción o en la lupa para elegir un trozo.</span></div>
-    <div class="fila" style="margin-top:6px">
-      <span title="Mover el principio del trozo">principio</span>
-      <button data-mueve="a,-50">−50</button><button data-mueve="a,-10">−10</button><button data-mueve="a,-5">−5</button><button data-mueve="a,-1">−1</button>
-      <button data-mueve="a,1">+1</button><button data-mueve="a,5">+5</button><button data-mueve="a,10">+10</button><button data-mueve="a,50">+50</button>
-      <span style="margin-left:10px" title="Mover el final del trozo">final</span>
-      <button data-mueve="b,-50">−50</button><button data-mueve="b,-10">−10</button><button data-mueve="b,10">+10</button><button data-mueve="b,50">+50</button>
-      <span class="ayuda">milisegundos</span>
-    </div>
-    <div class="fila" style="margin-top:6px">
-      <button id="al_golpe" title="Pone el principio justo en el 1 del compás más cercano">Empezar en el 1 más cercano</button>
-      <button id="exportar" title="Descarga un archivo con el trozo y sus golpes, para hacer el vídeo">Guardar el trozo</button>
-    </div>
-
-    <div class="titulo" style="margin-top:14px">Si el compás o el 1 están mal</div>
-    <div class="ayuda">Escucha, y en un momento en que suene un 1 pulsa el botón. Luego copia la orden que aparece y pégala en una ventana de comandos (o pásamela).</div>
-    <div class="fila" style="margin-top:6px">
-      <button id="es_uno">Aquí suena un 1</button>
-      <label>el compás es <select id="compas_ay"><option value="">el que ha visto</option><option>2/4</option><option>3/4</option><option>4/4</option></select></label>
-    </div>
-    <div style="margin-top:6px"><code id="orden"></code></div>
+    <div class="ayuda" id="partitura_aviso" style="margin-top:6px">Clic en un compás = ir ahí · Mayús + clic = elegir el trozo hasta ese compás (para «repetir el trozo»).
+      Amarillo = lo que suena · sombreado = lo que se ve en la lupa · azul = trozo elegido.</div>
+    <div id="partitura"><div class="cargando">Abre este panel para dibujar la partitura…</div></div>
   </details>
+
+  <!-- todo lo que se usa poco, plegado (19-11-2026) -->
+  <details class="panel" id="herramientas">
+    <summary>Herramientas <span class="ayuda" style="font-weight:400">· dibujos de golpes · volumen de cada pista · cuadrar la partitura · corregir el 1 · trozo para vídeo</span></summary>
+
+    <div class="caja">
+      <h3>Marcas</h3>
+      <div class="ayuda">Tecla <kbd>M</kbd> (sonando o parado) = poner una marca con un texto donde va la música («síncopa», «para el reel»…).
+        Salen en verde en la lupa y en la canción entera. Se guardan en este navegador; el texto de abajo es para pasármelas.</div>
+      <div class="fila"><button id="pon_marca">＋ marca aquí</button></div>
+      <div id="lista_marcas" class="fila"></div>
+      <div style="margin-top:8px"><code id="marcas_txt"></code></div>
+    </div>
+
+    <div class="caja">
+      <h3>Dibujos encontrados</h3>
+      <div class="ayuda">Figuras de golpes que se repiten (p. ej. el 1·4·5·7 de la habanera). Elige una: se marca en la franja de la
+        canción, arriba; luego pulsa uno de sus trozos para ir ahí. «A mitad de velocidad» = la misma figura, el doble de larga.</div>
+      <div id="dibujos"></div>
+      <div id="tramos"></div>
+    </div>
+
+    <div class="caja">
+      <h3>Volumen de cada pista</h3>
+      <div class="ayuda">Para oír un instrumento solo basta pulsar el nombre de su fila en la lupa (🎧). Aquí se mezclan a mano.</div>
+      <div class="fila" id="pistas"></div>
+    </div>
+    <div class="caja oculto" id="caja_cuadrar">
+      <h3>Cuadrar la partitura con la grabación</h3>
+      <div class="ayuda">La máquina la cuadra sola, pero puede ir corrida. Dos maneras de arreglarlo (se ve al momento):
+        <b>arrastra</b> en la lupa una raya azul «P…» (compás de la partitura) hasta donde de verdad empieza ese compás;
+        o haz clic en un compás de la partitura (queda con raya azul), escucha y, justo cuando empiece, pulsa el botón (o la tecla <kbd>A</kbd>).
+        Con 2 o 3 anclas repartidas basta. Se guardan en este navegador; para que valgan siempre, pásame el texto de abajo.</div>
+      <div class="fila"><button id="es_ancla">El compás marcado empieza aquí</button><button id="borra_anclas">Borrar las anclas</button></div>
+      <div style="margin-top:8px"><code id="anclas_txt"></code></div>
+    </div>
+
+    <div class="caja">
+      <h3>Si el compás o el 1 están mal</h3>
+      <div class="ayuda">Escucha y, justo cuando suene un 1, pulsa el botón. Copia la orden de abajo y pásamela.</div>
+      <div class="fila">
+        <button id="es_uno">Aquí suena un 1</button>
+        <label class="pista">el compás es <select id="compas_ay"><option value="">el que ha visto</option><option>2/4</option><option>3/4</option><option>4/4</option></select></label>
+      </div>
+      <div style="margin-top:8px"><code id="orden"></code></div>
+    </div>
+
+    <div class="caja">
+      <h3>El trozo elegido, para un vídeo</h3>
+      <div class="fila"><span id="tramo_txt" class="ayuda">Arrastra en la canción o en la lupa para elegir un trozo.</span></div>
+      <div class="fila">
+        <span class="ayuda">afinar el principio</span>
+        <div class="seg"><button data-mueve="a,-50">−50</button><button data-mueve="a,-10">−10</button><button data-mueve="a,10">+10</button><button data-mueve="a,50">+50</button></div>
+        <span class="ayuda">el final</span>
+        <div class="seg"><button data-mueve="b,-50">−50</button><button data-mueve="b,-10">−10</button><button data-mueve="b,10">+10</button><button data-mueve="b,50">+50</button></div>
+        <span class="ayuda">milisegundos</span>
+      </div>
+      <div class="fila">
+        <button id="al_golpe" title="Pone el principio justo en el 1 del compás más cercano">Empezar en el 1 más cercano</button>
+        <button id="exportar" title="Descarga un archivo con el trozo, sus golpes y el vídeo (si hay): arrástralo encima de clip_reel.bat para tener el clip del reel">💾 Guardar el trozo</button>
+      </div>
+      <div class="ayuda" style="margin-top:6px">Clip para un reel: guarda el trozo y arrastra el archivo (va a Descargas) encima de
+        <code>PYTHON\tgdj\herramientas\analizar_tango\clip_reel.bat</code> → vídeo vertical con el sonido del disco, a la velocidad que estabas escuchando
+        (en <code>Instagram\borradores\_clips</code>).
+      </div>
+    </div>
+  </details>
+
+  <details class="ayuda_uso">
+    <summary>¿Cómo se usa?</summary>
+    <ul>
+      <li><b>Escuchar</b>: botón amarillo o <kbd>espacio</kbd>. Velocidad: «⏱ 100 % ▾», o <kbd>↓</kbd> más despacio y <kbd>↑</kbd> más rápido (el tono no cambia).
+        Con «1·2·3·4 cuenta de entrada» (en 🔔 Comprobar) suena un compás de clics antes de la música.</li>
+      <li><b>Canción</b>: clic en su nombre (arriba a la izquierda) y escribe para buscar otra. ⓘ = compás, pulsos, el 1…
+        La página recuerda dónde te quedaste en cada canción.</li>
+      <li><b>Moverse</b>: la franja con la onda es la canción entera; clic = ir ahí; arrastrar en su fila de números = mover la lupa.
+        <kbd>⏮</kbd> <kbd>⏭</kbd> o <kbd>←</kbd> <kbd>→</kbd> = un compás atrás o adelante, también mientras suena (si va por la mitad
+        del compás, ⏮ vuelve a su principio). <kbd>,</kbd> <kbd>.</kbd> = un fotograma atrás o adelante. En «compás» escribe un número e Intro.</li>
+      <li><b>Repetir</b>: escribe «de 5 a 8» (o arrastra en la franja, en la lupa o, con Mayús + clic, en la partitura) y
+        enciende 🔁 (tecla <kbd>R</kbd>). Ir fuera del trozo apaga la repetición.</li>
+      <li><b>Ver</b> (si el tango tiene partitura): «Lupa», «Partitura» o «Las dos» (las dos caben en la pantalla, una encima de otra).
+        Sola, la lupa llena la pantalla.</li>
+      <li><b>Lupa</b>: cada fila es un instrumento; cada punto ●, un golpe (más grande = más fuerte; debajo, su casilla: 1, 1y, 2a…);
+        cada rombo ◆, un cambio de nota; línea blanca = empieza el compás. Clic = ir ahí, arrastrar = elegir un trozo.
+        Una fila sin nada que enseñar queda como una raya fina («vacía»). ◀ ▶ (o <kbd>Mayús</kbd> + <kbd>←</kbd> <kbd>→</kbd>, o Mayús + rueda)
+        mueven solo lo que se ve. «🔍 2 compases ▾» = cuántos se ven (también <kbd>Ctrl</kbd> + rueda, o pellizcar en el móvil).</li>
+      <li><b>Nombre de una fila</b> (clic): 🎧 oír ese instrumento solo, 🔔 un clic en cada golpe suyo, ocultar la fila.
+        Lo encendido sale arriba en pastillas: clic en una = apagarla. «⚠ golpes no fiables» = clic para leer por qué.</li>
+      <li><b>🔔 Comprobar</b>: metrónomo y clic de tresillo, corcheas o semicorcheas. ¿Tresillo o semicorcheas? Enciende uno y
+        escucha a 60 % o 50 %: el que va pegado a la música es el bueno.</li>
+      <li><b>⚙ Ver</b>: casillas de la rejilla, qué marcas se ven, filas altas, la onda de una banda arriba, si la lupa sigue a la música y las filas ocultas.</li>
+      <li><b>⇄ comparar</b>: elige otra grabación (las del mismo tango salen primero, en dorado): su onda sale como una fila más,
+        cuadrada compás a compás con esta. Si una tiene más introducción: «su compás = este ± 1». En su nombre: 🎧 oírla desde
+        aquí o abrir su página en este compás.</li>
+      <li><b>Marcas</b>: tecla <kbd>M</kbd> = una marca con texto donde va la música («síncopa», «para el reel»). En verde en la lupa
+        y en la canción; la lista y el texto para pasármelas, en «Herramientas».</li>
+      <li><b>Partitura</b>: el compás que suena sale en amarillo y se mueve sola; clic en un compás = ir ahí; «Partes» = qué instrumentos se ven.
+        Rayas azules «P…» en la lupa = compases de la partitura: se arrastran para cuadrarla (más en «Herramientas»).</li>
+      <li><b>Bajo (notas)</b> (si el tango lo tiene): las notas del contrabajo que ha oído la máquina (YourMT3+); acierta más o menos 1 de cada 4,
+        muy por encima del azar: sirve para ver por dónde va el bajo, no como partitura. Su 🔔 toca esas notas.</li>
+      <li><b>Subir un vídeo</b>: «🎬 Vídeo» (o ⚓ ▾ → ＋) y elige un archivo de este ordenador (con su sonido). La página busca sola
+        dónde encaja en esta grabación (unos segundos) y avisa si no está segura de que sea la misma. Se queda en este navegador.</li>
+      <li><b>🎬 Vídeo</b>: a la derecha (en el móvil en vertical, encima), va solo con la música; clic = escuchar / parar; <kbd>V</kbd> = enseñarlo u ocultarlo;
+        ‹ › = fotograma a fotograma. <b>⚓ ▾</b>: si va antes o después que la música (±50 ms, ±1 fotograma; o arrastrar en la lupa la raya morada
+        «▶ vídeo»), 🔊 oír el sonido del vídeo en vez del disco, añadir o quitar vídeos.</li>
+      <li><b>👣 marcar</b>: los botones salen a la izquierda del vídeo y el vídeo se hace tan alto como la pantalla. Botones <b>I D</b> (pie izquierdo / derecho) de la follower (teclas <kbd>Q</kbd> <kbd>W</kbd>) y del leader (<kbd>O</kbd> <kbd>P</kbd>); el nombre se cambia escribiendo encima. Moviola (con el vídeo a la vista): <kbd>←</kbd> <kbd>→</kbd> = un fotograma, Mayús + flecha = ¼ de tiempo, Ctrl + flecha = un compás; el espacio sigue desde donde paraste. Para colocar los pies: <kbd>Tab</kbd> = la siguiente pisada sin sitio, y clic en su pie en el vídeo (al pasar el ratón sale una lupa ×3 con una cruz); <kbd>E</kbd> = esconder las marcas. Sonando (con
+        «retraso del dedo») o parado, fotograma a fotograma con <kbd>,</kbd> <kbd>.</kbd>. <kbd>Z</kbd> = deshacer. <b>Tocar una pisada = elegirla</b>: arrastrarla, <kbd>←</kbd> <kbd>→</kbd> = un fotograma, 🧲 1 tiempo / ½ / ¼ / tresillo, I ↔ D, adorno, 🗑 (<kbd>Supr</kbd>); <kbd>Esc</kbd> = soltarla.
+        Salen en las filas «👣» (I arriba, D abajo; aro = adorno). 🧲 imán = la pisada se va sola al tiempo (o a la casilla, o al golpe de sonido) más cercano; «🧲 ajustar todas» lo hace con las ya puestas. Clic en el pie, en el vídeo = dónde está (⭐ estrella al sonar). «📋 Copiar para Claude» = el texto PISADAS para guardarlas para siempre.</li>
+      <li><b>Clip para un reel</b>: elige el trozo, «Herramientas → 💾 Guardar el trozo» y arrastra el archivo encima de <code>clip_reel.bat</code>.</li>
+      <li><b>〰 ondas</b>: detrás de cada fila, la onda de su pista separada: se ve quién suena y cuándo.</li>
+    </ul>
+  </details>
+</div>
+  <!-- vídeo de bailarines (19-11-2026, solo si la canción tiene video_datos.js de video.py): a la derecha, siempre a la vista -->
+  <aside class="panel" id="panel_video" hidden>
+    <div id="cab_video">
+      <select id="video_elige" class="oculto" title="Qué vídeo"></select>
+      <span id="video_nombre"></span>
+      <div class="seg"><button id="fot_menos" title="Un fotograma atrás (tecla ,)">‹</button><button id="fot_mas" title="Un fotograma adelante (tecla .)">›</button></div>
+      <button id="marcar" title="Marcar pisadas: I D de la follower (Q W) y del leader (O P); Tab + clic en el pie = colocarlas en el vídeo">👣 marcar</button>
+      <div class="menu" id="m_vcuadrar">
+        <button class="abre" title="Cuadrar el vídeo, su sonido, añadir o quitar vídeos">⚓ ▾</button>
+        <div class="pop">
+          <div class="fila" id="cuadrar_video" title="Si el vídeo va antes o después que la música">
+            <span class="ayuda">el vídeo va</span>
+            <div class="seg"><button data-vmueve="-0.05" title="El vídeo 50 milisegundos antes">−50 ms</button><button data-vmueve="-1f" title="Un fotograma antes">−1 fot.</button><button data-vmueve="1f" title="Un fotograma después">+1 fot.</button><button data-vmueve="0.05" title="El vídeo 50 milisegundos después">+50 ms</button></div>
+            <button id="video_maquina" class="oculto" title="Quitar la corrección y volver al cuadre de la máquina">↺</button>
+          </div>
+          <div class="ayuda">También: arrastrar en la lupa la raya morada «▶ vídeo».</div>
+          <label class="interruptor" title="Un destello en el pie de cada pisada al sonar (las que tienen su sitio marcado)"><input type="checkbox" id="ver_estrellas" checked> ⭐ estrellas en los pies</label>
+          <label class="interruptor" title="Se oye el sonido del propio vídeo (la sala, los aplausos) en vez del disco: sirve para comprobar de oído que cuadra"><input type="checkbox" id="sonido_video" autocomplete="off"> 🔊 sonido del vídeo en vez del disco</label>
+          <div class="fila"><button id="video_mas" title="Añadir otro vídeo de este ordenador">＋ añadir otro vídeo</button>
+            <button id="video_quitar" class="oculto" title="Quitar este vídeo de la página">🗑 quitar este vídeo</button></div>
+        </div>
+      </div>
+      <button id="video_cerrar" title="Ocultar el vídeo (vuelve con «🎬 Vídeo», arriba; tecla V)">✕</button>
+      <input type="file" id="video_archivo" accept="video/*,.mp4,.mov,.m4v,.webm" hidden>
+    </div>
+    <div id="caja_video">
+      <video id="video" muted playsinline preload="auto" title="Clic = escuchar / parar"></video>
+      <canvas id="estrellas" title=""></canvas>
+      <canvas id="lupa_pie" width="300" height="300" hidden></canvas>
+      <div id="video_fuera"></div>
+    </div>
+    <div id="caja_marcar" class="oculto">
+      <div class="bail">
+        <div class="rol" id="rol_b0"></div>
+        <input class="bailarin" id="nom_b0" title="Nombre (escribe para cambiarlo)" autocomplete="off">
+        <div class="pies"><button class="tecla" data-pon="0,I" title="Pie izquierdo (tecla Q)">I<small>Q</small></button><button class="tecla" data-pon="0,D" title="Pie derecho (tecla W)">D<small>W</small></button></div>
+      </div>
+      <div class="bail">
+        <div class="rol" id="rol_b1"></div>
+        <input class="bailarin" id="nom_b1" title="Nombre (escribe para cambiarlo)" autocomplete="off">
+        <div class="pies"><button class="tecla" data-pon="1,I" title="Pie izquierdo (tecla O)">I<small>O</small></button><button class="tecla" data-pon="1,D" title="Pie derecho (tecla P)">D<small>P</small></button></div>
+      </div>
+      <div class="bloque" title="Imán: cada pisada nueva se va sola al punto más cercano (si está a menos de 0,15 s)">
+        <div class="etq">🧲 Imán</div>
+        <div class="seg" id="seg_iman"><button data-iman="tiempos" class="on" title="Al tiempo (1 2 3 4)">tiempo</button><button data-iman="2" title="A la corchea (½ tiempo)">½</button><button data-iman="4" title="A la semicorchea (¼ de tiempo)">¼</button><button data-iman="3" title="Al tresillo (⅓ de tiempo)">tresillo</button><button data-iman="sonido" title="Al golpe de sonido más cercano">golpe</button><button data-iman="" title="Sin imán: donde pulses">no</button></div>
+        <input type="hidden" id="iman" value="tiempos">
+      </div>
+      <div class="bloque botones">
+        <button id="sig_pis" title="Elige la siguiente pisada que aún no tiene sitio en el vídeo (Mayús + Tab = la anterior)">⇥ siguiente sin sitio <kbd>Tab</kbd></button>
+        <button id="deshacer_pis" title="Deshace lo último: poner, borrar, mover, colocar…">↶ deshacer <kbd>Z</kbd></button>
+        <button id="estrellas_pis" title="Enseñar / esconder las marcas de los pies en el vídeo">⭐ marcas <kbd>E</kbd></button>
+      </div>
+      <div id="pis_n"></div>
+      <details class="mas_marcar"><summary>⋯ más</summary>
+        <button id="iman_todas" title="Lleva con el imán elegido todas las pisadas que estén cerca (se puede deshacer)">🧲 imantar todas</button>
+        <button id="originales_pis" title="Quita todos tus cambios y vuelve a las pisadas que traía el vídeo">⟲ originales</button>
+        <button id="copiar_pis" title="Copia las pisadas como texto: pégamelo en el chat para guardarlas para siempre">📋 Copiar</button>
+        <label class="interruptor" title="Enseñar en el vídeo las marcas de todas las pisadas cercanas (de los dos bailarines), no solo la que estás colocando"><input type="checkbox" id="ver_todos_aros" autocomplete="off"> ver todas las marcas</label>
+        <label class="ir" title="Lo que tarda el dedo: mientras suena, la pisada se pone este tiempo antes de la tecla">⏱ retraso <input id="retraso" type="number" min="0" max="400" step="10" value="80" autocomplete="off"> ms</label>
+      </details>
+      <div class="ayuda pista_marcar"><b>1</b> I / D al oír la pisada · <b>2</b> <kbd>Tab</kbd> o toca su punto en la lupa · <b>3</b> clic en el pie, en el vídeo</div>
+    </div>
+    <code id="video_txt"></code>
+  </aside>
 </main>
 
+<script src="_ritmo/indice.js"></script>
 <script>
-const D = /*DATOS*/null;
-const AUD = /*AUDIOS*/null;
-const M = D.meta, P = D.pulsos, G = D.golpes;
-const COL = { contrabajo:"#e0913c", piano:"#f1d58a", bandoneones:"#c96b8f", graves:"#e0913c", medios:"#f1d58a", agudos:"#7fb7d9" };
+// Una sola página para todas las canciones: ritmo.html?c=<carpeta de _ritmo>. Los datos y el audio de cada una están
+// en _ritmo/<carpeta>/ritmo_datos.js (window.RITMO); se cargan con <script>, que sí funciona abriendo con doble clic.
+const CANCION = new URLSearchParams(location.search).get("c") || "";
+if (CANCION) document.write('<script src="_ritmo/' + encodeURIComponent(CANCION) + '/ritmo_datos.js"><\/script>'
+  + '<script src="_ritmo/' + encodeURIComponent(CANCION) + '/partitura_datos.js"><\/script>'   // si no hay partitura, no pasa nada
+  + '<script src="_ritmo/' + encodeURIComponent(CANCION) + '/bajo_datos.js"><\/script>'       // notas del bajo (transcripcion\bajo_lupa.py), si las hay
+  + '<script src="_ritmo/' + encodeURIComponent(CANCION) + '/video_datos.js"><\/script>');     // vídeo de bailarines (video.py), si lo hay
+</script>
+<script>
+(function () {
+  const L = window.RITMO_LISTA || [];
+  const sinT = t => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const datos = x => `${x.compas} · ${Math.round(x.bpm)} pulsos/min · ${x.fuentes}` + (x.partitura ? " · 𝄞 con partitura" : "") + (x.video ? " · 🎬 con vídeo" : "");
+  const boton = document.getElementById("cancion"), bus = document.getElementById("buscar_c"), lc = document.getElementById("lista_c");
+  boton.textContent = (window.RITMO ? RITMO.datos.meta.cancion : "— elegir canción —") + " ▾";
+  const pintaC = () => {
+    const q = sinT(bus.value);
+    lc.replaceChildren(...L.filter(x => sinT(x.c).includes(q)).slice(0, 60).map(x => {
+      const a = document.createElement("a"); a.href = "?c=" + encodeURIComponent(x.c); a.className = x.c === CANCION ? "on" : "";
+      const b = document.createElement("b"); b.textContent = x.c; const sp = document.createElement("span"); sp.textContent = datos(x);
+      a.append(b, sp); return a;
+    }));
+  };
+  bus.oninput = pintaC; pintaC();
+  bus.onkeydown = e => { if (e.key === "Enter") { const a = lc.querySelector("a"); if (a) location.href = a.href; } };
+  boton.addEventListener("click", () => setTimeout(() => { bus.focus(); bus.select(); }, 30));
+  if (window.RITMO) return;
+  // sin canción (o no encontrada): lista para elegir
+  document.getElementById("barra").hidden = true; document.querySelector("main").hidden = true;
+  document.getElementById("elegir").hidden = false;
+  if (CANCION) document.getElementById("titulo").textContent = "No encuentro «" + CANCION + "»";
+  const lista = document.getElementById("lista"), buscar = document.getElementById("buscar");
+  const pinta = () => {
+    const q = buscar.value.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+    lista.replaceChildren(...L.filter(x => x.c.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").includes(q)).map(x => {
+      const a = document.createElement("a"); a.href = "?c=" + encodeURIComponent(x.c);
+      const b = document.createElement("b"); b.textContent = x.c;
+      const sp = document.createElement("span"); sp.textContent = datos(x);
+      a.append(b, sp); return a;
+    }));
+  };
+  buscar.oninput = pinta; pinta();
+})();
+</script>
+<script>
+if (!window.RITMO) throw new Error("sin canción elegida");
+const D = RITMO.datos;
+const AUD = RITMO.audios;
+document.title = "Ritmo · " + D.meta.cancion;
+document.getElementById("titulo").textContent = D.meta.cancion;
+document.getElementById("titulo").classList.add("oculto");   // el título ya lo dice el selector de canción
+const M = D.meta, P = D.pulsos, G = D.golpes, NOTAS = D.notas || [];
+const COL = { contrabajo:"#e0913c", piano:"#f1d58a", bandoneones:"#d77aa0", graves:"#e0913c", medios:"#f1d58a", agudos:"#7fb7d9" };
 const FUENTES = [...new Set(G.map(g => g.fuente))];
+// notas del contrabajo (YourMT3+, notas graves de la mezcla; 19-11-2026): una fila más, «bajo (notas)», si hay bajo_datos.js
+const BAJO_F = "bajo (notas)", BJ = (window.BAJO && BAJO.notas) || [];   // [segundo, fin, nota MIDI]
+const NOMBRE_NOTA = ["Do", "Do#", "Re", "Mib", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "Sib", "Si"];
+if (BJ.length) { FUENTES.push(BAJO_F); COL[BAJO_F] = "#ff9a52"; }
+// vídeo de bailarines (video.py, 19-11-2026): una fila de pisadas por bailarín («👣 Sol»), puntos I / D
+const VD = ((window.VIDEO && VIDEO.videos) || []).slice();   // los de video.py + los subidos desde la página
+const hayV = () => VD.length > 0;
+let VI = 0;                                   // vídeo que se ve (si hay varios)
+const PIS_F = {};                             // fila → nombre del bailarín
+const PIS_FILAS = [];                         // (van al final de la lupa, debajo de los instrumentos)
+if (VD) for (const v of VD) for (const b of v.bailarines) { const f = "👣 " + b.nombre; if (!(f in PIS_F)) { PIS_F[f] = b.nombre; PIS_FILAS.push(f); COL[f] = b.color; } }
+const CLAVE_VDES = "tdj_video:" + CANCION;
+let vDes = {};                                // corrección a mano del cuadre (segundos), por vídeo; se guarda en el navegador
+try { vDes = JSON.parse(localStorage.getItem(CLAVE_VDES) || "{}"); } catch (e) {}
+const VV = () => VD[VI];
+const vidIni = () => VV().inicio + (vDes[VV().id] || 0);          // segundo de la grabación donde empieza el vídeo
+const vidFin = () => vidIni() + VV().dur * VV().velocidad;
+// pistas separadas sin golpes (la voz): una fila solo con su onda (19-11-2026)
+const SOLO_ONDA = Object.keys(AUD).filter(n => n !== "mezcla" && !FUENTES.includes(n));
+SOLO_ONDA.forEach(n => { FUENTES.push(n); COL[n] = COL[n] || "#8fd18f"; });
+FUENTES.push(...PIS_FILAS);
+const PISTA_DE = f => (f in AUD && f !== "mezcla") ? f : null;   // la pista de audio de cada fila (si tiene)
+const filaOculta = {};                                   // filas de la lupa escondidas (clic en «Filas»)
+const FV = () => FUENTES.filter(f => !filaOculta[f]);
 const $ = id => document.getElementById(id);
 const beats = P.map(p => p.seg), unos = P.filter(p => p.tiempo === 1).map(p => p.seg);
 const durBeat = (beats[beats.length - 1] - beats[0]) / (beats.length - 1);
+const mayus = s => s[0].toUpperCase() + s.slice(1);
+const reloj = t => { t = Math.max(0, t); const m = Math.floor(t / 60), s = t - 60 * m; return `${m}:${s < 10 ? "0" : ""}${s.toFixed(1).replace(".", ",")}`; };
 
 // ---------- cabecera
 const cls = M.seguridad_1.split(" ")[0];
-$("meta").innerHTML = `<b>${M.compas}</b> · ${M.bpm} pulsos/min · ${M.subdivision} · el 1: <span class="${cls}">${M.seguridad_1}</span>
-  · golpes de: ${M.fuentes}${M.ayudas && Object.keys(M.ayudas).length ? " · ayudas: " + JSON.stringify(M.ayudas) : ""}`;
+const ay = M.ayudas && Object.keys(M.ayudas).length ? `<span class="dato" title="ayudas guardadas en ayudas.json">ayudas: ${Object.entries(M.ayudas).map(([k, v]) => k + " " + v).join(", ")}</span>` : "";
+$("meta").innerHTML = `<span class="dato">compás <b>${M.compas}</b></span><span class="dato"><b>${Math.round(M.bpm)}</b> pulsos/min</span>
+  <span class="dato" title="${M.seguridad_1}">el 1: <b class="${cls}">${cls}</b></span><span class="dato">${M.subdivision}</span>
+  <span class="dato">golpes de: ${M.fuentes}</span>${ay}`;
+// con canción, la cabecera entera va dentro de la barra fija (una línea menos)
+document.body.classList.add("con_cancion");
+$("barra").querySelector(".ancho").prepend(document.querySelector("header .elige"));
+// aviso: los golpes son subidas de volumen; sin separar instrumentos son casi todo ruido (18-11-2026)
+const SEPARADA = /separad/.test(M.fuentes || "");
+if (SEPARADA) {
+  $("ayuda_golpes").textContent = "ⓘ Golpes ● aproximados: salen de las pistas separadas, pero aún aciertan poco más que al azar. Lo fiable es el compás, el 1 y el pulso.";
+} else {
+  $("ver_golpes").checked = false;
+  $("chip_golpes").classList.remove("oculto");
+  $("chip_golpes").onclick = () => $("aviso_golpes").classList.toggle("oculto");
+  $("aviso_golpes").textContent = "Esta canción no tiene los instrumentos separados: los golpes ● no son fiables (son franjas de sonido de la mezcla, casi todo ruido), por eso están apagados. Lo fiable es el compás, el 1 y el pulso. Para verlos mejor: ritmo.bat con --separar.";
+}
 
 // ---------- audio
 const ctx = new AudioContext();
@@ -154,7 +700,7 @@ function cargar(n) {
   if (!cargando[n]) {
     $("info").textContent = "cargando el audio…";
     cargando[n] = fetch(AUD[n]).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b))
-      .then(x => { buf[n] = x; if ($("info").textContent === "cargando el audio…") $("info").textContent = ""; pinta(); return x; });
+      .then(x => { buf[n] = x; if ($("info").textContent === "cargando el audio…") ponInfo(cursor); pinta(); return x; });
   }
   return cargando[n];
 }
@@ -163,7 +709,13 @@ const clic = {}; FUENTES.forEach(f => clic[f] = false); clic._metro = false;
 let sonando = null, t0Play = 0, offPlay = 0, cursor = 0, sel = null;
 const DUR = () => buf.mezcla ? buf.mezcla.duration : beats[beats.length - 1] + 2;
 
-function ahora() { return sonando ? offPlay + (ctx.currentTime - t0Play) : cursor; }
+let VEL = 1;            // velocidad: 1 = normal (Web Audio, exacto); menos de 1 = <audio> con el mismo tono
+const EL = {};
+function elDe(n) { if (!EL[n]) { const a = new Audio(AUD[n]); a.preload = "auto"; a.preservesPitch = true; a.webkitPreservesPitch = true; EL[n] = a; } return EL[n]; }
+function ahora() {
+  if (!sonando) return cursor;
+  return sonando.vel === 1 ? offPlay + (ctx.currentTime - t0Play) : EL.mezcla.currentTime;
+}
 
 function pitido(t, f, g, d = 0.03) {
   const o = ctx.createOscillator(), a = ctx.createGain();
@@ -174,49 +726,182 @@ function pitido(t, f, g, d = 0.03) {
 }
 const TONO = { contrabajo:330, graves:330, piano:1320, medios:1320, bandoneones:880, agudos:2200 };
 
+let sonidoVideo = false;                 // 🔊 se oye el vídeo, el disco calla (pero sigue llevando el tiempo)
+const volDe = n => sonidoVideo ? 0 : vol[n];
 async function escuchar(desde) {
   parar();
   await ctx.resume();
   await Promise.all(Object.keys(AUD).filter(n => vol[n] > 0 || n === "mezcla").map(cargar));
   const fin = (sel && $("bucle").checked) ? sel.b : DUR();
   if (sel && $("bucle").checked && (desde < sel.a || desde >= sel.b)) desde = sel.a;
-  const t = ctx.currentTime + 0.08, nodos = [];
-  for (const n of Object.keys(AUD)) {
-    if (!buf[n] || vol[n] <= 0) continue;
-    const s = ctx.createBufferSource(), g = ctx.createGain();
-    s.buffer = buf[n]; g.gain.value = vol[n]; s.connect(g).connect(ctx.destination);
-    s.start(t, desde, fin - desde); nodos.push(s);
+  const v = VEL, nodos = [], els = [];
+  let t;
+  if (v === 1) {
+    t = ctx.currentTime + 0.08;
+    for (const n of Object.keys(AUD)) {
+      if (!buf[n] || volDe(n) <= 0) continue;
+      const s = ctx.createBufferSource(), g = ctx.createGain();
+      s.buffer = buf[n]; g.gain.value = volDe(n); s.connect(g).connect(ctx.destination);
+      s.start(t, desde, fin - desde); nodos.push(s);
+    }
+  } else {
+    // más despacio: el navegador estira el audio sin cambiar el tono; los clics se colocan según donde va de verdad
+    for (const n of Object.keys(AUD)) {
+      if (n !== "mezcla" && volDe(n) <= 0) continue;
+      const a = elDe(n); a.pause(); a.playbackRate = v; a.volume = Math.min(1, volDe(n)); a.currentTime = desde; els.push(a);
+    }
+    await Promise.all(els.map(a => a.play().catch(() => {})));
   }
-  for (const gg of G) if (clic[gg.fuente] && gg.seg >= desde && gg.seg < fin)
-    nodos.push(pitido(t + gg.seg - desde, TONO[gg.fuente] || 1000, 0.08 + 0.18 * gg.fuerza));
-  if (clic._metro) for (const p of P) if (p.seg >= desde && p.seg < fin)
-    nodos.push(pitido(t + p.seg - desde, p.tiempo === 1 ? 1760 : 1100, p.tiempo === 1 ? 0.25 : 0.12, 0.02));
-  sonando = { nodos, fin, t }; t0Play = t; offPlay = desde;
-  $("play").textContent = "■ Parar";
+  // todos los clics del trozo: [segundo de la canción, tono, volumen, duración]
+  const cl = [];
+  for (const gg of G) if (clic[gg.fuente] && gg.seg >= desde && gg.seg < fin) cl.push([gg.seg, TONO[gg.fuente] || 1000, 0.08 + 0.18 * gg.fuerza, 0.03]);
+  // bajo (notas): un pitido con la nota que ha oído el modelo, dos octavas más alto para que se oiga
+  if (clic[BAJO_F]) for (const [s, e, p] of BJ) if (s >= desde && s < fin) cl.push([s, 440 * Math.pow(2, (p + 24 - 69) / 12), 0.12, Math.min(0.12, e - s)]);
+  // pisadas de los bailarines: un clic en cada una (agudo ella, grave él)
+  if (hayV()) { const V = VV(), dd = vDes[V.id] || 0;
+    for (const [s, bb] of V.pisadas) { const bi = V.bailarines[bb]; if (bi && clic["👣 " + bi.nombre] && s + dd >= desde && s + dd < fin) cl.push([s + dd, bi.rol === "leader" ? 990 : 1480, 0.2, 0.03]); } }
+  if (clic._metro) for (const p of P) if (p.seg >= desde && p.seg < fin) cl.push([p.seg, p.tiempo === 1 ? 1760 : 1100, p.tiempo === 1 ? 0.25 : 0.12, 0.02]);
+  // clics de rejilla: tresillo (⅓ y ⅔ del tiempo), corcheas (½) o semicorcheas (¼ ½ ¾)
+  for (const [k, fr] of [["_tres", [1 / 3, 2 / 3]], ["_corch", [1 / 2]], ["_semi", [1 / 4, 1 / 2, 3 / 4]]]) if (clic[k])
+    for (let i = 0; i + 1 < P.length; i++) for (const f of fr) {
+      const s = P[i].seg + f * (P[i + 1].seg - P[i].seg);
+      if (s >= desde && s < fin) cl.push([s, 2640, 0.09, 0.015]);
+    }
+  cl.sort((x, y) => x[0] - y[0]);
+  sonando = { nodos, els, fin, t, vel: v, cl, ic: 0 }; t0Play = t; offPlay = desde;
+  if (v === 1) { for (const c of cl) nodos.push(pitido(t + c[0] - desde, c[1], c[2], c[3])); sonando.ic = cl.length; }
+  else programa();
+  $("play").textContent = "■ Parar"; $("play").classList.add("sonando");
 }
+// más despacio: los clics se programan poco a poco, mirando dónde va el audio de verdad (el <audio> tarda en arrancar)
+function programa() {
+  const s = sonando; if (!s || s.vel === 1) return;
+  const m = EL.mezcla, now = ctx.currentTime, pos = m.currentTime;
+  while (s.ic < s.cl.length && s.cl[s.ic][0] < pos + 0.3 * s.vel) {
+    const c = s.cl[s.ic++], at = now + (c[0] - pos) / s.vel;
+    if (at > now + 0.005) s.nodos.push(pitido(at, c[1], c[2], c[3]));
+  }
+}
+setInterval(programa, 40);
 function parar() {
-  if (sonando) { sonando.nodos.forEach(n => { try { n.stop(); } catch (e) {} }); cursor = ahora(); }
-  sonando = null; $("play").textContent = "▶ Escuchar";
+  if (typeof quitaLupaPie === "function") quitaLupaPie();
+  if (CMP && CMP.src) { try { CMP.src.stop(); } catch (e) {} CMP.src = null; }
+  if (sonando) { cursor = ahora(); sonando.nodos.forEach(n => { try { n.stop(); } catch (e) {} }); (sonando.els || []).forEach(a => a.pause()); }
+  sonando = null; $("play").textContent = "▶ Escuchar"; $("play").classList.remove("sonando");
 }
-$("play").onclick = () => sonando ? parar() : escuchar(sel ? sel.a : cursor);
+function ponVel(v) {
+  VEL = v; document.querySelectorAll("[data-vel]").forEach(b => b.classList.toggle("on", +b.dataset.vel === v));
+  $("vel_btn").textContent = `⏱ ${Math.round(v * 100)} % ▾`; $("vel_btn").classList.toggle("on", v !== 1);
+  $("m_vel").classList.remove("abierto");
+  if (sonando) escuchar(ahora());
+}
+document.querySelectorAll("[data-vel]").forEach(b => b.onclick = () => ponVel(+b.dataset.vel));
+const VELS = [1, 0.75, 0.6, 0.5, 0.25];
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+  const i = VELS.indexOf(VEL);
+  if (e.code === "ArrowDown" && i < VELS.length - 1) { e.preventDefault(); ponVel(VELS[i + 1]); }
+  if (e.code === "ArrowUp" && i > 0) { e.preventDefault(); ponVel(VELS[i - 1]); }
+});
+// cuenta de entrada: un compás de clics al ritmo del sitio donde empieza, y luego la música (19-11-2026)
+let cuentaEnCurso = 0;
+async function escucharConCuenta(desde) {
+  if (!$("cuenta").checked) return escuchar(desde);
+  if ($("bucle").checked && sel && (desde < sel.a || desde >= sel.b)) desde = sel.a;
+  await ctx.resume();
+  const yo = ++cuentaEnCurso, i = Math.max(0, P.findIndex(p => p.seg >= desde - 0.02));
+  const durT = ((P[Math.min(P.length - 1, i + 1)].seg - P[Math.max(0, i === P.length - 1 ? i - 1 : i)].seg) || durBeat) / VEL;
+  const n = parseInt(M.compas) || 4, t0 = ctx.currentTime + 0.05;
+  for (let k = 0; k < n; k++) pitido(t0 + k * durT, k === 0 ? 1760 : 1100, k === 0 ? 0.25 : 0.15, 0.03);
+  $("play").textContent = "■ 1 · 2 · 3 · 4"; $("play").classList.add("sonando");
+  await new Promise(r => setTimeout(r, Math.max(0, (n * durT - 0.03) * 1000)));
+  if (yo !== cuentaEnCurso) return;   // se paró durante la cuenta
+  cuentaEnCurso = 0;
+  return escuchar(desde);
+}
+$("play").onclick = () => { if (CMP && CMP.src) { parar(); return; } if (cuentaEnCurso) { cuentaEnCurso = 0; parar(); return; } sonando ? parar() : escucharConCuenta(desdeDonde()); };
+// 20-11-2026 (Edmundo: «paro con espacio y al volver empieza al principio del compás»): con un trozo elegido, seguir
+// desde donde se paró si está dentro del trozo; solo si está fuera (o al final), desde el principio del trozo
+function desdeDonde() { return sel && !(cursor >= sel.a && cursor < sel.b - 0.05) ? sel.a : cursor; }
 document.addEventListener("keydown", e => { if (e.code === "Space" && e.target.tagName !== "INPUT") { e.preventDefault(); $("play").click(); } });
+// que el espacio no «pulse» otra vez el último botón tocado
+document.addEventListener("click", e => { if (e.target.closest("button")) e.target.closest("button").blur(); });
 
 // ---------- pistas y clics
 for (const n of Object.keys(AUD)) {
   const d = document.createElement("label"); d.className = "pista";
-  d.innerHTML = `${n === "mezcla" ? "Mezcla" : n[0].toUpperCase() + n.slice(1) + " solo"} <input type="range" min="0" max="1" step="0.05" value="${vol[n]}">`;
-  d.querySelector("input").oninput = e => { vol[n] = +e.target.value; if (sonando) escuchar(ahora()); };
+  d.innerHTML = `${n === "mezcla" ? "Mezcla" : `<span class="punto" style="background:${COL[n] || "#ccc"}"></span>${mayus(n)} solo`} <input type="range" min="0" max="1" step="0.05" value="${vol[n]}" data-pista="${n}">`;
+  d.querySelector("input").oninput = e => { vol[n] = +e.target.value; solo = null; if (sonando) escuchar(ahora()); };
   $("pistas").appendChild(d);
 }
-$("clics").innerHTML = `<span>Oír un clic en cada golpe de:</span>`;
-for (const f of FUENTES) {
-  const b = document.createElement("button");
-  b.innerHTML = `<span class="punto" style="background:${COL[f] || "#ccc"}"></span> ${f}`;
-  b.onclick = () => { clic[f] = !clic[f]; b.classList.toggle("on", clic[f]); if (sonando) escuchar(ahora()); };
-  $("clics").appendChild(b);
+{ const b = document.createElement("button"); b.textContent = "♩ metrónomo"; b.title = "Un clic en cada tiempo, más agudo en el 1";
+  b.dataset.metro = 1; b.onclick = () => { clic._metro = !clic._metro; cambiaClics(); }; $("clics").appendChild(b); }
+clic._tres = clic._corch = clic._semi = false;
+for (const [k, txt, ti] of [["_tres", "tresillo", "3 clics iguales por tiempo"], ["_corch", "corcheas", "2 por tiempo"], ["_semi", "semicorcheas", "4 por tiempo"]]) {
+  const b = document.createElement("button"); b.textContent = txt; b.title = ti; b.dataset.rej = k;
+  b.onclick = () => {
+    clic[k] = !clic[k]; if (clic[k]) for (const o of ["_tres", "_corch", "_semi"]) if (o !== k) clic[o] = false;
+    cambiaClics();
+  };
+  $("clics_rejilla").appendChild(b);
 }
-{ const b = document.createElement("button"); b.textContent = "metrónomo (cada tiempo; el 1 más agudo)"; b.title = "Un clic en cada tiempo, más agudo en el 1";
-  b.onclick = () => { clic._metro = !clic._metro; b.classList.toggle("on", clic._metro); if (sonando) escuchar(ahora()); }; $("clics").appendChild(b); }
+
+// ---------- menús «🔔 Comprobar» y «⚙ Ver», menú de cada fila y lo encendido (19-11-2026)
+document.querySelectorAll(".menu > .abre").forEach(b => b.onclick = e => {
+  const m = b.parentElement, abierto = m.classList.contains("abierto");
+  document.querySelectorAll(".menu.abierto").forEach(x => x.classList.remove("abierto")); cierraMenuFila();
+  if (!abierto) m.classList.add("abierto");
+  e.stopPropagation();
+});
+document.addEventListener("pointerdown", e => {
+  if (!e.target.closest(".menu")) document.querySelectorAll(".menu.abierto").forEach(x => x.classList.remove("abierto"));
+  if (!e.target.closest("#menu_fila") && e.target !== cl) cierraMenuFila();
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape") { document.querySelectorAll(".menu.abierto").forEach(x => x.classList.remove("abierto")); cierraMenuFila(); } });
+let solo = null;    // pista que se oye sola (null = la mezcla)
+function ponSolo(n) {
+  solo = n;
+  for (const k of Object.keys(AUD)) vol[k] = n ? (k === n ? 1 : 0) : (k === "mezcla" ? 1 : 0);
+  document.querySelectorAll("#pistas input[type=range]").forEach(i => { i.value = vol[i.dataset.pista]; });
+  cambiaClics();
+}
+const NOMBRE_CLIC = { _metro: "♩ metrónomo", _tres: "clic de tresillo", _corch: "clic de corcheas", _semi: "clic de semicorcheas" };
+function cambiaClics() {   // después de encender o apagar un clic o un solo: botones, chips y volver a sonar
+  document.querySelectorAll("[data-rej]").forEach(x => x.classList.toggle("on", clic[x.dataset.rej]));
+  document.querySelectorAll("[data-metro]").forEach(x => x.classList.toggle("on", clic._metro));
+  $("m_comprobar").querySelector(".abre").classList.toggle("on", !!(clic._metro || clic._tres || clic._corch || clic._semi));
+  const chips = [];
+  if (solo) chips.push([`🎧 solo ${solo}`, () => ponSolo(null)]);
+  for (const f of FUENTES) if (clic[f]) chips.push([`🔔 ${f}`, () => { clic[f] = false; cambiaClics(); }]);
+  for (const k of ["_metro", "_tres", "_corch", "_semi"]) if (clic[k]) chips.push([NOMBRE_CLIC[k], () => { clic[k] = false; cambiaClics(); }]);
+  $("activos").replaceChildren(...chips.map(([t, f]) => { const b = document.createElement("button"); b.textContent = t; b.onclick = f; return b; }));
+  if (sonando) escuchar(ahora());
+  pinta();
+}
+function cierraMenuFila() { const mf = $("menu_fila"); if (mf) mf.hidden = true; }
+function filaEn(e) {   // fila de la lupa bajo el ratón, si es en la columna de los nombres
+  const r = cl.getBoundingClientRect(), m = medidas(), x = e.clientX - r.left, y = e.clientY - r.top;
+  if (x > m.izq) return null;
+  const k = m.ys.findIndex((yy, i) => y >= yy && y < yy + m.altos[i] + m.hueco);
+  const f = FV()[k]; return f ? { f, y: m.ys[k] } : null;
+}
+function abreMenuFila(f, y) {
+  const mf = $("menu_fila"), p = PISTA_DE(f), conClic = !SOLO_ONDA.includes(f) && !(CMP && f === CMP.f);
+  mf.innerHTML = "";
+  const t = document.createElement("b"); t.textContent = mayus(f); t.style.color = COL[f] || "#ccc"; mf.appendChild(t);
+  const boton = (txt, on, fn, ti) => { const b = document.createElement("button"); b.textContent = txt; b.title = ti || ""; b.classList.toggle("on", !!on);
+    b.onclick = () => { fn(); cierraMenuFila(); }; mf.appendChild(b); };
+  if (p) boton(solo === p ? "🎧 dejar de oírlo solo" : "🎧 oír solo " + f, solo === p, () => ponSolo(solo === p ? null : p), "Solo se oye esta pista separada");
+  if (conClic) boton(clic[f] ? "🔔 quitar el clic" : (f === BAJO_F ? "🔔 tocar las notas del bajo" : f in PIS_F ? "🔔 clic en cada pisada" : "🔔 clic en sus golpes"), clic[f],
+                     () => { clic[f] = !clic[f]; cambiaClics(); }, f === BAJO_F ? "Un pitido con cada nota que ha oído la máquina" : "Un clic en cada golpe medido");
+  if (CMP && f === CMP.f) {
+    boton("🎧 oír esta grabación desde aquí", false, oirComparada, "Para lo que suena y pone la otra grabación en el mismo compás (al 100 %)");
+    boton("abrir su página en este compás", false, () => { location.href = "?c=" + encodeURIComponent(CMP.c) + "&compas=" + Math.max(1, compasDe(ahora() + 0.01) + CMP.off); });
+    boton("quitar la comparación", false, quitaComparar);
+  }
+  if (FV().length > 1) boton("ocultar esta fila", false, () => { filaOculta[f] = true; marcaFilas(); pinta(); }, "Se vuelve a enseñar en ⚙ Ver");
+  mf.style.top = (y + 4) + "px"; mf.style.left = "6px"; mf.hidden = false;
+}
 
 // ---------- vista general
 const cv = $("vista"), cl = $("lupa");
@@ -228,27 +913,31 @@ function calcPicos(w) {
   return out;
 }
 function dibujaVista() {
-  const [g, w, h] = preparaLienzo(cv), T = DUR(), x = t => t / T * w;
+  const [g, w, h] = preparaLienzo(cv), T = DUR(), x = t => t / T * w, arriba = 16;
   if (buf.mezcla && (!picos || picos.length !== Math.floor(w))) picos = calcPicos(Math.floor(w));
-  if (picos) { g.fillStyle = "#5b4a36"; for (let i = 0; i < picos.length; i++) { const a = picos[i] * h * 0.45; g.fillRect(i, h / 2 - a, 1, 2 * a); } }
-  // compases cada 8
-  g.fillStyle = "#a8998a"; g.font = "11px Segoe UI";
-  unos.forEach((t, i) => { if (i % 8 === 0) { g.fillRect(x(t), 0, 1, 6); g.fillText(String(i + 1), x(t) + 2, 11); } });
-  if (dibSel) { g.fillStyle = "rgba(240,192,90,.45)"; dibSel.tramos.forEach(tr => g.fillRect(x(tr.desde_seg), h - 14, Math.max(2, x(tr.hasta_seg) - x(tr.desde_seg)), 12)); }
-  if (sel) { g.fillStyle = "rgba(240,192,90,.22)"; g.fillRect(x(sel.a), 0, x(sel.b) - x(sel.a), h); }
-  const [v0, v1] = ventana(); g.strokeStyle = "#efe6d8"; g.strokeRect(x(v0), 1, x(v1) - x(v0), h - 2);
-  g.fillStyle = "#f0c05a"; g.fillRect(x(ahora()), 0, 2, h);
+  if (picos) { g.fillStyle = "#5e4c38"; const m = (h + arriba) / 2, alto = (h - arriba) * 0.46; for (let i = 0; i < picos.length; i++) { const a = picos[i] * alto; g.fillRect(i, m - a, 1, 2 * a); } }
+  // números de compás (los que quepan)
+  g.font = "11px Segoe UI"; g.fillStyle = "#8a7b6c";
+  const cada = [4, 8, 16, 32, 64].find(k => k * (unos.length > 1 ? x(unos[1]) - x(unos[0]) : 10) > 34) || 64;
+  unos.forEach((t, i) => { if (i % cada === 0) { g.fillRect(x(t), arriba - 4, 1, 4); g.fillText(String(i + 1), x(t) + 2, 11); } });
+  if (dibSel) { g.fillStyle = "rgba(240,192,90,.55)"; dibSel.tramos.forEach(tr => g.fillRect(x(tr.desde_seg), h - 9, Math.max(3, x(tr.hasta_seg) - x(tr.desde_seg)), 8)); }
+  if (sel) { g.fillStyle = "rgba(240,192,90,.22)"; g.fillRect(x(sel.a), arriba, x(sel.b) - x(sel.a), h - arriba); }
+  g.fillStyle = "#7fd99a"; for (const [t] of MARCAS) g.fillRect(x(t) - 1, arriba, 2, 8);   // marcas con texto
+  if (hayV()) { g.fillStyle = "rgba(197,138,240,.85)"; g.fillRect(x(vidIni()), h - 4, Math.max(3, x(vidFin()) - x(vidIni())), 3); }   // lo que cubre el vídeo
+  const [v0, v1] = ventana(); g.strokeStyle = "#f1e8da"; g.lineWidth = 1.5; g.strokeRect(x(v0), arriba + 1, Math.max(2, x(v1) - x(v0)), h - arriba - 2);
+  g.fillStyle = "#f0c05a"; g.fillRect(x(ahora()) - 1, arriba, 2, h - arriba);
 }
 
 // ---------- lupa
 let vIni = unos.length ? unos[0] : beats[0];
 function ventana() {
-  const n = +$("ncomp").value;
+  const n = NCOMP;
   let i = unos.findIndex(t => t >= vIni - 0.01); if (i < 0) i = 0;
   const a = unos[i], b = unos[Math.min(i + n, unos.length - 1)] || a + n * 4 * durBeat;
   return [a, b > a ? b : a + n * 4 * durBeat];
 }
 let env = null, envKey = "";
+let NCOMP = 2, SUB = 4, BANDA = [40, 200];   // compases que se ven, casillas por tiempo, banda de la onda de arriba (Hz)
 function biquad(x, tipo, f, sr) {
   const w = 2 * Math.PI * Math.min(f, sr * 0.45) / sr, al = Math.sin(w) / (2 * Math.SQRT1_2), c = Math.cos(w);
   let b0, b1, b2; if (tipo === "lp") { b0 = (1 - c) / 2; b1 = 1 - c; b2 = b0; } else { b0 = (1 + c) / 2; b1 = -(1 + c); b2 = b0; }
@@ -257,7 +946,7 @@ function biquad(x, tipo, f, sr) {
   for (let i = 0; i < x.length; i++) { const xi = x[i], y = (b0 * xi + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2) / a0; x2 = x1; x1 = xi; y2 = y1; y1 = y; x[i] = y; }
 }
 async function calcBanda(a, b) {
-  const lo = +$("lo").value, hi = Math.max(+$("hi").value, lo + 10), de = $("banda_de").value || "mezcla";
+  const [lo, hi] = BANDA, de = "mezcla";
   const key = [a, b, lo, hi, de].join("|"); if (key === envKey) return env;
   const B = await cargar(de); const sr = B.sampleRate;
   const i0 = Math.max(0, Math.floor(a * sr)), i1 = Math.min(B.length, Math.ceil(b * sr));
@@ -269,76 +958,545 @@ async function calcBanda(a, b) {
   for (let k = 0; k + paso <= r.length; k += paso) { let m = 0; for (let j = k; j < k + paso; j++) m += r[j] * r[j]; e.push(Math.sqrt(m / paso)); }
   env = { a, paso: paso / sr, e }; envKey = key; return env;
 }
+// medidas de la lupa: columna de nombres a la izquierda, franja de números arriba, onda y una fila por instrumento
+function medidas() {
+  const movil = cl.getBoundingClientRect().width < 640, altas = $("filas_altas").checked, banda = $("ver_banda").checked;
+  // franja de arriba: la onda de una banda (si se pide) o, si hay partitura, una tira fina para las rayas «P…»
+  const onda = banda ? (movil ? 64 : 90) : ((PT && $("ver_partitura_lupa").checked) || hayV() || MARCAS.length ? 22 : 0);   // (con vídeo: sus rayas «▶ vídeo»)
+  const cab = 26, hueco = 3, filas = FV(), vac = filas.map(vacia), nVac = vac.filter(Boolean).length, nLl = filas.length - nVac;
+  let fila = altas ? (movil ? 62 : 78) : (movil ? 44 : 50);
+  // sola (sin partitura al lado), la lupa llena lo que queda de pantalla: filas más altas si caben (19-11-2026)
+  if (!altas && !movil && VISTA !== "dos" && nLl) {
+    const disp = innerHeight - $("barra").offsetHeight - $("cab_lupa").offsetHeight - 52 - cab - onda - hueco - nVac * (FINA + hueco);
+    fila = Math.max(44, Math.min(90, Math.floor(disp / nLl - hueco)));
+  }
+  const altos = vac.map(v => v ? FINA : fila), ys = [];
+  let y = cab + onda + hueco; for (const al of altos) { ys.push(y); y += al + hueco; }
+  return { izq: movil ? 66 : 112, der: movil ? 8 : 12, pad: movil ? 8 : 12, cab, onda, banda, fila, altos, ys, alto: y + 4, hueco, movil };
+}
+// una fila sin nada que enseñar (con lo que está encendido en ⚙ Ver) se queda en una raya fina con su nombre
+const FINA = 18;
+let vacCache = { k: null, v: {} };
+function vacia(f) {
+  const k = [$("ver_golpes").checked, $("ver_notas").checked, $("ver_ondas").checked, VI, VD.length, typeof marcando !== "undefined" && marcando].join();
+  if (vacCache.k !== k) vacCache = { k, v: {} };
+  if (f in vacCache.v) return vacCache.v[f];
+  let r;
+  if (f in PIS_F) { const V = hayV() ? VV() : null, i = V ? V.bailarines.findIndex(b => b.nombre === PIS_F[f]) : -1;
+    r = !(i >= 0 && (V.pisadas.some(q => q[1] === i) || (typeof marcando !== "undefined" && marcando))); }
+  else if (f === BAJO_F || (CMP && f === CMP.f)) r = false;
+  else r = !(($("ver_ondas").checked && PISTA_DE(f)) || ($("ver_golpes").checked && G.some(g => g.fuente === f))
+             || ($("ver_notas").checked && NOTAS.some(n => n.fuente === f && n.fuerza >= 0.25)));
+  return vacCache.v[f] = r;
+}
+function ajustaAlto() { cl.style.height = medidas().alto + "px"; }
+function nombreBanda() {
+  const [lo, hi] = BANDA;
+  return hi <= 400 ? "graves" : lo >= 1500 ? "agudos" : (lo <= 40 && hi >= 8000) ? "todo" : lo >= 150 ? "medios" : "graves+medios";
+}
 async function dibujaLupa() {
-  const [g, w, h] = preparaLienzo(cl), [a, b] = ventana(), x = t => (t - a) / (b - a) * w;
-  const filas = FUENTES.length, altoOnda = h * 0.42, y0 = altoOnda + 18, altoFila = (h - y0 - 6) / filas;
+  ajustaAlto();
+  const [g, w, h] = preparaLienzo(cl), [a, b] = ventana(), m = medidas();
+  const X0 = m.izq + m.pad, X1 = w - m.der, x = t => X0 + (t - a) / (b - a) * (X1 - X0);
+  const yOnda = m.cab, yFila = r => m.ys[r], filaM = r => Object.assign({}, m, { fila: m.altos[r] });
+  // fondos de las franjas
+  g.fillStyle = "#18130f"; g.fillRect(0, yOnda, w, m.onda);
+  FV().forEach((f, r) => { g.fillStyle = r % 2 ? "#1a1511" : "#1d1813"; g.fillRect(0, yFila(r), w, m.altos[r]); });
   // selección
-  if (sel) { g.fillStyle = "rgba(240,192,90,.15)"; g.fillRect(x(sel.a), 0, x(sel.b) - x(sel.a), h); }
-  // rejilla: casillas, pulsos, compases
-  const sub = +$("rejilla").value;
+  g.save(); g.beginPath(); g.rect(m.izq, 0, w - m.izq, h); g.clip();
+  if (sel) { g.fillStyle = "rgba(240,192,90,.13)"; g.fillRect(x(sel.a), m.cab, x(sel.b) - x(sel.a), h - m.cab); }
+  // rejilla: casillas, tiempos y compases (solo en la zona de datos; los números, arriba)
+  const sub = SUB, abajo = m.cab;
+  g.font = (m.movil ? "11px" : "12.5px") + " Segoe UI"; g.textBaseline = "middle";
+  let finTxt = -1e9;   // dónde acaba el último número escrito arriba (para no montar uno encima de otro)
   for (let i = 0; i < P.length - 1; i++) {
     const t = P[i].seg, t2 = P[i + 1].seg; if (t2 < a || t > b) continue;
-    for (let k = 1; k < sub; k++) { const tx = x(t + (t2 - t) * k / sub); g.fillStyle = "#2c241c"; g.fillRect(tx, 0, 1, h); }
-    g.fillStyle = P[i].tiempo === 1 ? "#efe6d8" : "#6b5a48"; g.fillRect(x(t), 0, P[i].tiempo === 1 ? 2 : 1, h);
-    g.fillStyle = "#a8998a"; g.font = "12px Segoe UI";
-    g.fillText(P[i].tiempo === 1 ? `compás ${P[i].compas}` : String(P[i].tiempo), x(t) + 4, 13);
+    const anchoT = x(t2) - x(t);
+    for (let k = 1; k < sub; k++) { const tx = x(t + (t2 - t) * k / sub); g.fillStyle = "#2b231c"; g.fillRect(tx, abajo, 1, h - abajo); }
+    const uno = P[i].tiempo === 1;
+    g.fillStyle = uno ? "#e8dccb" : "#5f5040"; g.fillRect(x(t) - (uno ? 1 : 0), abajo, uno ? 2 : 1, h - abajo);
+    if (uno) {
+      g.fillStyle = "#f0c05a"; g.font = "600 " + (m.movil ? "11.5px" : "13px") + " Segoe UI";
+      const txt = anchoT > 70 ? `compás ${P[i].compas}` : String(P[i].compas);
+      g.fillText(txt, x(t) + 5, m.cab / 2); finTxt = x(t) + 5 + g.measureText(txt).width;
+    } else {
+      g.fillStyle = "#a8998a"; g.font = (m.movil ? "11px" : "12.5px") + " Segoe UI";
+      if (x(t) + 4 > finTxt + 8) { g.fillText(String(P[i].tiempo), x(t) + 4, m.cab / 2); finTxt = x(t) + 4 + g.measureText(String(P[i].tiempo)).width; }
+    }
   }
-  // golpes por fuente
-  FUENTES.forEach((f, r) => {
-    const yc = y0 + altoFila * (r + 0.5);
-    g.fillStyle = "#a8998a"; g.font = "11px Segoe UI"; g.fillText(f, 4, yc - altoFila * 0.32);
-    for (const gg of G) {
+  g.textBaseline = "alphabetic";
+  // golpes y cambios de nota, una fila por instrumento
+  const ancho16 = (X1 - X0) / ((b - a) / durBeat * 4);   // píxeles por semicorchea: si no caben, no se escriben las casillas
+  FV().forEach((f, r) => {
+    const m = filaM(r); if (m.fila <= FINA) return;   // fila vacía: solo su nombre
+    const y = yFila(r), yRombo = y + (m.fila < 60 ? 8 : 12), yc = y + m.fila * (m.fila < 60 ? 0.47 : 0.5), col = COL[f] || "#ccc";
+    const kr = Math.min(1, m.fila / 78);   // filas bajas: puntos más pequeños
+    if ($("ver_ondas").checked && PISTA_DE(f)) ondaFila(g, x, a, b, y, m, PISTA_DE(f), col);
+    if (f in PIS_F) { pisadasFila(g, x, a, b, y, m, f, col); return; }
+    if (CMP && f === CMP.f) { filaComparar(g, x, a, b, y, m, col, X0, X1); return; }
+    if (f === BAJO_F) {   // barrita por nota: a lo ancho, lo que dura; de alto, lo aguda que es (entre la más grave y la más aguda)
+      const vis = BJ.filter(n => n[1] >= a && n[0] <= b);
+      if (!vis.length) return;
+      const lo = Math.min(...vis.map(n => n[2])), hi = Math.max(lo + 7, ...vis.map(n => n[2]));
+      const yN = p => y + m.fila - 9 - (p - lo) / (hi - lo) * (m.fila - 30);
+      let ultTxt = -1e9;
+      for (const [s, e, p] of vis) {
+        const x0 = x(s), x1 = Math.max(x0 + 3, x(Math.min(e, s + durBeat)));
+        g.fillStyle = col; g.globalAlpha = 0.9; g.fillRect(x0, yN(p) - 3, x1 - x0, 6); g.globalAlpha = 1;
+        if (ancho16 > 9 && x0 - ultTxt > 26) {
+          g.fillStyle = "#f1e8da"; g.font = (m.movil ? "10px" : "11px") + " Segoe UI";
+          g.fillText(NOMBRE_NOTA[p % 12], x0, yN(p) - 6); ultTxt = x0;
+        }
+      }
+      return;
+    }
+    if ($("ver_notas").checked) for (const nn of NOTAS) {
+      if (nn.fuente !== f || nn.seg < a || nn.seg > b || nn.fuerza < 0.25) continue;
+      const tx = x(nn.seg), rr = 2.5 + 3.5 * nn.fuerza;
+      g.globalAlpha = 0.45 + 0.55 * nn.fuerza; g.strokeStyle = col; g.lineWidth = 1.5;
+      g.beginPath(); g.moveTo(tx, yRombo - rr); g.lineTo(tx + rr, yRombo); g.lineTo(tx, yRombo + rr); g.lineTo(tx - rr, yRombo); g.closePath(); g.stroke();
+    }
+    g.globalAlpha = 1; g.lineWidth = 1;
+    let ultTxt = -1e9;
+    if ($("ver_golpes").checked) for (const gg of G) {
       if (gg.fuente !== f || gg.seg < a || gg.seg > b) continue;
-      const rad = 3 + 7 * gg.fuerza; g.globalAlpha = 0.35 + 0.65 * gg.fuerza;
-      g.fillStyle = COL[f] || "#ccc"; g.beginPath(); g.arc(x(gg.seg), yc, rad, 0, 7); g.fill();
+      const tx = x(gg.seg), rad = ((m.movil ? 2.5 : 3) + (m.movil ? 6 : 8) * gg.fuerza) * kr;
+      g.globalAlpha = 0.35 + 0.65 * gg.fuerza; g.fillStyle = col; g.beginPath(); g.arc(tx, yc, rad, 0, 7); g.fill();
       g.globalAlpha = 1;
-      if (gg.fuerza >= 0.5) { g.fillStyle = "#efe6d8"; g.font = "10px Segoe UI"; g.fillText(gg.casilla, x(gg.seg) - 6, yc + rad + 11); }
+      if (gg.fuerza >= 0.5 && ancho16 > 13 && tx - ultTxt > 22) {
+        g.fillStyle = "#f1e8da"; g.font = (m.movil ? "10px" : (m.fila < 60 ? "10.5px" : "11px")) + " Segoe UI"; g.textAlign = "center";
+        g.fillText(gg.casilla, tx, y + m.fila - (m.fila < 60 ? 2 : 5)); g.textAlign = "left"; ultTxt = tx;
+      }
     }
   });
-  const tn = ahora(); if (tn >= a && tn <= b) { g.fillStyle = "#f0c05a"; g.fillRect(x(tn) - 1, 0, 3, h); }
+  const tn = ahora(); if (tn >= a && tn <= b) { g.fillStyle = "#f0c05a"; g.fillRect(x(tn) - 1, m.cab, 3, h - m.cab); }
+  g.restore();
+  // columna de nombres
+  g.fillStyle = "#100c09"; g.fillRect(0, 0, m.izq - 2, h);
+  if (m.banda) { g.font = "12px Segoe UI"; g.fillStyle = "#8a7b6c"; g.fillText("onda", 10, yOnda + 20);
+    g.font = "11px Segoe UI"; g.fillStyle = "#6f6153"; g.fillText(nombreBanda(), 10, yOnda + 36); }
+  else if (m.onda) { const conP = PT && $("ver_partitura_lupa").checked;
+    g.font = "11px Segoe UI"; g.fillStyle = conP ? "#7fb7d9" : "#c58af0";
+    g.fillText(conP && hayV() ? (m.movil ? "P · vídeo" : "partitura · vídeo") : conP ? "partitura" : "vídeo", 8, yOnda + 15); }
+  FV().forEach((f, r) => {
+    const m = filaM(r), y = yFila(r), col = COL[f] || "#ccc";
+    g.fillStyle = r % 2 ? "#1a1511" : "#1d1813"; g.fillRect(0, y, m.izq - 2, m.fila);
+    g.fillStyle = col; g.fillRect(0, y, 4, m.fila);
+    if (m.fila <= FINA) { g.font = "11px Segoe UI"; g.globalAlpha = 0.7; g.fillText(mayus(f) + " · vacía", 10, y + 13); g.globalAlpha = 1; return; }
+    g.font = "600 " + (m.movil ? "12px" : "14px") + " Segoe UI"; g.fillStyle = col;
+    let nom = m.movil && f.length > 8 ? f.slice(0, 7) + "." : f;
+    const cabe = m.izq - 14 - (m.movil ? 0 : 14);   // los nombres largos se cortan con «…» (no se meten en los datos)
+    if (g.measureText(nom).width > cabe) { while (nom.length > 3 && g.measureText(nom + "…").width > cabe) nom = nom.slice(0, -1); nom = nom.trimEnd() + "…"; }
+    const marcas = (solo && PISTA_DE(f) === solo ? "🎧 " : "") + (clic[f] ? "🔔" : "");
+    const yn = marcas && m.fila < 60 ? y + m.fila / 2 - 2 : y + m.fila / 2 + 5;
+    g.fillText(mayus(nom) + (m.movil ? "" : " ▾"), 10, yn);
+    if (marcas) { g.font = (m.movil ? "11px" : "12px") + " Segoe UI"; g.fillText(marcas, 10, yn + (m.fila < 60 ? 16 : 17)); }
+  });
   // onda de la banda
   const clave = [a, b].join("|");
-  const E = await calcBanda(a, b);
+  const E = m.banda ? await calcBanda(a, b) : null;
   if (E && clave === ventana().join("|")) {
-    const mx = Math.max(...E.e) || 1; g.strokeStyle = "#f0c05a"; g.lineWidth = 1.5; g.beginPath();
-    E.e.forEach((v, k) => { const tx = x(E.a + k * E.paso), ty = altoOnda + 10 - v / mx * altoOnda; k ? g.lineTo(tx, ty) : g.moveTo(tx, ty); });
-    g.stroke(); g.lineWidth = 1;
+    const mx = Math.max(...E.e) || 1, base = yOnda + m.onda - 4, alto = m.onda - 10;
+    g.save(); g.beginPath(); g.rect(m.izq, yOnda, w - m.izq, m.onda); g.clip();
+    g.beginPath(); g.moveTo(x(E.a), base);
+    E.e.forEach((v, k) => g.lineTo(x(E.a + k * E.paso), base - v / mx * alto));
+    g.lineTo(x(E.a + (E.e.length - 1) * E.paso), base); g.closePath();
+    g.fillStyle = "rgba(240,192,90,.18)"; g.fill();
+    g.beginPath(); E.e.forEach((v, k) => { const tx = x(E.a + k * E.paso), ty = base - v / mx * alto; k ? g.lineTo(tx, ty) : g.moveTo(tx, ty); });
+    g.strokeStyle = "#f0c05a"; g.lineWidth = 1.5; g.stroke(); g.lineWidth = 1; g.restore();
   }
-
+  if (clave === ventana().join("|")) rayasPartituraLupa(g, x, a, b, m, w);
+  if (hayV() && clave === ventana().join("|")) rayasVideoLupa(g, x, a, b, m, w, h);
+  if (MARCAS.length && clave === ventana().join("|")) marcasLupa(g, x, a, b, m, w, h);
+  $("donde").textContent = `compás ${compasDe(a + 0.01)}` + (NCOMP > 1 ? `–${compasDe(b - 0.01)}` : "");
 }
 
-// ---------- ratón: ir y elegir
+// onda de cada pista separada, detrás de su fila (envolvente cada 10 ms, escala de toda la canción)
+const ondas = {};
+function ondaDe(n) {
+  if (ondas[n]) return ondas[n];
+  if (!buf[n]) { if (!ondas["_" + n]) { ondas["_" + n] = 1; cargar(n).then(() => pinta()); } return null; }
+  const d = buf[n].getChannelData(0), sr = buf[n].sampleRate, paso = Math.round(sr * 0.01), e = new Float32Array(Math.floor(d.length / paso));
+  for (let i = 0; i < e.length; i++) { let s = 0; for (let j = i * paso; j < (i + 1) * paso; j += 2) s += d[j] * d[j]; e[i] = Math.sqrt(2 * s / paso); }
+  const orden = Float32Array.from(e).sort();
+  let tope = orden[Math.floor(orden.length * 0.995)] || 1;
+  // una pista casi en silencio (la voz de un tango instrumental) no se agranda hasta que el ruido parezca música:
+  // la escala no baja de un cuarto de la de la mezcla (19-11-2026)
+  if (n !== "mezcla") { const mz = buf.mezcla ? ondaDe("mezcla") : null; if (mz) tope = Math.max(tope, 0.25 * mz.tope); }
+  return ondas[n] = { e, paso: 0.01, tope };
+}
+function ondaFila(g, x, a, b, y, m, n, col) {
+  const O = ondaDe(n); if (!O) return;
+  const i0 = Math.max(0, Math.floor(a / O.paso)), i1 = Math.min(O.e.length - 1, Math.ceil(b / O.paso));
+  const base = y + m.fila - 2, alto = m.fila - 6;
+  g.save(); g.beginPath(); g.moveTo(x(i0 * O.paso), base);
+  for (let i = i0; i <= i1; i++) g.lineTo(x(i * O.paso), base - Math.min(1, O.e[i] / O.tope) * alto);
+  g.lineTo(x(i1 * O.paso), base); g.closePath();
+  g.globalAlpha = 0.2; g.fillStyle = col; g.fill(); g.globalAlpha = 0.45; g.strokeStyle = col; g.lineWidth = 1; g.stroke();
+  g.restore();
+}
+
+// ---------- ratón (y dedo): ir y elegir
+let rayaP = -1;    // compás de la partitura que se está arrastrando en la lupa
+function agarraRaya(e) {
+  if (!PT || !$("ver_partitura_lupa").checked) return -1;
+  const r = cl.getBoundingClientRect(), m = medidas(), y = e.clientY - r.top;
+  if (y > m.cab + m.onda) return -1;   // en la tira de la partitura o en la de los números
+  const [a, b] = ventana(), X0 = m.izq + m.pad, X1 = r.width - m.der, px = e.clientX - r.left;
+  let mejor = -1, dmin = 9;
+  for (let i = 0; i < TP.length - 1; i++) { const d = Math.abs(X0 + (TP[i] - a) / (b - a) * (X1 - X0) - px); if (d < dmin) { dmin = d; mejor = i; } }
+  return mejor;
+}
+let rayaV = 0;     // raya del vídeo que se arrastra en la lupa: 1 = principio, 2 = final (mueven el vídeo entero)
+function agarraRayaV(e) {
+  if (!hayV()) return 0;
+  const r = cl.getBoundingClientRect(), m = medidas(), y = e.clientY - r.top;
+  if (y > m.cab + m.onda) return 0;   // solo en la tira de arriba o en la de los números
+  const [a, b] = ventana(), X0 = m.izq + m.pad, X1 = r.width - m.der, px = e.clientX - r.left, xx = t => X0 + (t - a) / (b - a) * (X1 - X0);
+  if (vidIni() >= a - 0.06 && vidIni() <= b + 0.06 && Math.abs(xx(vidIni()) - px) < 9) return 1;
+  if (vidFin() >= a && vidFin() <= b && Math.abs(xx(vidFin()) - px) < 9) return 2;
+  return 0;
+}
 function arrastre(c, aTiempo) {
   let ini = null;
-  c.onmousedown = e => { ini = aTiempo(e); };
-  c.onmousemove = e => { if (ini !== null) { const t = aTiempo(e); if (Math.abs(t - ini) > 0.05) { sel = { a: Math.min(ini, t), b: Math.max(ini, t) }; pinta(); } } };
-  c.onmouseup = e => { const t = aTiempo(e); if (ini !== null && Math.abs(t - ini) <= 0.05) { cursor = t; if (c === cv) vIni = unos.filter(u => u <= t).pop() || unos[0]; if (sonando) escuchar(t); } ini = null; pinta(); };
+  c.onpointerdown = e => {
+    if (pellizco) { ini = null; return; }
+    if (c === cl) { const q = pisadaEn(e); if (q) { eligePis(q); arrPis = { x0: e.clientX, t0: q[0], movido: false }; c.setPointerCapture(e.pointerId); ini = null; return; } }
+    if (c === cv && e.clientY - cv.getBoundingClientRect().top < 18) { arrLupa = true; c.setPointerCapture(e.pointerId); centraLupa(aTiempo(e)); return; }
+    if (c === cl) { const fe = filaEn(e); if (fe) { abreMenuFila(fe.f, fe.y); ini = null; return; } cierraMenuFila(); }
+    if (c === cl && (rayaV = agarraRayaV(e))) { c.setPointerCapture(e.pointerId); return; }
+    if (c === cl && (rayaP = agarraRaya(e)) >= 0) { c.setPointerCapture(e.pointerId); return; }
+    ini = aTiempo(e); c.setPointerCapture(e.pointerId); };
+  c.onpointermove = e => {
+    if (pellizco) { ini = null; return; }
+    if (arrLupa) { centraLupa(aTiempo(e)); return; }
+    if (arrPis) { if (Math.abs(e.clientX - arrPis.x0) > 3) arrPis.movido = true;
+      if (arrPis.movido) { const V = VV(), dd = vDes[V.id] || 0; selPis[0] = +(alFotograma(aTiempo(e) - dd)).toFixed(3); verPis(true); } return; }
+    if (c === cl && pisadaEn(e)) { cl.style.cursor = "grab"; } else
+    if (c === cv) cv.style.cursor = e.clientY - cv.getBoundingClientRect().top < 18 ? "grab" : "";
+    if (rayaV) { const V = VV(), t = aTiempo(e); ponDesVideo(t - V.inicio - (rayaV === 2 ? V.dur * V.velocidad : 0)); return; }
+    if (rayaP >= 0) { anclas[rayaP] = +aTiempo(e).toFixed(3); rehazTiempos(); pinta(); return; }
+    if (c === cl) cl.style.cursor = filaEn(e) ? "pointer" : ((PT && agarraRaya(e) >= 0) || agarraRayaV(e) ? "ew-resize" : "");
+    if (ini !== null) { const t = aTiempo(e); if (Math.abs(t - ini) > 0.05) { sel = { a: Math.min(ini, t), b: Math.max(ini, t) }; pinta(); } } };
+  c.onpointerup = e => { if (arrLupa) { arrLupa = false; return; }
+    if (arrPis) { if (arrPis.movido) { pilaPis.push({ que: "movidas", antes: [[selPis, arrPis.t0]] }); ordenaGuarda(); } arrPis = null; return; }
+    if (pellizco) { ini = null; return; }
+    if (rayaV) { rayaV = 0; guardaDes(); return; }
+    if (rayaP >= 0) { ponAncla(rayaP, aTiempo(e)); rayaP = -1; return; }
+    if (ini === null) return;
+    const t = aTiempo(e); if (Math.abs(t - ini) <= 0.05) ir(t, c === cv); ini = null; pinta(); };
+  c.onpointercancel = () => { ini = null; if (rayaV) { rayaV = 0; guardaDes(); } };
 }
-arrastre(cv, e => { const r = cv.getBoundingClientRect(); return (e.clientX - r.left) / r.width * DUR(); });
-arrastre(cl, e => { const r = cl.getBoundingClientRect(), [a, b] = ventana(); return a + (e.clientX - r.left) / r.width * (b - a); });
+// rueda en la lupa: Ctrl (o Alt) + rueda = más o menos compases; Mayús + rueda (o rueda de lado) = mover la lupa
+let ultRueda = 0;
+cl.addEventListener("wheel", e => {
+  const L = [1, 2, 4, 8], i = L.indexOf(NCOMP);
+  if (e.ctrlKey || e.altKey) { e.preventDefault(); if (Date.now() - ultRueda < 120) return; ultRueda = Date.now();
+    const j = e.deltaY > 0 ? Math.min(3, i + 1) : Math.max(0, i - 1); if (j !== i) ponNcomp(L[j]); }
+  else if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) { e.preventDefault(); if (Date.now() - ultRueda < 150) return; ultRueda = Date.now();
+    ((e.shiftKey ? e.deltaY : e.deltaX) > 0 ? $("adelante") : $("atras")).click(); }
+}, { passive: false });
+// pellizcar con dos dedos (móvil): abrir = menos compases, cerrar = más
+const toques = new Map(); let pellizco = null;
+cl.addEventListener("pointerdown", e => { if (e.pointerType !== "touch") return; toques.set(e.pointerId, e.clientX);
+  if (toques.size === 2) { const [p1, p2] = [...toques.values()]; pellizco = { d: Math.abs(p1 - p2) || 1, n: NCOMP }; } }, true);
+cl.addEventListener("pointermove", e => { if (!toques.has(e.pointerId)) return; toques.set(e.pointerId, e.clientX);
+  if (!pellizco || toques.size !== 2) return;
+  const [p1, p2] = [...toques.values()], r = Math.abs(p1 - p2) / pellizco.d, L = [1, 2, 4, 8]; let i = L.indexOf(pellizco.n);
+  if (r > 1.5) i = Math.max(0, i - (r > 2.6 ? 2 : 1)); else if (r < 0.67) i = Math.min(3, i + (r < 0.38 ? 2 : 1));
+  if (L[i] !== NCOMP) ponNcomp(L[i]); }, true);
+["pointerup", "pointercancel"].forEach(t => cl.addEventListener(t, e => { toques.delete(e.pointerId); if (!toques.size) pellizco = null; }, true));
+function centraLupa(t) { const [a, b] = ventana(); vIni = unos.filter(u => u <= t - (b - a) / 2 + 0.01).pop() || unos[0]; pinta(); }
+let arrLupa = false;   // arrastrando la lupa en la franja de números de la canción entera
+arrastre(cv, e => { const r = cv.getBoundingClientRect(); return Math.max(0, (e.clientX - r.left) / r.width * DUR()); });
+arrastre(cl, e => { const r = cl.getBoundingClientRect(), [a, b] = ventana(), m = medidas();
+  const f = Math.min(1, Math.max(0, (e.clientX - r.left - m.izq - m.pad) / (r.width - m.izq - m.pad - m.der))); return a + f * (b - a); });
+
+// ---------- partitura (19-11-2026): solo si existe _ritmo/<canción>/partitura_datos.js (window.PARTITURA, lo escribe partitura.py)
+// Se dibuja con Verovio (lib/verovio-toolkit-wasm.js, guardado en local) al abrir el panel. El cuadre compás → segundo
+// viene de partitura.py; las anclas puestas aquí (arrastrando en la lupa o con el botón) lo corrigen al momento y se
+// guardan en este navegador; para que valgan siempre, el texto ANCLAS se pasa a Claude (partitura.py --ancla).
+const PT = window.PARTITURA || null;
+const CLAVE_ANCLAS = "tdj_anclas:" + CANCION, CLAVE_PARTES = "tdj_partes:" + CANCION;
+let anclas = {};      // índice de compás de la partitura → segundo
+try { anclas = JSON.parse(localStorage.getItem(CLAVE_ANCLAS) || "{}"); } catch (e) {}
+let TP = [];          // segundo en que empieza cada compás de la partitura (+ el final), ya con las anclas
+function rehazTiempos() {
+  if (!PT) return;
+  const base = PT.compases.map(c => c.t).concat([PT.compases[PT.compases.length - 1].fin]);
+  const ks = Object.keys(anclas).map(Number).filter(i => i >= 0 && i < base.length).sort((a, b) => a - b);
+  const off = i => {   // corrección: la de las anclas, repartida en línea recta entre una y otra
+    if (!ks.length) return 0;
+    if (i <= ks[0]) return anclas[ks[0]] - base[ks[0]];
+    if (i >= ks[ks.length - 1]) return anclas[ks[ks.length - 1]] - base[ks[ks.length - 1]];
+    let j = 0; while (ks[j + 1] < i) j++;
+    const a = ks[j], b = ks[j + 1], f = (i - a) / (b - a);
+    return (1 - f) * (anclas[a] - base[a]) + f * (anclas[b] - base[b]);
+  };
+  TP = base.map((t, i) => t + off(i));
+  for (let i = 1; i < TP.length; i++) TP[i] = Math.max(TP[i], TP[i - 1] + 0.05);
+}
+function compasPartitura(t) {
+  if (!PT || !TP.length || t < TP[0] - 0.02 || t >= TP[TP.length - 1]) return -1;
+  let lo = 0, hi = TP.length - 2;
+  while (lo < hi) { const m = (lo + hi + 1) >> 1; if (TP[m] <= t + 0.02) lo = m; else hi = m - 1; }
+  return lo;
+}
+let tk = null, svgMedidas = [], cajas = [], marcado = -1, ultimoSuena = -1, zoomP = matchMedia("(max-width:700px)").matches ? 26 : 36;
+let partesVer = null;   // grupos que se ven (null = todas)
+const NOMBRE_GRUPO = { bandoneones: "Bandoneones", piano: "Piano", contrabajo: "Contrabajo", cuerdas: "Cuerdas", voz: "Voz", otros: "Otros" };
+function anclasTxt() {
+  const ks = Object.keys(anclas).map(Number).sort((a, b) => a - b);
+  if (!ks.length) { $("anclas_txt").textContent = ""; return; }
+  const pares = ks.map(i => `${PT.compases[i].n}=${anclas[i].toFixed(3)}`);
+  $("anclas_txt").textContent = `ANCLAS ${pares.join(" ")}\npython partitura.py "_ritmo/${CANCION}" ` + pares.map(p => "--ancla " + p).join(" ");
+}
+function ponAncla(i, t) {
+  if (i < 0) return;
+  anclas[i] = +t.toFixed(3);
+  try { localStorage.setItem(CLAVE_ANCLAS, JSON.stringify(anclas)); } catch (e) {}
+  rehazTiempos(); anclasTxt(); ponInfo(ahora()); pinta();
+}
+if (PT) {
+  rehazTiempos();
+  $("panel_partitura").hidden = false;
+  $("partitura_que").textContent = `· ${PT.partitura} · ${PT.compases.length} compases · ${PT.partes.length} partes`;
+  let guardadas = null;
+  try { guardadas = JSON.parse(localStorage.getItem(CLAVE_PARTES) || "null"); } catch (e) {}
+  if (Array.isArray(guardadas)) partesVer = guardadas;
+  else if (matchMedia("(max-width:700px)").matches)   // en el móvil, 12 partes no caben: de entrada, las de ritmo
+    partesVer = ["bandoneones", "piano", "contrabajo"].filter(g => PT.partes.some(p => p.grupo === g));
+  const grupos = ["bandoneones", "piano", "contrabajo", "cuerdas", "voz", "otros"].filter(g => PT.partes.some(p => p.grupo === g));
+  const botones = [["todas", "Todas"]].concat(grupos.map(g => [g, NOMBRE_GRUPO[g]]));
+  for (const [g, txt] of botones) {
+    const b = document.createElement("button"); b.textContent = txt; b.dataset.parte = g;
+    b.title = g === "todas" ? "Todas las partes" : "Ver u ocultar: " + PT.partes.filter(p => p.grupo === g).map(p => p.nombre).join(", ");
+    b.onclick = () => {
+      if (g === "todas") partesVer = null;
+      else {
+        const s = new Set(partesVer || []); s.has(g) ? s.delete(g) : s.add(g);
+        partesVer = s.size && s.size < grupos.length ? [...s] : null;
+      }
+      try { localStorage.setItem(CLAVE_PARTES, JSON.stringify(partesVer)); } catch (e) {}
+      marcaPartes(); dibujaPartitura();
+    };
+    $("seg_partes").appendChild(b);
+  }
+  marcaPartes();
+  $("panel_partitura").addEventListener("toggle", () => {
+    if (!$("panel_partitura").open) return;
+    if (!nMedidas && !enCurso) dibujaPartitura();
+    else if (nMedidas) { cajas = []; marcaPartitura(true); }   // ya estaba dibujada (de antemano): solo marcar
+  });
+  document.querySelectorAll("[data-zoom]").forEach(b => b.onclick = () => { zoomP = Math.max(14, Math.min(70, zoomP + 6 * +b.dataset.zoom)); dibujaPartitura(); });
+  $("partitura").addEventListener("click", e => {
+    const g = e.target.closest && e.target.closest("g.measure"); if (!g) return;
+    const i = svgMedidas.indexOf(g); if (i < 0 || i >= TP.length - 1) return;
+    if (e.shiftKey && marcado >= 0) {
+      const a = Math.min(i, marcado), b = Math.max(i, marcado);
+      sel = { a: TP[a], b: TP[b + 1] }; $("bucle").checked = true; ir(sel.a, true);
+    } else { marcado = i; ir(TP[i], true); }
+  });
+  $("ir_cuadrar").onclick = () => { $("herramientas").open = true; $("caja_cuadrar").scrollIntoView({ block: "center", behavior: "smooth" }); };
+  $("es_ancla").onclick = () => { if (marcado < 0) { alert("Primero haz clic en un compás de la partitura"); return; } ponAncla(marcado, ahora()); };
+  $("borra_anclas").onclick = () => { anclas = {}; try { localStorage.removeItem(CLAVE_ANCLAS); } catch (e) {} rehazTiempos(); anclasTxt(); pinta(); };
+  document.addEventListener("keydown", e => { if (e.code === "KeyA" && e.target.tagName !== "INPUT" && $("panel_partitura").open) $("es_ancla").click(); });
+  anclasTxt();
+}
+function marcaPartes() {
+  document.querySelectorAll("[data-parte]").forEach(b => b.classList.toggle("on", b.dataset.parte === "todas" ? !partesVer : !!(partesVer && partesVer.includes(b.dataset.parte))));
+}
+function cargaVerovio() {
+  if (window.__verovio) return window.__verovio;
+  return window.__verovio = new Promise((ok, mal) => {
+    const s = document.createElement("script"); s.src = "lib/verovio-toolkit-wasm.js";
+    s.onload = () => {
+      const listo = () => ok(new verovio.toolkit());
+      if (verovio.module.calledRun) listo(); else verovio.module.onRuntimeInitialized = listo;
+    };
+    s.onerror = () => mal(new Error("no encuentro lib/verovio-toolkit-wasm.js (lo copia pagina_ritmo.py)"));
+    document.head.appendChild(s);
+  });
+}
+function corto(n) {   // nombre corto de una parte (en el móvil los nombres largos se comen media pantalla)
+  const num = (n.match(/\d+/) || [""])[0], x = n.toLowerCase();
+  const k = [["bandon", "Bn"], ["violonc", "Vc"], ["cello", "Vc"], ["viola", "Va"], ["violin", "Vl"], ["piano", "Pno"], ["contrab", "Cb"],
+             ["bass", "Cb"], ["flaut", "Fl"], ["flute", "Fl"], ["voz", "Voz"], ["voice", "Voz"]].find(([c]) => x.includes(c));
+  return (k ? k[1] : n.slice(0, 3)) + (num ? " " + num : "");
+}
+function xmlConPartes() {
+  const estrecho = $("partitura").clientWidth < 640;
+  const doc = new DOMParser().parseFromString(PT.xml, "application/xml");
+  // casillas de 1.ª/2.ª vez fuera: si están mal cerradas (pasa con las de Audiveris), Verovio desordena los compases
+  // («El Huracán»: ponía los 18 primeros al final y la marca iba corrida). El cuadre no las usa. (19-11-2026)
+  doc.querySelectorAll("barline > ending").forEach(el => el.remove());
+  if (partesVer) {
+    const quitar = new Set(PT.partes.filter(p => !partesVer.includes(p.grupo)).map(p => p.id));
+    doc.querySelectorAll("score-part, part").forEach(el => { if (quitar.has(el.getAttribute("id"))) el.remove(); });
+  }
+  if (estrecho) doc.querySelectorAll("score-part > part-name").forEach(el => { el.textContent = corto(el.textContent); });
+  return new XMLSerializer().serializeToString(doc);
+}
+let dibujando = 0, enCurso = false;
+// ancho del recuadro de la partitura (con el panel cerrado mide 0: se usa el de la página)
+function anchoPartitura() { return $("partitura").clientWidth || (document.querySelector("main").clientWidth - 40); }
+async function dibujaPartitura() {
+  enCurso = true;
+  try { await dibujaPartitura_(); } finally { enCurso = false; }
+}
+// La partitura se pinta por páginas (19-11-2026): con todo dentro (54.000 piezas de SVG) el navegador tardaba ~19 s en
+// enseñarla; ahora cada página es un hueco del tamaño justo y solo se rellenan las que están a la vista (y cerca).
+let paginas = [], nMedidas = 0, observador = null;
+async function dibujaPartitura_() {
+  const caja = $("partitura"), yo = ++dibujando, t0 = performance.now();
+  window.__partituraLista = false;
+  caja.innerHTML = '<div class="cargando">' + (tk ? "Dibujando la partitura…" : "Cargando el programa de partituras y dibujando (la primera vez tarda unos segundos)…") + "</div>";
+  try {
+    tk = tk || await cargaVerovio();
+    await new Promise(r => setTimeout(r, 30));
+    const ancho = Math.max(300, anchoPartitura() - 12); window.__anchoP = anchoPartitura();
+    const alto = Math.max(400, caja.clientHeight || innerHeight * 0.62);
+    tk.setOptions({ pageWidth: Math.round(ancho * 100 / zoomP), pageHeight: Math.round(alto * 100 / zoomP), scale: zoomP, adjustPageHeight: true,
+                    breaks: "auto", header: "none", footer: "none", pageMarginLeft: 30, pageMarginRight: 30, pageMarginTop: 20,
+                    pageMarginBottom: 20, svgAdditionalAttribute: ["measure@n"], svgViewBox: true });
+    tk.loadData(xmlConPartes());
+    const t1 = performance.now();
+    const nuevas = []; let ini = 0;
+    for (let p = 1; p <= tk.getPageCount(); p++) {
+      const svg = tk.renderToSVG(p), vb = (svg.match(/viewBox="([\d.\s-]+)"/) || [, "0 0 2100 2970"])[1].split(/\s+/).map(Number);
+      const n = (svg.match(/class="measure"/g) || []).length;
+      nuevas.push({ svg, ini, n, w: vb[2], h: vb[3] }); ini += n;
+    }
+    window.__partituraMs = [Math.round(t1 - t0), Math.round(performance.now() - t1)];
+    if (yo !== dibujando) return;
+    if (observador) observador.disconnect();
+    paginas = nuevas; nMedidas = ini; svgMedidas = new Array(nMedidas); cajas = [];
+    caja.innerHTML = "";
+    paginas.forEach((pg, k) => {
+      pg.div = document.createElement("div"); pg.div.className = "pag"; pg.div.dataset.p = k;
+      pg.div.style.aspectRatio = `${pg.w} / ${pg.h}`; caja.appendChild(pg.div);
+    });
+    observador = new IntersectionObserver(es => es.forEach(e => {
+      const k = +e.target.dataset.p;
+      if (e.isIntersecting) { ponPagina(k); marcaPartitura("pagina"); } else quitaPagina(k);   // «pagina»: marcar sin mover la vista
+    }), { root: caja, rootMargin: "800px 0px" });
+    paginas.forEach(pg => observador.observe(pg.div));
+    if (nMedidas !== PT.compases.length)
+      $("partitura_aviso").textContent = `Ojo: la partitura dibujada tiene ${nMedidas} compases y el cuadre ${PT.compases.length}.`;
+    ultimoSuena = -2; marcaPartitura(true);
+    window.__partituraLista = true;
+  } catch (e) {
+    caja.innerHTML = '<div class="cargando">No se pudo dibujar la partitura: ' + e.message + "</div>"; console.error(e);
+  }
+}
+function paginaDe(i) { return paginas.findIndex(pg => i >= pg.ini && i < pg.ini + pg.n); }
+function ponPagina(k) {
+  const pg = paginas[k]; if (!pg || pg.puesta) return;
+  pg.div.innerHTML = pg.svg; pg.puesta = true;
+  [...pg.div.querySelectorAll("g.measure")].forEach((g, j) => {
+    const i = pg.ini + j; svgMedidas[i] = g; delete cajas[i];
+    // Verovio numera mal los compases de estas partituras (empezaba en 19): se ponen los números escritos
+    const t = g.querySelector(".mNum tspan tspan") || g.querySelector(".mNum tspan");
+    if (t && PT.compases[i]) t.textContent = PT.compases[i].n;
+  });
+}
+function quitaPagina(k) {
+  const pg = paginas[k]; if (!pg || !pg.puesta) return;
+  pg.div.innerHTML = ""; pg.puesta = false;
+  for (let i = pg.ini; i < pg.ini + pg.n; i++) { delete svgMedidas[i]; delete cajas[i]; }
+}
+function medida(i) { if (!svgMedidas[i]) ponPagina(paginaDe(i)); return svgMedidas[i]; }   // (también para probar_ritmo.py)
+function caja(i) {   // recuadro del compás en coordenadas del SVG (guardado)
+  if (!cajas[i]) { const b = svgMedidas[i].getBBox(); cajas[i] = { x: b.x, y: b.y, w: b.width, h: b.height }; }
+  return cajas[i];
+}
+function rect(i, clase) {
+  if (!svgMedidas[i]) return;
+  const b = caja(i), r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  r.setAttribute("x", b.x); r.setAttribute("y", b.y); r.setAttribute("width", b.w); r.setAttribute("height", b.h); r.setAttribute("class", clase);
+  svgMedidas[i].insertBefore(r, svgMedidas[i].firstChild);
+}
+function aLaVista(i) {
+  const caj = $("partitura"), g = medida(i); if (!g) return;
+  const r = g.getBoundingClientRect(), c = caj.getBoundingClientRect();
+  if (r.top < c.top + 8 || r.bottom > c.bottom - 8)
+    caj.scrollTo({ top: caj.scrollTop + r.top - c.top - Math.max(10, (c.height - r.height) * 0.25), behavior: sonando ? "smooth" : "auto" });
+}
+function marcaPartitura(forzar) {
+  if (!PT || !nMedidas || !$("panel_partitura").open) return;
+  const t = ahora(), i = compasPartitura(t), [a, b] = ventana();
+  const n = Math.min(nMedidas, TP.length - 1);
+  if (i >= 0 && i < n) medida(i);
+  const clave = [i, a, b, sel ? sel.a + "," + sel.b : "", marcado, Object.keys(anclas).length].join("|");
+  if (forzar || clave !== marcaPartitura.clave) {
+    marcaPartitura.clave = clave;
+    $("partitura").querySelectorAll("rect.marca, rect.marca_lupa, rect.marca_trozo, rect.marca_ancla, line.aguja").forEach(x => x.remove());
+    for (let k = 0; k < n; k++) {
+      if (!svgMedidas[k]) continue;
+      if (TP[k + 1] > a + 0.05 && TP[k] < b - 0.05) rect(k, "marca_lupa");
+      if (sel && TP[k + 1] > sel.a + 0.05 && TP[k] < sel.b - 0.05) rect(k, "marca_trozo");
+    }
+    if (marcado >= 0 && marcado < n) rect(marcado, "marca_ancla");
+    if (i >= 0 && i < n) rect(i, "marca");
+    if ($("partitura_sigue").checked) {
+      if (sonando && i >= 0 && i < n && i !== ultimoSuena) aLaVista(i);
+      if (!sonando && forzar !== "pagina") { const k = compasPartitura(a + 0.05); if (k >= 0 && k < n) aLaVista(k); }
+    }
+    ultimoSuena = i;
+  }
+  // aguja: dónde va dentro del compás
+  let ag = $("partitura").querySelector("line.aguja");
+  if (i >= 0 && i < n && svgMedidas[i]) {
+    const bx = caja(i), f = Math.max(0, Math.min(1, (t - TP[i]) / (TP[i + 1] - TP[i]))), x = bx.x + f * bx.w;
+    if (!ag || ag.parentNode !== svgMedidas[i]) {
+      if (ag) ag.remove();
+      ag = document.createElementNS("http://www.w3.org/2000/svg", "line"); ag.setAttribute("class", "aguja"); svgMedidas[i].appendChild(ag);
+    }
+    ag.setAttribute("x1", x); ag.setAttribute("x2", x); ag.setAttribute("y1", bx.y); ag.setAttribute("y2", bx.y + bx.h);
+  } else if (ag) ag.remove();
+}
+// rayas de compás de la partitura en la lupa (azules, en la franja de la onda): se pueden arrastrar para cuadrarla
+function rayasPartituraLupa(g, x, a, b, m, w) {
+  if (!PT || !$("ver_partitura_lupa").checked) return;
+  g.save(); g.beginPath(); g.rect(m.izq, m.cab, w - m.izq, m.onda); g.clip();
+  g.font = "600 11px Segoe UI";
+  for (let i = 0; i < TP.length - 1; i++) {
+    if (TP[i] < a - 0.5 || TP[i] > b + 0.5) continue;
+    const tx = x(TP[i]), fijo = anclas[i] !== undefined;
+    g.fillStyle = fijo ? "#5fb0ff" : "#7fb7d9"; g.fillRect(tx - 1, m.cab, fijo ? 3 : 2, m.onda);
+    g.fillRect(tx - 6, m.cab, 12, 4);
+    g.fillText("P" + PT.compases[i].n + (fijo ? " ⚓" : ""), tx + 4, m.cab + 13);
+  }
+  g.restore();
+}
 
 // ---------- dibujos
 D.dibujos.filter(d => d.tramos.length).forEach(d => {
-  const b = document.createElement("button"); b.textContent = `${d.nombre.replace(" · en el doble de tiempos", " · a mitad de velocidad")} (${d.tramos.length})`;
+  const b = document.createElement("button");
+  b.innerHTML = `${d.nombre.replace(" · en el doble de tiempos", " · a mitad de velocidad")}<span class="n">${d.tramos.length}</span>`;
+  b.title = `${d.tramos.length} trozos`;
   b.onclick = () => {
     dibSel = d; [...$("dibujos").children].forEach(x => x.classList.remove("on")); b.classList.add("on");
     $("tramos").innerHTML = "";
     d.tramos.forEach(tr => {
       const t = document.createElement("button");
-      t.textContent = `${tr.desde_seg.toFixed(2)}–${tr.hasta_seg.toFixed(2)} s · ${tr.ventanas} veces · nota ${tr.nota} · ${tr.fuente}`;
-      t.onclick = () => { sel = { a: tr.desde_seg, b: tr.hasta_seg }; cursor = sel.a; vIni = unos.filter(u => u <= sel.a + 0.05).pop() || unos[0]; pinta(); };
+      const c1 = compasDe(tr.desde_seg), c2 = compasDe(tr.hasta_seg - 0.01);
+      t.innerHTML = `<span class="punto" style="background:${COL[tr.fuente] || "#ccc"}"></span>compás ${c1}${c2 > c1 ? "–" + c2 : ""} · ${reloj(tr.desde_seg)}`;
+      t.title = `${tr.desde_seg.toFixed(2)}–${tr.hasta_seg.toFixed(2)} s · ${tr.ventanas} veces · nota ${tr.nota} · ${tr.fuente}`;
+      t.onclick = () => { sel = { a: tr.desde_seg, b: tr.hasta_seg }; cursor = sel.a; ponInfo(cursor); vIni = unos.filter(u => u <= sel.a + 0.05).pop() || unos[0]; pinta(); };
       $("tramos").appendChild(t);
     });
     pinta();
   };
   $("dibujos").appendChild(b);
 });
-if (!$("dibujos").children.length) $("dibujos").innerHTML = '<span class="ayuda">No ha encontrado ningún dibujo de dibujos.txt.</span>';
+if (!$("dibujos").children.length) $("dibujos").innerHTML = '<span class="ayuda">No ha encontrado ninguno.</span>';
 
 // ---------- tramo: afinar y guardar
 function compasDe(t) { let c = 0; for (const p of P) if (p.seg <= t + 1e-3) c = p.compas; return c; }
 function textoTramo() {
   if (!sel) return;
+  $("tramo_txt").className = "";
   $("tramo_txt").innerHTML = `de <b>${sel.a.toFixed(3)} s</b> (compás ${compasDe(sel.a)}) a <b>${sel.b.toFixed(3)} s</b> (compás ${compasDe(sel.b)}) · ${(sel.b - sel.a).toFixed(2)} s`;
 }
 document.querySelectorAll("[data-mueve]").forEach(b => b.onclick = () => {
@@ -347,11 +1505,15 @@ document.querySelectorAll("[data-mueve]").forEach(b => b.onclick = () => {
 });
 $("al_golpe").onclick = () => { if (!sel) return; const u = unos.reduce((m, t) => Math.abs(t - sel.a) < Math.abs(m - sel.a) ? t : m, unos[0]); sel.b += u - sel.a; sel.a = u; pinta(); };
 $("exportar").onclick = () => {
-  if (!sel) { alert("Primero elige un tramo"); return; }
+  if (!sel) { alert("Primero elige un trozo"); return; }
   const golpes = G.filter(g => g.seg >= sel.a && g.seg < sel.b).map(g => ({ ...g, seg_en_tramo: +(g.seg - sel.a).toFixed(3) }));
   const pulsos = P.filter(p => p.seg >= sel.a && p.seg < sel.b).map(p => ({ ...p, seg_en_tramo: +(p.seg - sel.a).toFixed(3) }));
   const out = { cancion: M.cancion, audio: M.audio, compas: M.compas, bpm: M.bpm, desde_seg: +sel.a.toFixed(3), hasta_seg: +sel.b.toFixed(3),
-                compas_inicio: compasDe(sel.a), dibujo: dibSel ? dibSel.nombre : null, pulsos, golpes };
+                compas_inicio: compasDe(sel.a), dibujo: dibSel ? dibSel.nombre : null, pulsos, golpes,
+                carpeta: CANCION, velocidad_escucha: VEL };
+  if (hayV()) { const V = VV(), dd = vDes[V.id] || 0;
+    out.video = { id: V.id, origen: V.origen || null, nombre: V.nombre || null, subido: !!V.subido, inicio: +vidIni().toFixed(3), velocidad: V.velocidad };
+    out.pisadas = V.pisadas.filter(q => q[0] + dd >= sel.a && q[0] + dd < sel.b).map(([t, b, pie, tipo]) => ({ seg: +(t + dd).toFixed(3), bailarin: (V.bailarines[b] || {}).nombre, pie, tipo })); }
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 1)], { type: "application/json" }));
   a.download = `tramo_${M.cancion}_${sel.a.toFixed(2)}.json`; a.click();
 };
@@ -366,29 +1528,929 @@ $("es_uno").onclick = () => orden(ahora()); $("compas_ay").onchange = () => orde
 // ---------- controles de la lupa
 $("atras").onclick = () => { const i = unos.findIndex(t => t >= vIni - 0.01); vIni = unos[Math.max(0, i - 1)]; pinta(); };
 $("adelante").onclick = () => { const i = unos.findIndex(t => t >= vIni - 0.01); vIni = unos[Math.min(unos.length - 1, i + 1)]; pinta(); };
-["ncomp", "rejilla", "banda_de"].forEach(id => $(id).onchange = pinta);
-function bandaTxt() { $("lo_v").textContent = $("lo").value; $("hi_v").textContent = $("hi").value; }
-["lo", "hi"].forEach(id => $(id).oninput = () => { bandaTxt(); pinta(); });
-document.querySelectorAll("[data-banda]").forEach(b => b.onclick = () => { const [l, h] = b.dataset.banda.split(","); $("lo").value = l; $("hi").value = h; bandaTxt(); pinta(); });
-Object.keys(AUD).forEach(n => { const o = document.createElement("option"); o.value = n; o.textContent = n === "mezcla" ? "la mezcla" : "la pista de " + n; $("banda_de").appendChild(o); });
-bandaTxt();
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+  // con el vídeo a la vista (20-11-2026, moviola para ajustar pisadas): ← → = 1 fotograma, Mayús = ¼ de tiempo,
+  // Ctrl = un compás. Sin vídeo, como siempre: ← → = un compás, Mayús = mover solo la lupa
+  const dir = { ArrowLeft: -1, ArrowRight: 1 }[e.code]; if (!dir) { if (e.code === "KeyR" && !e.ctrlKey && !e.metaKey) { e.preventDefault(); $("bucle").click(); } return; }
+  e.preventDefault();
+  if (verVideo && hayV()) { if (e.ctrlKey || e.metaKey) dir < 0 ? compasMenos() : compasMas(); else if (e.shiftKey) pasoRejilla(dir, 4); else pasoFotograma(dir); return; }
+  if (e.shiftKey) $(dir < 0 ? "atras" : "adelante").click(); else dir < 0 ? compasMenos() : compasMas();
+});
+function ponNcomp(n) { NCOMP = n; $("ncomp_btn").textContent = `🔍 ${n} compás${n > 1 ? "es" : ""} ▾`; $("m_ncomp").classList.remove("abierto"); typeof guardaPos === "function" && guardaPos(); pinta(); }
+document.querySelectorAll("[data-ncomp]").forEach(b => b.onclick = () => ponNcomp(+b.dataset.ncomp));
+document.querySelectorAll("[data-sub]").forEach(b => b.onclick = () => { SUB = +b.dataset.sub; pinta(); });
+function marcaSeg() {
+  document.querySelectorAll("[data-ncomp]").forEach(b => b.classList.toggle("on", +b.dataset.ncomp === NCOMP));
+  document.querySelectorAll("[data-sub]").forEach(b => b.classList.toggle("on", +b.dataset.sub === SUB));
+  document.querySelectorAll("[data-banda]").forEach(b => b.classList.toggle("on", b.dataset.banda === BANDA.join(",")));
+}
+["ver_notas", "ver_golpes", "ver_ondas"].forEach(id => $(id).onchange = pinta);
+["filas_altas", "ver_banda"].forEach(id => $(id).onchange = () => { pinta(); setTimeout(ajustaVista, 50); });
+if (!Object.keys(AUD).some(n => n !== "mezcla")) $("lbl_ondas").classList.add("oculto");   // sin pistas separadas no hay ondas
+document.querySelectorAll("[data-banda]").forEach(b => b.onclick = () => { BANDA = b.dataset.banda.split(",").map(Number); $("ver_banda").checked = true; pinta(); setTimeout(ajustaVista, 50); });
 
 // ---------- bucle de pintado
+function ponInfo(t) {
+  const ip = PT ? compasPartitura(t) : -1;
+  $("info").innerHTML = `<b>${reloj(t)}</b>` + (ip >= 0 ? ` <span class="ayuda" title="compás de la partitura que suena">· partitura ${PT.compases[ip].n}</span>` : "");
+  if (document.activeElement !== $("ir_compas")) $("ir_compas").value = Math.max(1, compasDe(t));
+}
+
+// ---------- reproductor (19-11-2026): ⏮ ⏭, ir a un compás, repetir del compás N al M
+const NC = Math.max(...P.map(p => p.compas));
+function inicioCompas(n) {   // segundo en que empieza el compás n (null si no existe)
+  const p = P.find(q => q.compas === n && q.tiempo === 1) || P.find(q => q.compas === n);
+  return p ? p.seg : null;
+}
+function ir(t, verLupa) {   // ir a un segundo: sonando sigue sonando desde ahí; la lupa lo enseña si no se ve
+  t = Math.max(0, Math.min(DUR() - 0.05, t));
+  if ($("bucle").checked && sel && (t < sel.a - 0.01 || t >= sel.b - 0.01)) $("bucle").checked = false;   // salir del trozo = dejar de repetir
+  cursor = t; ponInfo(t); guardaPos();
+  const [a, b] = ventana();
+  if (verLupa || t < a || t >= b) vIni = unos.filter(u => u <= t + 0.01).pop() || unos[0];
+  if (sonando) escuchar(t);
+  pinta();
+}
+function compasMenos() {   // como un reproductor de discos: si ya va por dentro del compás, a su principio; si no, al anterior
+  const t = ahora(), n = compasDe(t), ini = inicioCompas(n);
+  if (ini !== null && t - ini > (sonando ? 0.6 * VEL + 0.25 : 0.05)) ir(ini);
+  else { const p = inicioCompas(n - 1); ir(p !== null ? p : 0); }
+}
+function compasMas() { const p = inicioCompas(compasDe(ahora()) + 1); if (p !== null) ir(p); }
+$("compas_menos").onclick = compasMenos; $("compas_mas").onclick = compasMas;
+$("de_n").textContent = "de " + NC;
+$("bucle").checked = false;   // (por si el navegador la recuerda de antes de recargar)
+$("ir_compas").max = NC; $("rep_de").max = NC; $("rep_a").max = NC;
+$("ir_compas").onchange = () => {
+  const n = Math.max(1, Math.min(NC, Math.round(+$("ir_compas").value || 1))), p = inicioCompas(n);
+  $("ir_compas").blur(); if (p !== null) ir(p, true);
+};
+$("ir_compas").onkeydown = e => { if (e.key === "Enter") $("ir_compas").onchange(); };
+function trozoDeCompases(a, b) {
+  a = Math.max(1, Math.min(NC, a)); b = Math.max(a, Math.min(NC, b));
+  const ta = inicioCompas(a), tb = inicioCompas(b + 1);
+  sel = { a: ta, b: tb !== null ? tb : DUR() };
+}
+function repDesdeCasillas() {
+  const n = Math.max(1, compasDe(ahora()));
+  let a = Math.round(+$("rep_de").value) || n, b = Math.round(+$("rep_a").value) || a;
+  if (b < a) [a, b] = [b, a];
+  trozoDeCompases(a, b); $("bucle").checked = true;
+  if (sonando) escuchar(ahora()); else { cursor = sel.a; ponInfo(cursor); vIni = unos.filter(u => u <= sel.a + 0.01).pop() || unos[0]; }
+  pinta();
+}
+["rep_de", "rep_a"].forEach(id => { $(id).onchange = () => { $(id).blur(); repDesdeCasillas(); };
+                                     $(id).onkeydown = e => { if (e.key === "Enter") $(id).onchange(); }; });
+$("bucle").onchange = () => {
+  if ($("bucle").checked && !sel) { const n = Math.max(1, compasDe(ahora())); trozoDeCompases(n, n); }   // sin trozo: el compás que suena
+  if (sonando) escuchar(ahora());
+  pinta();
+};
+function casillasRep() {   // las casillas «de … a …» dicen siempre el trozo elegido (lo elija quien lo elija)
+  // (sin trozo: el compás que suena, que es lo que se repetiría al encender 🔁)
+  const f = document.activeElement, n = Math.max(1, compasDe(ahora()));
+  if (f !== $("rep_de")) $("rep_de").value = sel ? Math.max(1, compasDe(sel.a + 0.02)) : n;
+  if (f !== $("rep_a")) $("rep_a").value = sel ? Math.max(1, compasDe(sel.b - 0.02)) : n;
+}
 let pend = false;
-function pinta() { if (pend) return; pend = true; setTimeout(async () => { pend = false; try { dibujaVista(); textoTramo(); await dibujaLupa(); } catch (e) { console.error(e); } }, 0); }
+function pinta() { if (pend) return; pend = true; setTimeout(async () => { pend = false; try { marcaSeg(); dibujaVista(); textoTramo(); casillasRep(); marcaPartitura(); if (!$("panel_lupa").hidden) await dibujaLupa(); } catch (e) { console.error(e); } }, 0); }
 function tic() {
   if (sonando) {
     const t = ahora();
     if (t >= sonando.fin - 0.01) { if ($("bucle").checked && sel) escuchar(sel.a); else { parar(); cursor = 0; } }
     const [a, b] = ventana();
     if ($("seguir").checked && (t > b || t < a)) vIni = unos.filter(u => u <= t + 0.01).pop() || unos[0];
-    $("info").textContent = `${t.toFixed(2)} s · compás ${compasDe(t)}`;
+    ponInfo(t);
     pinta();
   }
+  sincVideo();
   requestAnimationFrame(tic);
 }
-window.addEventListener("resize", () => { picos = null; pinta(); });
-cargar("mezcla").then(() => pinta()); pinta(); tic();
+for (const f of FUENTES) {
+  const b = document.createElement("button"); b.className = "on"; b.innerHTML = `<span class="punto" style="background:${COL[f] || "#ccc"}"></span>${f}`;
+  b.dataset.fila = f;
+  b.onclick = () => { if (!filaOculta[f] && FV().length === 1) return; filaOculta[f] = !filaOculta[f]; marcaFilas(); pinta(); };
+  $("filas").appendChild(b);
+}
+function marcaFilas() { document.querySelectorAll("[data-fila]").forEach(b => b.classList.toggle("on", !filaOculta[b.dataset.fila])); }
+if (PT) { $("lbl_partitura_lupa").classList.remove("oculto"); $("caja_cuadrar").classList.remove("oculto"); }
+// ---------- qué se ve debajo de la barra (19-11-2026): «Lupa», «Partitura» o «Las dos». Con «Las dos» la partitura
+// se queda con el alto que deja la lupa, para que quepa todo en la pantalla sin bajar.
+const CLAVE_VISTA = "tdj_vista";
+let VISTA = "lupa";
+function ponVista(v, sinMover) {
+  if (!PT) v = "lupa";
+  VISTA = v; document.body.dataset.vista = v; try { localStorage.setItem(CLAVE_VISTA, v); } catch (e) {}
+  document.querySelectorAll("[data-vista]").forEach(b => b.classList.toggle("on", b.dataset.vista === v));
+  $("panel_lupa").hidden = v === "partitura";
+  if (PT) { $("panel_partitura").hidden = v === "lupa"; if (v !== "lupa" && !$("panel_partitura").open) $("panel_partitura").open = true; }
+  ajustaVista();
+  if (!sinMover) { const p = v === "partitura" ? $("panel_partitura") : $("panel_lupa");
+    scrollTo({ top: Math.max(0, p.getBoundingClientRect().top + scrollY - $("barra").offsetHeight - 8) }); }
+  pinta();
+}
+function ajustaVista() {   // alto de la partitura = lo que queda de pantalla
+  if (!PT || VISTA === "lupa") return;
+  const barra = $("barra").offsetHeight, lupa = VISTA === "dos" ? $("panel_lupa").offsetHeight + 14 : 0;
+  const encima = $("partitura").getBoundingClientRect().top - $("panel_partitura").getBoundingClientRect().top;
+  const alto = Math.max(220, Math.floor(innerHeight - barra - lupa - encima - 26));
+  if (Math.abs(($("partitura").offsetHeight || 0) - alto) > 2) $("partitura").style.height = alto + "px";
+}
+document.querySelectorAll("[data-vista]").forEach(b => b.onclick = () => ponVista(b.dataset.vista));
+if (PT) {
+  $("grupo_vista").classList.remove("oculto");
+  let v = null; try { v = localStorage.getItem(CLAVE_VISTA); } catch (e) {}
+  ponVista(v || (innerWidth < 700 ? "lupa" : "dos"), true);
+}
+window.addEventListener("resize", () => setTimeout(ajustaVista, 60));
+$("ver_partitura_lupa").onchange = () => { pinta(); setTimeout(ajustaVista, 50); };
+window.addEventListener("resize", () => { picos = null; pinta(); if (PT && nMedidas && Math.abs(anchoPartitura() - (window.__anchoP || 0)) > 40) { clearTimeout(window.__rz); window.__rz = setTimeout(dibujaPartitura, 400); } });
+// ---------- vídeo de bailarines (19-11-2026; «mega visor», fase 2): sigue a lo que suena, con su cuadrador
+// El vídeo es una copia ligera (video.py: 720 px, sin sonido, fotograma clave cada 10) que se enlaza, no va en el .js.
+// Segundo del vídeo = (segundo de la grabación − inicio) / velocidad. Sonando, se corrige poco a poco (un pelín más
+// rápido o más lento) y solo salta si se va más de 0,3 s, para que no dé tirones.
+let verVideo = false;
+const CLAVE_VERVIDEO = "tdj_ver_video";
+function nombreVideo() { const V = VV(); return V.subido ? "📁 " + V.nombre : `${V.bailarines.map(b => b.nombre).join(" y ")} · ${V.pisadas.length} pisadas`; }
+function cargaVideo() {
+  const v = $("video"), src = encodeURI(VV().src);
+  if (v.dataset.src !== src) { v.dataset.src = src; v.src = src; v.onloadedmetadata = () => tamVideo(); }
+  $("video_nombre").textContent = nombreVideo(); $("video_nombre").title = VV().origen || VV().nombre || ""; textoVideo();
+  $("video_quitar").classList.toggle("oculto", !VV().subido);
+}
+function ponVideo(on) {
+  verVideo = !!(hayV() && on);
+  $("panel_video").hidden = !verVideo; $("ver_video").classList.toggle("on", verVideo);
+  try { localStorage.setItem(CLAVE_VERVIDEO, verVideo ? "1" : "0"); } catch (e) {}
+  if (verVideo) cargaVideo(); else $("video").pause();
+  tamVideo();
+  window.dispatchEvent(new Event("resize"));     // la lupa y la partitura cambian de ancho
+}
+function tamVideo() {   // tan alto como deja la pantalla (es vertical); en pantallas estrechas, encima de la lupa
+  document.documentElement.style.setProperty("--barra", $("barra").offsetHeight + "px");
+  if (!verVideo) return;
+  const V = VV(), estrecha = innerWidth <= 900 && innerHeight > innerWidth;   // móvil en vertical: encima de la lupa
+  const lado = marcando && !estrecha;   // marcando: los botones van a la izquierda del vídeo, no debajo
+  const resto = $("cab_video").offsetHeight + (lado ? 0 : ($("caja_marcar").offsetHeight || 0) + ($("video_txt").offsetHeight || 0)) + 18 + 16;
+  let h = estrecha ? Math.round(innerHeight * 0.34) : innerHeight - $("barra").offsetHeight - 16 - resto;
+  let w = h * V.ancho / V.alto;
+  const maxW = estrecha ? innerWidth - 40 : lado ? Math.max(220, document.querySelector("main").clientWidth * 0.66 - 190)
+             : Math.max(220, document.querySelector("main").clientWidth * (innerWidth < 1000 ? 0.36 : 0.42));
+  if (w > maxW) { w = maxW; h = w * V.alto / V.ancho; }
+  if (h < 160) { h = 160; w = h * V.ancho / V.alto; }
+  $("video").style.width = Math.round(w) + "px"; $("video").style.height = Math.round(h) + "px";
+  $("panel_video").style.width = (lado ? Math.round(w + 22 + 160) : Math.max(Math.round(w + 22), marcando ? 340 : 280)) + "px";
+}
+// estrellas en los pies (19-11-2026): cada pisada con sitio (x y) da un destello que se apaga en ~0,4 s de música
+function estrellasVideo() {
+  const c = $("estrellas"), v = $("video"), V = VV();
+  const w = v.clientWidth, h = v.clientHeight, k = devicePixelRatio || 1;
+  if (c.width !== Math.round(w * k) || c.height !== Math.round(h * k)) { c.width = Math.round(w * k); c.height = Math.round(h * k); }
+  const g = c.getContext("2d"); g.setTransform(k, 0, 0, k, 0, 0); g.clearRect(0, 0, w, h);
+  if (!$("ver_estrellas").checked) return;
+  const t = ahora(), dd = vDes[V.id] || 0, sx = w / V.ancho, sy = h / V.alto;
+  if (!marcando) for (const [s, b, pie, tipo, x, y] of V.pisadas) {
+    if (!x && !y) continue;
+    const d = t - (s + dd); if (d < -0.04 || d > 0.45) continue;
+    // 20-11-2026 (Edmundo: «las estrellas son muy grandes, casi no se ven los pies»): una onda fina que se abre
+    // alrededor del pie y se apaga; el centro queda libre, así se ve el pie
+    const vida = Math.max(0, d) / 0.45, col = (V.bailarines[b] || {}).color || "#f0c05a";
+    ondaPie(g, x * sx, y * sy, col, vida, tipo === "o");
+  }
+  if (marcando) for (const q of arosVisibles(V)) {   // marcando: aros finos (se ve el pie a través); más claros cuanto más cerca del instante
+    const [s, b, pie, tipo, x, y] = q; if ((!x && !y) || q === selPis) continue;
+    const d = Math.abs(t - (s + dd)); if (d > 0.6 && !q.tenue) continue;
+    aroPie(g, x * sx, y * sy, (V.bailarines[b] || {}).color || "#fff", q.tenue && !$("ver_todos_aros").checked ? 0.3 : d < 0.05 ? 1 : 0.45, pie);
+    delete q.tenue;
+  }
+  if (selPis && V.pisadas.includes(selPis) && (selPis[4] || selPis[5])) {   // la elegida: aro blanco con cruz abierta (sin tapar el centro)
+    const col = (V.bailarines[selPis[1]] || {}).color || "#f0c05a", X = selPis[4] * sx, Y = selPis[5] * sy;
+    if (marcando) { aroPie(g, X, Y, col, 1, selPis[2]); g.save(); g.strokeStyle = "#fff"; g.lineWidth = 1.5; g.beginPath(); g.arc(X, Y, 14, 0, 7);
+      for (const [a, b2] of [[[X - 22, Y], [X - 16, Y]], [[X + 16, Y], [X + 22, Y]], [[X, Y - 22], [X, Y - 16]], [[X, Y + 16], [X, Y + 22]]]) { g.moveTo(...a); g.lineTo(...b2); }
+      g.stroke(); g.restore(); }
+    else { aroPie(g, X, Y, col, 1, selPis[2]); g.beginPath(); g.arc(X, Y, 14, 0, 7); g.strokeStyle = "#fff"; g.lineWidth = 1.5; g.stroke(); }
+  }
+  lupaPie();
+}
+// 20-11-2026 (Edmundo: «que se vean los anteriores y los de él cuando voy a marcar no ayuda»): marcando, solo la
+// elegida y, muy tenue, la anterior del MISMO pie del MISMO bailarín; «⋯ más → ver todas las marcas» las enseña todas
+function arosVisibles(V) {
+  if ($("ver_todos_aros").checked) return V.pisadas;
+  const q = selPis && V.pisadas.includes(selPis) ? selPis : ultimaPis && V.pisadas.includes(ultimaPis) ? ultimaPis : null;
+  if (!q) return [];
+  const prev = V.pisadas.filter(p => p !== q && p[1] === q[1] && p[2] === q[2] && p[0] < q[0] && (p[4] || p[5])).pop();
+  if (prev) prev.tenue = true;
+  return prev ? [prev, q] : [q];
+}
+function ondaPie(g, x, y, col, vida, adorno) {
+  // (Edmundo, 20-11-2026) un píxel opaco en el centro y enseguida casi transparente hasta desaparecer (~32 px);
+  // todo se apaga en 0,45 s
+  const R = 32, h = col.replace("#", ""), [r, gg, b] = [0, 2, 4].map(k => parseInt(h.length === 3 ? h[k / 2] + h[k / 2] : h.slice(k, k + 2), 16));
+  const c = al => `rgba(${r},${gg},${b},${al})`;
+  const gr = g.createRadialGradient(x, y, 0, x, y, R);
+  // (2.ª vez) solo 1 px opaco; cae enseguida y el resto, el doble de grande, casi transparente
+  gr.addColorStop(0, c(1)); gr.addColorStop(1 / R, c(1)); gr.addColorStop(3 / R, c(0.3)); gr.addColorStop(0.25, c(0.1));
+  gr.addColorStop(0.55, c(0.035)); gr.addColorStop(1, c(0));
+  g.save(); g.globalAlpha = Math.pow(1 - vida, 1.3) * (adorno ? 0.6 : 1); g.fillStyle = gr;
+  g.beginPath(); g.arc(x, y, R, 0, 7); g.fill(); g.restore();
+}
+function aroPie(g, x, y, col, alfa, pie) {   // marca fina: aro del color del bailarín, punto en el centro y la letra del pie
+  g.save(); g.globalAlpha = alfa; g.strokeStyle = col; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 8, 0, 7); g.stroke();
+  g.fillStyle = col; g.beginPath(); g.arc(x, y, 1.6, 0, 7); g.fill();
+  g.font = "bold 11px system-ui"; g.textAlign = "center"; g.lineWidth = 3; g.strokeStyle = "rgba(0,0,0,.7)";
+  g.strokeText(pie === "I" ? "I" : "D", x + 14, y - 8); g.fillText(pie === "I" ? "I" : "D", x + 14, y - 8); g.restore();
+}
+// lupa del pie (20-11-2026): al pasar el ratón por el vídeo (marcando o con una pisada elegida), un círculo ×3 con una cruz
+let ratonV = null;
+function lupaPie() {
+  const c = $("lupa_pie"), v = $("video");
+  // sonando no hace falta (20-11-2026: se quedaba el círculo encima del vídeo al darle a escuchar)
+  if (!ratonV || !(marcando || selPis) || sonando || !v.videoWidth) { c.hidden = true; return; }
+  // 20-11-2026 (Edmundo: «tan pequeña y tan ampliada no veo nada»): grande (casi media altura del vídeo), ×2
+  // (rueda del ratón = más o menos aumento) y en la esquina contraria al ratón, para no tapar el pie
+  const w = v.clientWidth, h = v.clientHeight, [mx, my] = ratonV, Z = zoomLupa;
+  const L = Math.round(Math.max(200, Math.min(480, w * 0.64, h * 0.48))), M = 8, dpr = devicePixelRatio || 1;
+  if (c.width !== Math.round(L * dpr)) { c.width = c.height = Math.round(L * dpr); }
+  c.style.width = c.style.height = L + "px";
+  c.hidden = false;
+  c.style.left = (mx > w / 2 ? M : w - L - M) + "px";
+  c.style.top = (my > h / 2 ? M : h - L - M) + "px";
+  const k = v.videoWidth / w, lado = L / Z * k, g = c.getContext("2d");
+  g.setTransform(dpr, 0, 0, dpr, 0, 0); g.imageSmoothingQuality = "high";
+  g.fillStyle = "#000"; g.fillRect(0, 0, L, L);
+  try { g.drawImage(v, mx * k - lado / 2, my * k - lado / 2, lado, lado, 0, 0, L, L); } catch (e) {}
+  // las marcas que haya cerca, también ampliadas
+  const V = VV(), t = ahora(), dd = vDes[V.id] || 0, sx = w / V.ancho, sy = h / V.alto;
+  for (const q of (marcando ? arosVisibles(V) : V.pisadas)) { delete q.tenue; if ((!q[4] && !q[5]) || (q !== selPis && Math.abs(t - (q[0] + dd)) > 0.6 && !marcando)) continue;
+    const X = L / 2 + (q[4] * sx - mx) * Z, Y = L / 2 + (q[5] * sy - my) * Z; if (X < -20 || Y < -20 || X > L + 20 || Y > L + 20) continue;
+    g.save(); g.strokeStyle = (V.bailarines[q[1]] || {}).color || "#fff"; g.lineWidth = q === selPis ? 2.5 : 1.5; g.globalAlpha = q === selPis ? 1 : 0.6;
+    g.beginPath(); g.arc(X, Y, 4 * Z, 0, 7); g.stroke(); g.restore(); }
+  g.strokeStyle = "rgba(255,255,255,.9)"; g.lineWidth = 1; g.beginPath();
+  g.moveTo(L / 2 - 40, L / 2); g.lineTo(L / 2 - 6, L / 2); g.moveTo(L / 2 + 6, L / 2); g.lineTo(L / 2 + 40, L / 2);
+  g.moveTo(L / 2, L / 2 - 40); g.lineTo(L / 2, L / 2 - 6); g.moveTo(L / 2, L / 2 + 6); g.lineTo(L / 2, L / 2 + 40); g.stroke();
+  g.fillStyle = "rgba(0,0,0,.55)"; g.fillRect(L - 46, L - 22, 42, 18);
+  g.fillStyle = "#fff"; g.font = "12px system-ui"; g.textAlign = "center"; g.fillText("×" + (+Z.toFixed(1)), L - 25, L - 9);
+}
+let zoomLupa = 2;
+try { zoomLupa = +localStorage.getItem("tdj_zoom_lupa") || 2; } catch (e) {}
+$("video").addEventListener("wheel", e => {
+  if ($("lupa_pie").hidden) return;
+  e.preventDefault();
+  zoomLupa = Math.max(1.25, Math.min(5, zoomLupa * (e.deltaY < 0 ? 1.15 : 1 / 1.15)));
+  try { localStorage.setItem("tdj_zoom_lupa", zoomLupa); } catch (e) {}
+  lupaPie();
+}, { passive: false });
+$("video").addEventListener("mousemove", e => { const r = $("video").getBoundingClientRect(); ratonV = [e.clientX - r.left, e.clientY - r.top]; lupaPie(); });
+$("video").addEventListener("mouseleave", () => { ratonV = null; lupaPie(); });
+// 20-11-2026 (Edmundo: «se me quedan lupas»): el «mouseleave» a veces no llega (el vídeo se mueve o cambia de tamaño
+// bajo el ratón). Se quita también si el ratón está en cualquier otro sitio, al escuchar / parar,
+// al desplazar la página y al cambiar de tamaño
+function quitaLupaPie() { if (ratonV) { ratonV = null; lupaPie(); } }
+document.addEventListener("pointermove", e => { if (ratonV && e.target !== $("video")) quitaLupaPie(); }, true);
+document.addEventListener("pointerdown", e => { if (e.target !== $("video")) quitaLupaPie(); }, true);
+addEventListener("scroll", quitaLupaPie, true); addEventListener("resize", quitaLupaPie); addEventListener("blur", quitaLupaPie);
+function estrella(g, x, y, r, col, alfa, aro) {
+  g.save(); g.globalAlpha = alfa; g.translate(x, y);
+  const grad = g.createRadialGradient(0, 0, 0, 0, 0, r * 1.6); grad.addColorStop(0, "rgba(255,255,255,.9)"); grad.addColorStop(0.35, col); grad.addColorStop(1, "rgba(0,0,0,0)");
+  g.fillStyle = grad; g.beginPath(); g.arc(0, 0, r * 1.6, 0, 7); g.fill();
+  g.beginPath();
+  for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.38 : r; g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
+  g.closePath();
+  if (aro) { g.strokeStyle = "#fff"; g.lineWidth = 2; g.stroke(); } else { g.fillStyle = "#fff8e0"; g.fill(); g.strokeStyle = col; g.lineWidth = 1.5; g.stroke(); }
+  g.restore();
+}
+function sincVideo() {
+  if (!verVideo) return;
+  try { estrellasVideo(); } catch (e) {}
+  const v = $("video"), V = VV(), tv = (ahora() - vidIni()) / V.velocidad;
+  const antes = tv < 0, despues = tv > V.dur - 0.05;
+  const fuera = antes ? `<div>El vídeo empieza en el <b>compás ${Math.max(1, compasDe(vidIni() + 0.15))}</b> (${reloj(vidIni())}).<br>Clic aquí para ir.</div>`
+              : despues ? `<div>El vídeo acabó en el compás ${compasDe(vidFin() - 0.02)}.<br>Clic aquí para volver a su principio.</div>` : "";
+  if ($("video_fuera").innerHTML !== fuera) $("video_fuera").innerHTML = fuera;
+  if (v.readyState < 1) return;
+  if (antes || despues) {
+    if (!v.paused) v.pause();
+    const c = antes ? 0 : V.dur - 0.05; if (!v.seeking && Math.abs(v.currentTime - c) > 0.1) v.currentTime = c;
+    return;
+  }
+  const base = VEL / V.velocidad;
+  if (sonando) {
+    const d = tv - v.currentTime;    // > 0: el vídeo va atrasado
+    if (v.paused || Math.abs(d) > 0.3) {
+      if (!v.seeking) v.currentTime = tv;
+      v.playbackRate = base; if (v.paused) v.play().catch(() => {});
+    } else {
+      const r = base * (1 + Math.max(-0.12, Math.min(0.12, d * 2)));
+      if (Math.abs(v.playbackRate - r) > 0.004) v.playbackRate = r;
+    }
+  } else {
+    if (!v.paused) v.pause();
+    if (!v.seeking && Math.abs(v.currentTime - tv) > 0.4 / V.fps) v.currentTime = tv;
+  }
+}
+function pisadasFila(g, x, a, b, y, m, f, col) {   // I arriba, D abajo; lleno = apoyo, aro = adorno
+  const V = VV(), i = V.bailarines.findIndex(q => q.nombre === PIS_F[f]); if (i < 0) return;
+  const dd = vDes[V.id] || 0, x0 = x(Math.max(a, vidIni())), x1 = x(Math.min(b, vidFin()));
+  if (x1 > x0) { g.fillStyle = "rgba(197,138,240,.07)"; g.fillRect(x0, y, x1 - x0, m.fila); }
+  const r = Math.max(6, Math.min(10, m.fila * 0.17));
+  g.font = "700 " + Math.round(r * 1.2) + "px Segoe UI"; g.textAlign = "center"; g.textBaseline = "middle";
+  for (const q of V.pisadas) {
+    const [s, bb, pie, tipo] = q;
+    if (bb !== i) continue;
+    const t = s + dd; if (t < a - 0.3 || t > b + 0.3) continue;
+    const tx = x(t), ty = y + m.fila * (pie === "I" ? 0.3 : 0.7);
+    if (q === selPis) { g.beginPath(); g.arc(tx, ty, r + 5, 0, 7); g.fillStyle = "#fff"; g.fill();
+      g.fillStyle = "rgba(255,255,255,.35)"; g.fillRect(tx - 1, y, 2, m.fila); }
+    g.beginPath(); g.arc(tx, ty, r, 0, 7);
+    if (tipo === "o") { g.strokeStyle = col; g.lineWidth = 2; g.stroke(); g.fillStyle = col; }
+    else { g.fillStyle = col; g.fill(); g.fillStyle = "#15110d"; }
+    g.fillText(pie, tx, ty + 0.5);
+  }
+  g.textAlign = "left"; g.textBaseline = "alphabetic"; g.lineWidth = 1;
+}
+function rayasVideoLupa(g, x, a, b, m, w, h) {   // «▶ vídeo» y «vídeo ◀»: se arrastran para cuadrar el vídeo entero
+  g.save(); g.beginPath(); g.rect(m.izq, 0, w - m.izq, h); g.clip();
+  g.font = "600 11px Segoe UI"; g.textBaseline = "middle";
+  for (const [t, txt, izq] of [[vidIni(), "▶ vídeo", true], [vidFin(), "vídeo ◀", false]]) {
+    if (t < a - 0.06 || t > b + 0.06) continue;     // (justo en el borde también: el vídeo suele empezar en un 1)
+    const tx = Math.max(x(a), Math.min(x(b), x(t))), tw = g.measureText(txt).width;
+    g.fillStyle = "rgba(197,138,240,.8)"; g.fillRect(tx - 1, m.cab, 2, h - m.cab);
+    g.fillStyle = "#d9b3f5"; g.fillText(txt, izq ? tx + 4 : tx - 4 - tw, m.cab + m.onda / 2);
+  }
+  g.textBaseline = "alphabetic"; g.restore();
+}
+function ponDesVideo(d) { vDes[VV().id] = Math.round(d * 1000) / 1000; textoVideo(); pinta(); }
+function guardaDes() { try { localStorage.setItem(CLAVE_VDES, JSON.stringify(vDes)); } catch (e) {} }
+function textoVideo() {
+  const V = VV(), d = vDes[V.id] || 0;
+  $("video_maquina").classList.toggle("oculto", !d);
+  const txt = d && !V.subido ? `VIDEO ${V.id} inicio=${vidIni().toFixed(3)}` : "";   // (el subido se guarda solo, en el navegador)
+  if ($("video_txt").textContent !== txt) {
+    $("video_txt").textContent = txt;
+    $("video_txt").title = d ? `Corregido ${d > 0 ? "+" : ""}${Math.round(d * 1000)} ms a mano (guardado en este navegador). Para que valga siempre, pásame este texto.` : "";
+    tamVideo();
+  }
+}
+// ---------- subir un vídeo desde la página (19-11-2026, lo pidió Edmundo: «¿no puedo simplemente subir un vídeo?»)
+// Se elige un archivo; la página saca su sonido, lo compara con la grabación (subidas de volumen en graves, medios y
+// agudos cada 10 ms, como bailarines\alinear.py) y busca dónde encaja y a qué velocidad. Se guarda en este navegador
+// (IndexedDB, con el archivo dentro); para que quede para siempre (y en el otro PC), pedírselo a Claude (video.py).
+let envCancion = null;
+function envolvente(B) {   // [graves, medios, agudos]: cuánto sube el volumen cada 10 ms
+  const sr = B.sampleRate, n = B.length, d = new Float32Array(n);
+  for (let c = 0; c < B.numberOfChannels; c++) { const x = B.getChannelData(c); for (let i = 0; i < n; i++) d[i] += x[i]; }
+  const paso = Math.round(sr * 0.01), nf = Math.floor(n / paso), out = [];
+  for (const [lo, hi] of [[30, 200], [200, 2000], [2000, 9000]]) {
+    const r = Float32Array.from(d); biquad(r, "hp", lo, sr); biquad(r, "lp", hi, sr);
+    const e = new Float32Array(nf); let prev = 0;
+    for (let f = 0; f < nf; f++) {
+      let q = 0; for (let j = f * paso; j < (f + 1) * paso; j++) q += r[j] * r[j];
+      const l = Math.log(1e-10 + q / paso); e[f] = f ? Math.max(0, l - prev) : 0; prev = l;
+    }
+    // el arranque (de silencio a música, en el vídeo y en el disco) daría un golpe enorme que «encaja» consigo mismo:
+    // fuera el primer medio segundo, y ningún golpe vale más que los más fuertes de verdad (el 1 % de arriba)
+    e.fill(0, 0, Math.min(nf, 50));
+    const cap = Float32Array.from(e).sort()[Math.floor(nf * 0.99)] || 1;
+    for (let f = 0; f < nf; f++) if (e[f] > cap) e[f] = cap;
+    out.push(e);
+  }
+  return out;
+}
+const suaviza = (e, k) => { if (k <= 1) return e; const o = new Float32Array(e.length); let s = 0;
+  for (let i = 0; i < e.length; i++) { s += e[i]; if (i >= k) s -= e[i - k]; o[i] = s / Math.min(i + 1, k); } return o; };
+function estira(e, n) { const o = new Float32Array(n), r = (e.length - 1) / Math.max(1, n - 1);
+  for (let i = 0; i < n; i++) { const x = i * r, j = Math.floor(x), f = x - j; o[i] = e[j] * (1 - f) + (e[Math.min(j + 1, e.length - 1)] || 0) * f; } return o; }
+function correla(S, V, L0, L1) {   // parecido (correlación normalizada) del vídeo puesto en cada desfase L de la canción
+  const nV = V[0].length, nL = Math.min(L1, S[0].length - nV + 1) - L0, tot = new Float32Array(Math.max(0, nL));
+  if (nL <= 0) return { tot, L0 };
+  for (let b = 0; b < S.length; b++) {
+    const s = S[b], v = V[b]; let m = 0; for (let k = 0; k < nV; k++) m += v[k]; m /= nV;
+    let sd = 0; const vz = new Float32Array(nV); for (let k = 0; k < nV; k++) { vz[k] = v[k] - m; sd += vz[k] * vz[k]; }
+    sd = Math.sqrt(sd / nV) || 1;
+    const p1 = new Float64Array(s.length + 1), p2 = new Float64Array(s.length + 1);
+    for (let i = 0; i < s.length; i++) { p1[i + 1] = p1[i] + s[i]; p2[i + 1] = p2[i] + s[i] * s[i]; }
+    // un trozo casi en silencio (el principio del disco) no puede ganar por dividir entre casi cero
+    const mG = p1[s.length] / s.length, suelo = Math.max(1e-12, 0.25 * (p2[s.length] / s.length - mG * mG));
+    for (let i = 0; i < nL; i++) {
+      const L = L0 + i; let q = 0; for (let k = 0; k < nV; k++) q += vz[k] * s[L + k];
+      const mu = (p1[L + nV] - p1[L]) / nV, va = Math.max(suelo, (p2[L + nV] - p2[L]) / nV - mu * mu);
+      tot[i] += q / (nV * sd * Math.sqrt(va)) / S.length;
+    }
+  }
+  return { tot, L0 };
+}
+async function cuadraVideo(file, avisa) {
+  avisa("leyendo su sonido…");
+  let au; try { au = await ctx.decodeAudioData(await file.arrayBuffer()); }
+  catch (e) { throw new Error("no puedo leer el sonido de este vídeo (¿no tiene sonido?)"); }
+  await new Promise(r => setTimeout(r, 20));
+  if (!envCancion) { avisa("midiendo la grabación…"); await new Promise(r => setTimeout(r, 20)); envCancion = envolvente(await cargar("mezcla")); }
+  avisa("buscando dónde encaja…"); await new Promise(r => setTimeout(r, 20));
+  const EV = envolvente(au), nV = EV[0].length;
+  if (nV < 300) throw new Error("el vídeo es demasiado corto (hacen falta al menos 3 segundos de música)");
+  // 1) a velocidad normal, en toda la canción, con las subidas un poco suavizadas (aguanta un vídeo algo acelerado)
+  const S5 = envCancion.map(e => suaviza(e, 5)), c = correla(S5, EV.map(e => suaviza(e, 5)), 0, 1e9);
+  let iB = 0; for (let i = 1; i < c.tot.length; i++) if (c.tot[i] > c.tot[iB]) iB = i;
+  let m = 0, sd = 0; for (const x of c.tot) m += x; m /= c.tot.length || 1; for (const x of c.tot) sd += (x - m) ** 2; sd = Math.sqrt(sd / (c.tot.length || 1)) || 1;
+  const seguridad = (c.tot[iB] - m) / sd;       // cuántas veces destaca el mejor sitio sobre el resto
+  // 2) afinar: velocidades 0,94–1,06 alrededor de ese sitio (±1,5 s), sin suavizar
+  avisa("afinando…"); await new Promise(r => setTimeout(r, 20));
+  const S2 = envCancion.map(e => suaviza(e, 2));
+  let mejor = { val: -9, L: iB, vel: 1 }, mejor1 = null;   // (mejor1 = el mejor a velocidad normal)
+  for (let vel = 0.94; vel <= 1.0601; vel += 0.0025) {
+    const Vr = EV.map(e => suaviza(estira(e, Math.round(nV * vel)), 2)), r = correla(S2, Vr, Math.max(0, iB - 150), iB + 150);
+    const uno = Math.abs(vel - 1) < 1e-6;
+    for (let i = 0; i < r.tot.length; i++) if (r.tot[i] > mejor.val || (uno && (!mejor1 || r.tot[i] > mejor1.val))) {
+      const a = r.tot[i - 1] ?? r.tot[i], b = r.tot[i + 1] ?? r.tot[i], den = a - 2 * r.tot[i] + b;
+      const x = { val: r.tot[i], L: r.L0 + i + (den < 0 ? 0.5 * (a - b) / den : 0), vel: uno ? 1 : vel };
+      if (x.val > mejor.val) mejor = x;
+      if (uno && (!mejor1 || x.val > mejor1.val)) mejor1 = x;
+    }
+  }
+  // casi todos los vídeos van a su velocidad: otra solo si encaja claramente mejor (3 %)
+  if (mejor.vel !== 1 && mejor1 && mejor.val < mejor1.val * 1.03) mejor = mejor1;
+  return { inicio: +(mejor.L * 0.01).toFixed(3), velocidad: +mejor.vel.toFixed(4), seguridad: +seguridad.toFixed(1) };
+}
+// guardar los subidos en este navegador
+function abreBD() { return new Promise((ok, mal) => { const q = indexedDB.open("tdj_videos", 1);
+  q.onupgradeneeded = () => q.result.createObjectStore("videos", { keyPath: "id" }); q.onsuccess = () => ok(q.result); q.onerror = () => mal(q.error); }); }
+async function bdVideos(accion, x) {
+  const db = await abreBD();
+  return new Promise((ok, mal) => {
+    const tx = db.transaction("videos", accion === "leer" ? "readonly" : "readwrite"), st = tx.objectStore("videos");
+    const q = accion === "leer" ? st.getAll() : accion === "poner" ? st.put(x) : st.delete(x);
+    // (al guardar, esperar a que esté escrito de verdad: si se recarga antes, se perdía)
+    tx.oncomplete = () => ok(q.result); tx.onerror = tx.onabort = () => mal(tx.error || q.error);
+  });
+}
+function metaVideo(src) { return new Promise((ok, mal) => { const v = document.createElement("video"); v.muted = true; v.preload = "metadata";
+  v.onloadedmetadata = () => ok({ dur: v.duration, ancho: v.videoWidth || 1080, alto: v.videoHeight || 1920 }); v.onerror = () => mal(new Error("no puedo abrir este vídeo")); v.src = src; }); }
+function deSubido(r) {   // de lo guardado en el navegador a un vídeo de la página
+  return pisGuardadas(deSubido0(r));
+}
+function deSubido0(r) {
+  return { id: r.id, subido: true, nombre: r.nombre, src: URL.createObjectURL(r.archivo), inicio: r.inicio, velocidad: r.velocidad,
+           fps: 30, dur: r.dur, ancho: r.ancho, alto: r.alto, bailarines: [], pisadas: [], seguridad: r.seguridad };
+}
+let subiendo = false;
+async function anadeVideo(file) {
+  if (subiendo) return null;
+  subiendo = true;
+  const b = $("ver_video"), avisa = t => { b.textContent = "🎬 " + t; };
+  try {
+    const src = URL.createObjectURL(file), mt = await metaVideo(src);
+    URL.revokeObjectURL(src);
+    const r = await cuadraVideo(file, avisa);
+    if (r.seguridad < 6 && !window.__sinPreguntar &&
+        !confirm(`No estoy seguro de que en este vídeo suene esta grabación (seguridad ${r.seguridad}; lo normal es más de 8).\n` +
+                 `Donde mejor encaja es en el ${reloj(r.inicio)} (compás ${Math.max(1, compasDe(r.inicio + 0.15))}).\n\n¿Lo pongo igualmente?`)) return null;
+    const reg = { id: "subido_" + Date.now(), cancion: CANCION, nombre: file.name, archivo: file, ...mt, ...r };
+    try { await bdVideos("poner", reg); } catch (e) { console.error(e); alert("El vídeo se ve, pero no se ha podido guardar en el navegador: al recargar habrá que subirlo otra vez."); }
+    VD.push(deSubido(reg)); VI = VD.length - 1; rehazElige();
+    ponVideo(true); ir(r.inicio + 0.001, true);
+    return r;
+  } catch (e) { alert("No se ha podido poner el vídeo: " + e.message); return null; }
+  finally { subiendo = false; b.textContent = "🎬 Vídeo"; }
+}
+async function quitaVideo() {
+  const V = VV(); if (!V || !V.subido || !confirm(`¿Quito el vídeo «${V.nombre}» de esta página?`)) return;
+  try { await bdVideos("borrar", V.id); } catch (e) {}
+  VD.splice(VI, 1); VI = 0; delete vDes[V.id]; guardaDes(); rehazElige();
+  if (hayV()) { cargaVideo(); tamVideo(); } else ponVideo(false);
+  pinta();
+}
+function rehazElige() {
+  const e = $("video_elige"); e.replaceChildren(...VD.map((v, i) => new Option(v.subido ? "📁 " + v.nombre : v.id, i)));
+  e.value = VI; e.classList.toggle("oculto", VD.length < 2);
+}
+$("video_elige").onchange = () => { VI = +$("video_elige").value; cargaVideo(); tamVideo(); pinta(); };
+$("video_archivo").onchange = () => { const f = $("video_archivo").files[0]; $("video_archivo").value = ""; if (f) anadeVideo(f); };
+const eligeArchivo = () => $("video_archivo").click();
+$("video_mas").onclick = eligeArchivo;
+$("video_quitar").onclick = quitaVideo;
+$("ver_video").onclick = () => { if (subiendo) return; hayV() ? ponVideo(!verVideo) : eligeArchivo(); };
+$("video_cerrar").onclick = () => ponVideo(false);
+$("video").onclick = e => { if (marcando || selPis) sitioPie(e); else $("play").click(); };
+$("video_fuera").onclick = () => ir(vidIni() + 0.001, true);
+document.querySelectorAll("[data-vmueve]").forEach(b => b.onclick = () => {
+  const V = VV(), k = b.dataset.vmueve, d = k.endsWith("f") ? parseFloat(k) / V.fps * V.velocidad : +k;
+  ponDesVideo((vDes[V.id] || 0) + d); guardaDes();
+});
+$("video_maquina").onclick = () => { delete vDes[VV().id]; guardaDes(); textoVideo(); pinta(); };
+document.addEventListener("keydown", e => { if (e.code === "KeyV" && !e.ctrlKey && !e.metaKey && e.target.tagName !== "INPUT" && e.target.tagName !== "SELECT" && hayV()) ponVideo(!verVideo); });
+window.addEventListener("resize", () => setTimeout(tamVideo, 60));
+{ let v = null; try { v = localStorage.getItem(CLAVE_VERVIDEO); } catch (e) {}
+  const empieza = () => { rehazElige(); if (hayV()) ponVideo(v !== "0"); else tamVideo(); };
+  // los subidos de esta canción, guardados en el navegador
+  bdVideos("leer").then(rs => { for (const r of rs) if (r.cancion === CANCION) { const V = deSubido(r); VD.push(V); filasPis(V); } }).catch(() => {}).finally(() => { empieza(); pinta(); });
+}
+// ---------- marcar pisadas en la misma página (19-11-2026; antes era otra herramienta, marcar_pisadas.py)
+// Q W = pie izquierdo / derecho del 1.er bailarín (ella), O P = del 2.º (él). Sonando: se pone «retraso del dedo»
+// antes de la tecla. Parado: en el fotograma que se ve (con , . se avanza de uno en uno). Se guarda en este navegador
+// (localStorage, por vídeo) y «📋 Copiar para Claude» da el texto PISADAS de siempre (sin la posición del pie: 0 0).
+let marcando = false;
+const pilaPis = [];                       // para deshacer (Z)
+const CLAVE_PIS = id => "tdj_pis:" + CANCION + ":" + id;
+function pisGuardadas(V) {
+  if (!V.originales) V.originales = { bailarines: JSON.parse(JSON.stringify(V.bailarines)), pisadas: V.pisadas.map(q => q.slice()) };
+  try { const x = JSON.parse(localStorage.getItem(CLAVE_PIS(V.id)) || "null"); if (x) { V.bailarines = x.bailarines; V.pisadas = x.pisadas; } } catch (e) {}
+  // las guardadas antes de que hubiera estrellas no llevan dónde está el pie: se lo pone la original igual (mismo instante y pie)
+  for (const q of V.pisadas) if (!q[4] && !q[5]) {
+    const o = V.originales.pisadas.find(o => o[1] === q[1] && o[2] === q[2] && Math.abs(o[0] - q[0]) < 0.02);
+    if (o && (o[4] || o[5])) { q[4] = o[4]; q[5] = o[5]; }
+  }
+  return V;
+}
+function guardaPis(V) { try { localStorage.setItem(CLAVE_PIS(V.id), JSON.stringify({ bailarines: V.bailarines, pisadas: V.pisadas })); } catch (e) {} }
+function filasPis(V) {   // filas «👣» de los bailarines de este vídeo (si aún no están)
+  for (const b of V.bailarines) {
+    const f = "👣 " + b.nombre; if (f in PIS_F) continue;
+    PIS_F[f] = b.nombre; FUENTES.push(f); COL[f] = b.color; clic[f] = false;
+    const bt = document.createElement("button"); bt.className = "on"; bt.dataset.fila = f;
+    bt.innerHTML = `<span class="punto" style="background:${b.color}"></span>${f}`;
+    bt.onclick = () => { if (!filaOculta[f] && FV().length === 1) return; filaOculta[f] = !filaOculta[f]; marcaFilas(); pinta(); };
+    $("filas").appendChild(bt);
+  }
+}
+for (const V of VD) pisGuardadas(V);
+function ponMarcar(on) {
+  marcando = !!(on && hayV()); document.body.classList.toggle("marcando", marcando);
+  $("marcar").classList.toggle("on", marcando); $("caja_marcar").classList.toggle("oculto", !marcando);
+  if (marcando) {
+    const V = VV();
+    if (!V.bailarines.length) V.bailarines = [{ nombre: "Ella", rol: "follower", color: "#f0c05a" }, { nombre: "Él", rol: "leader", color: "#5ad1f0" }];
+    filasPis(V);
+    pintaTeclas();
+  }
+  cuentaPis(); tamVideo(); pinta();
+}
+function cuentaPis() { if (!hayV()) return; const ps = VV().pisadas, sin = ps.filter(q => !q[4] && !q[5]).length;
+  $("pis_n").textContent = `👣 ${ps.length} pisadas` + (sin ? ` · ${sin} sin sitio` : " · todas con sitio"); }
+function fotogramaDe(t) { const V = VV(); return Math.round((t - vidIni()) / V.velocidad * V.fps); }
+// imán (19-11-2026, como en marcar_pisadas): la pisada se va al tiempo, a la casilla o al golpe de sonido más cercano
+function puntosIman(a, b) {
+  const modo = $("iman").value, out = [];
+  if (modo === "tiempos" || modo === "rejilla" || /^[234]$/.test(modo)) {
+    const sub = modo === "rejilla" ? SUB : modo === "tiempos" ? 1 : +modo;
+    for (let i = 0; i + 1 < P.length; i++) { if (P[i + 1].seg < a || P[i].seg > b) continue;
+      for (let k = 0; k < sub; k++) out.push(P[i].seg + (P[i + 1].seg - P[i].seg) * k / sub); }
+  } else if (modo === "sonido") {   // subidas fuertes del volumen de la mezcla (máximos de la subida, cada 10 ms)
+    const O = ondaDe("mezcla"); if (!O) return out;
+    const i0 = Math.max(2, Math.floor(a / O.paso)), i1 = Math.min(O.e.length - 3, Math.ceil(b / O.paso));
+    const sube = i => Math.max(0, O.e[i] - O.e[i - 2]);
+    for (let i = i0; i <= i1; i++) { const d = sube(i); if (d > 0.08 * O.tope && d >= sube(i - 1) && d > sube(i + 1)) out.push(i * O.paso); }
+  }
+  return out;
+}
+function iman(t) {   // t en segundos de la grabación (ya con la corrección del vídeo)
+  const ps = puntosIman(t - 0.2, t + 0.2); let mejor = t, dmin = 0.15;
+  for (const q of ps) { const d = Math.abs(q - t); if (d < dmin) { dmin = d; mejor = q; } }
+  return mejor;
+}
+function ponPisada(b, pie) {
+  const V = VV(); if (!V.bailarines[b]) b = 0;
+  const t = iman(ahora() - (sonando ? (+$("retraso").value || 0) / 1000 * VEL : 0)), n = fotogramaDe(t);
+  if (n < 0 || n / V.fps > V.dur) return;
+  const p = [+(($("iman").value ? t - (vDes[V.id] || 0) : V.inicio + n / V.fps * V.velocidad)).toFixed(3), b, pie, "a"];
+  V.pisadas = V.pisadas.filter(q => !(q[1] === b && q[2] === pie && Math.abs(q[0] - p[0]) < 0.5 / V.fps * V.velocidad));   // la misma, otra vez = no repetir
+  V.pisadas.push(p); V.pisadas.sort((x, y) => x[0] - y[0]); pilaPis.push({ que: "puesta", p }); ultimaPis = p;
+  const tb = document.querySelector(`[data-pon="${b},${pie}"]`); if (tb) { tb.classList.add("flash"); setTimeout(() => tb.classList.remove("flash"), 160); }
+  guardaPis(V); cuentaPis(); pinta();
+}
+let ultimaPis = null;            // la última puesta: un clic en el pie, en el vídeo, le pone su sitio
+function deshazPis() {
+  const V = VV(), h = pilaPis.pop(); if (!h) return;
+  if (h.que === "puesta") V.pisadas = V.pisadas.filter(q => q !== h.p);
+  else if (h.que === "borrada") { V.pisadas.push(h.p); V.pisadas.sort((x, y) => x[0] - y[0]); }
+  else if (h.que === "sitio") { h.p[4] = h.antes[0]; h.p[5] = h.antes[1]; }
+  else if (h.que === "movidas") { for (const [q, t] of h.antes) q[0] = t; V.pisadas.sort((x, y) => x[0] - y[0]); }
+  else if (h.que === "cambio") { h.p.splice(0, h.p.length, ...h.antes); }
+  if (selPis) verPis(false);
+  guardaPis(V); cuentaPis(); pinta();
+}
+function sitioPie(e) {   // marcando: clic en el pie dentro del vídeo = dónde está (de la última pisada, o de la más cercana)
+  const V = VV(), v = $("video"), r = v.getBoundingClientRect();
+  const x = Math.round((e.clientX - r.left) / r.width * V.ancho), y = Math.round((e.clientY - r.top) / r.height * V.alto);
+  const t = ahora(), dd = vDes[V.id] || 0;
+  // 1.º la pisada elegida (20-11-2026: con la de London elegida, el clic ponía el sitio a la de Sol, que estaba más cerca)
+  let p = selPis && V.pisadas.includes(selPis) ? selPis : null;
+  if (!p && ultimaPis && V.pisadas.includes(ultimaPis) && Math.abs(ultimaPis[0] + dd - t) < 0.5) p = ultimaPis;
+  if (!p) { let dmin = 0.3; for (const q of V.pisadas) { const d = Math.abs(q[0] + dd - t); if (d < dmin) { dmin = d; p = q; } } }
+  if (!p) return;
+  pilaPis.push({ que: "sitio", p, antes: [p[4] || 0, p[5] || 0] }); p[4] = x; p[5] = y; ultimaPis = null;
+  guardaPis(V); cuentaPis(); pinta(); estrellasVideo();
+}
+// ---------- elegir y retocar una pisada (19-11-2026, Edmundo: «si pulsas un círculo, que lo seleccione y luego moverlo,
+// borrarlo, adelantarlo, atrasarlo, imantarlo al tiempo, ½, ¼ o tresillo»). Tocar = elegir; arrastrar = mover.
+let selPis = null, arrPis = null;
+function pisadaEn(e) {   // la pisada bajo el ratón (en las filas 👣), o null
+  if (!hayV()) return null;
+  const r = cl.getBoundingClientRect(), m = medidas(), y = e.clientY - r.top, px = e.clientX - r.left;
+  if (px < m.izq) return null;
+  const k = m.ys.findIndex((yy, i) => y >= yy && y < yy + m.altos[i]), f = FV()[k];
+  if (!(f in PIS_F)) return null;
+  const V = VV(), bi = V.bailarines.findIndex(q => q.nombre === PIS_F[f]), [a, b] = ventana(), dd = vDes[V.id] || 0;
+  const X0 = m.izq + m.pad, X1 = r.width - m.der, xx = t => X0 + (t - a) / (b - a) * (X1 - X0);
+  let mejor = null, dmin = 13;
+  for (const q of V.pisadas) if (q[1] === bi) {
+    const qy = m.ys[k] + m.altos[k] * (q[2] === "I" ? 0.3 : 0.7), d = Math.hypot(xx(q[0] + dd) - px, (qy - y) * 0.5);
+    if (d < dmin) { dmin = d; mejor = q; } }
+  return mejor;
+}
+function alFotograma(t) { const V = VV(); return V.inicio + Math.round((t - V.inicio) / V.velocidad * V.fps) / V.fps * V.velocidad; }
+function eligePis(q) { selPis = q; verPis(true); }
+function soltarPis() { selPis = null; $("pis_sel").hidden = true; pinta(); }
+function ordenaGuarda() { const V = VV(); V.pisadas.sort((x, y) => x[0] - y[0]); guardaPis(V); cuentaPis(); verPis(false); }
+function verPis(irAhi) {   // pinta, coloca la barrita junto a la pisada y (si se pide) lleva el vídeo a su fotograma
+  if (!selPis || !hayV() || !VV().pisadas.includes(selPis)) { soltarPis(); return; }
+  const V = VV(), dd = vDes[V.id] || 0, t = selPis[0] + dd, bi = V.bailarines[selPis[1]] || {};
+  if (irAhi) { if (sonando) parar(); cursor = t; ponInfo(t); const [a, b] = ventana(); if (t < a || t >= b) vIni = unos.filter(u => u <= t + 0.01).pop() || unos[0]; }
+  const n = Math.round((selPis[0] - V.inicio) / V.velocidad * V.fps), ps = P.findIndex(p => p.seg > t) - 1;
+  let donde = ""; if (ps >= 0 && ps < P.length - 1) {   // en qué parte del tiempo cae (para ver si va a tiempo)
+    const f = (t - P[ps].seg) / (P[ps + 1].seg - P[ps].seg);
+    donde = ` · compás ${P[ps].compas}, tiempo ${P[ps].tiempo}` + (f < 0.06 || f > 0.94 ? "" : ` + ${Math.round(f * 100)} %`); }
+  $("pis_sel_que").innerHTML = `<span style="color:${bi.color || "#fff"}">${bi.nombre || ""} · pie ${selPis[2] === "I" ? "izquierdo" : "derecho"}</span>` +
+    `<span class="ayuda"> · fotograma ${n}${donde} · clic en su pie, en el vídeo = ponerle ahí la ⭐</span>`;
+  $("pis_tipo").textContent = selPis[3] === "o" ? "→ apoyo" : "→ adorno";
+  pinta();
+  // la barrita: debajo de la fila de la pisada
+  const m = medidas(), f = FV().indexOf(FUENTES.find(x => PIS_F[x] === bi.nombre)), bar = $("pis_sel");
+  bar.hidden = false;
+  // encima de la primera fila de pisadas (así no tapa ninguna pisada); si no cabe, debajo de la última
+  const filasP = FV().map((x, i) => x in PIS_F ? i : -1).filter(i => i >= 0), alto = bar.offsetHeight || 40;
+  let yy = filasP.length ? m.ys[filasP[0]] - alto - 4 : 30;
+  if (yy < m.cab && filasP.length) yy = m.ys[filasP[filasP.length - 1]] + m.altos[filasP[filasP.length - 1]] + 4;
+  bar.style.top = Math.max(0, yy) + "px"; bar.style.left = (m.izq + 8) + "px";
+}
+function muevePis(q, t) { pilaPis.push({ que: "movidas", antes: [[q, q[0]]] }); q[0] = +t.toFixed(3); ordenaGuarda(); }
+function imanA(t, sub) {   // la casilla más cercana: 1 = tiempo, 2 = ½, 4 = ¼, 3 = tresillo
+  let mejor = t, dmin = 1e9;
+  for (let i = 0; i + 1 < P.length; i++) { if (P[i + 1].seg < t - 2 || P[i].seg > t + 2) continue;
+    for (let k = 0; k <= sub; k++) { const q = P[i].seg + (P[i + 1].seg - P[i].seg) * k / sub, d = Math.abs(q - t); if (d < dmin) { dmin = d; mejor = q; } } }
+  return mejor;
+}
+document.querySelectorAll("[data-pmueve]").forEach(b => b.onclick = () => {
+  if (!selPis) return; const V = VV(); muevePis(selPis, selPis[0] + +b.dataset.pmueve / V.fps * V.velocidad); verPis(true); });
+document.querySelectorAll("[data-piman]").forEach(b => b.onclick = () => {
+  if (!selPis) return; const dd = vDes[VV().id] || 0; muevePis(selPis, imanA(selPis[0] + dd, +b.dataset.piman) - dd); verPis(true); });
+$("pis_pie").onclick = () => { if (!selPis) return; pilaPis.push({ que: "cambio", p: selPis, antes: selPis.slice() }); selPis[2] = selPis[2] === "I" ? "D" : "I"; ordenaGuarda(); };
+$("pis_tipo").onclick = () => { if (!selPis) return; pilaPis.push({ que: "cambio", p: selPis, antes: selPis.slice() }); selPis[3] = selPis[3] === "o" ? "a" : "o"; ordenaGuarda(); };
+$("pis_borrar").onclick = () => { if (!selPis) return; const V = VV(); V.pisadas = V.pisadas.filter(q => q !== selPis); pilaPis.push({ que: "borrada", p: selPis }); guardaPis(V); cuentaPis(); soltarPis(); };
+$("pis_cerrar").onclick = soltarPis;
+// con una pisada elegida: ← → la mueven un fotograma, Supr la borra, Esc la suelta (antes que las teclas de siempre)
+document.addEventListener("keydown", e => {
+  if (!selPis || e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+  const k = { ArrowLeft: -1, ArrowRight: 1 }[e.code];
+  if (k && !e.shiftKey) { e.preventDefault(); e.stopImmediatePropagation(); document.querySelector(`[data-pmueve="${k}"]`).click(); }
+  else if (e.code === "Delete" || e.code === "Backspace") { e.preventDefault(); e.stopImmediatePropagation(); $("pis_borrar").click(); }
+  else if (e.code === "Escape") soltarPis();
+}, true);
+function borraPisEn(e) {   // (ya no se usa: tocar una pisada la elige)
+  const r = cl.getBoundingClientRect(), m = medidas(), y = e.clientY - r.top, px = e.clientX - r.left;
+  const k = m.ys.findIndex((yy, i) => y >= yy && y < yy + m.altos[i]), f = FV()[k];
+  if (!(f in PIS_F)) return false;
+  const V = VV(), bi = V.bailarines.findIndex(q => q.nombre === PIS_F[f]), [a, b] = ventana(), dd = vDes[V.id] || 0;
+  const X0 = m.izq + m.pad, X1 = r.width - m.der, xx = t => X0 + (t - a) / (b - a) * (X1 - X0);
+  let mejor = null, dmin = 10;
+  for (const q of V.pisadas) if (q[1] === bi) { const d = Math.abs(xx(q[0] + dd) - px); if (d < dmin) { dmin = d; mejor = q; } }
+  if (!mejor) return false;
+  V.pisadas = V.pisadas.filter(q => q !== mejor); pilaPis.push({ que: "borrada", p: mejor }); guardaPis(V); cuentaPis(); pinta(); return true;
+}
+function textoPisadas() {
+  const V = VV();
+  return `PISADAS ${V.id} · ${V.bailarines.map(b => b.nombre).join(",")} · ${V.pisadas.length}\n` +
+    V.pisadas.map(([s, b, pie, tipo, x, y]) => `${Math.round((s - V.inicio) / V.velocidad * V.fps)} ${b} ${pie} ${tipo} ${x || 0} ${y || 0}`).join("\n");
+}
+$("marcar").onclick = () => ponMarcar(!marcando);
+$("deshacer_pis").onclick = deshazPis;
+function siguienteSinSitio(dir) {   // Tab (20-11-2026): elegir la próxima pisada sin sitio en el vídeo (si todas lo tienen, la próxima)
+  const V = VV(), ps = V.pisadas; if (!ps.length) return;
+  const ref = selPis && ps.includes(selPis) ? selPis[0] : ahora() - (vDes[V.id] || 0) - (dir > 0 ? 0.001 : -0.001);
+  const orden = dir > 0 ? ps : ps.slice().reverse(), pasa = q => dir > 0 ? q[0] > ref + 1e-4 || (q[0] === ref && ps.indexOf(q) > ps.indexOf(selPis)) : q[0] < ref - 1e-4;
+  const sin = q => !q[4] && !q[5];
+  const q = orden.find(q => pasa(q) && sin(q)) || orden.find(sin) || orden.find(pasa) || orden[0];
+  eligePis(q);
+}
+$("sig_pis").onclick = () => siguienteSinSitio(1);
+$("estrellas_pis").onclick = () => { const c = $("ver_estrellas"); c.checked = !c.checked; c.onchange && c.onchange(); marcaEstrellas(); estrellasVideo(); };
+function marcaEstrellas() { $("estrellas_pis").classList.toggle("apagado", !$("ver_estrellas").checked); }
+$("ver_estrellas").addEventListener("change", () => { marcaEstrellas(); estrellasVideo(); });
+$("ver_todos_aros").onchange = () => estrellasVideo();
+function pintaTeclas() {   // nombres, papel (leader / follower) y colores de los dos bailarines en el teclado de pisadas
+  const V = VV();
+  [0, 1].forEach(i => { const b = V.bailarines[i] || V.bailarines[0], inp = $("nom_b" + i);
+    const rol = { leader: "Leader", follower: "Follower" }[b.rol] || (i ? "Leader" : "Follower");
+    $("rol_b" + i).textContent = rol; $("rol_b" + i).style.setProperty("--c", b.color);
+    document.querySelectorAll(`[data-pon^="${i},"]`).forEach(t => t.title = `${b.nombre} (${rol}) · pie ${t.dataset.pon.endsWith("I") ? "izquierdo" : "derecho"} (tecla ${t.querySelector("small").textContent})`);
+    if (document.activeElement !== inp) inp.value = b.nombre; inp.style.setProperty("--c", b.color);
+    document.querySelectorAll(`[data-pon^="${i},"]`).forEach(t => t.style.setProperty("--c", b.color)); });
+}
+function renombra(i, nuevo) {   // cambiar el nombre de un bailarín (su fila «👣» cambia también)
+  const V = VV(), b = V.bailarines[i]; nuevo = (nuevo || "").trim();
+  if (!b || !nuevo || nuevo === b.nombre || ("👣 " + nuevo) in PIS_F) { pintaTeclas(); return; }
+  const viejo = "👣 " + b.nombre, f = "👣 " + nuevo, k = FUENTES.indexOf(viejo);
+  b.nombre = nuevo; if (k >= 0) FUENTES[k] = f;
+  PIS_F[f] = nuevo; delete PIS_F[viejo]; COL[f] = COL[viejo]; clic[f] = clic[viejo]; filaOculta[f] = filaOculta[viejo];
+  const bt = document.querySelector(`[data-fila="${viejo}"]`); if (bt) { bt.dataset.fila = f; bt.innerHTML = `<span class="punto" style="background:${b.color}"></span>${f}`; }
+  vacCache.k = null; guardaPis(V); pintaTeclas(); pinta();
+}
+[0, 1].forEach(i => { const inp = $("nom_b" + i); inp.onchange = () => renombra(i, inp.value);
+  inp.onkeydown = e => { if (e.key === "Enter") inp.blur(); e.stopPropagation(); }; });
+document.querySelectorAll("[data-pon]").forEach(t => t.onclick = () => { const [b, pie] = t.dataset.pon.split(","); ponPisada(+b, pie); });
+document.querySelectorAll("[data-iman]").forEach(t => t.onclick = () => {
+  $("iman").value = t.dataset.iman; document.querySelectorAll("[data-iman]").forEach(x => x.classList.toggle("on", x === t)); });
+$("iman_todas").onclick = () => {
+  const V = VV(), dd = vDes[V.id] || 0; if (!$("iman").value) { alert("Elige antes a qué llevarlas (🧲)"); return; }
+  const antes = [];
+  for (const q of V.pisadas) { const t = iman(q[0] + dd) - dd; if (Math.abs(t - q[0]) > 0.0005) { antes.push([q, q[0]]); q[0] = +t.toFixed(3); } }
+  V.pisadas.sort((x, y) => x[0] - y[0]); pilaPis.push({ que: "movidas", antes }); guardaPis(V); pinta();
+  $("pis_n").textContent = `👣 ${V.pisadas.length} pisadas · ${antes.length} imantadas`;
+};
+$("originales_pis").onclick = () => {
+  const V = VV(); if (!confirm("¿Quito todos tus cambios en las pisadas de este vídeo y vuelvo a las que traía?")) return;
+  V.bailarines = JSON.parse(JSON.stringify(V.originales.bailarines)); V.pisadas = V.originales.pisadas.map(q => q.slice());
+  try { localStorage.removeItem(CLAVE_PIS(V.id)); } catch (e) {}
+  pilaPis.length = 0; cuentaPis(); pinta();
+};
+$("copiar_pis").onclick = async () => {
+  const t = textoPisadas();
+  try { await navigator.clipboard.writeText(t); $("copiar_pis").textContent = "✓ copiado"; }
+  catch (e) { prompt("Copia este texto y pégamelo en el chat:", t); }
+  setTimeout(() => { $("copiar_pis").textContent = "📋 Copiar"; }, 2500);
+};
+function pasoFotograma(k) {   // un fotograma atrás o adelante (sin vídeo: 1/30 s)
+  const paso = hayV() ? VV().velocidad / VV().fps : 1 / 30;
+  if (sonando) parar();
+  ir(Math.max(0, ahora() + k * paso));
+}
+function pasoRejilla(dir, sub) {   // al siguiente / anterior punto de la rejilla (sub = 4: cada ¼ de tiempo = 1/16 de compás de 4)
+  if (sonando) parar();
+  const t = ahora(), i = P.findIndex(p => p.seg > t) - 1;
+  if (i < 0 || i >= P.length - 1) { ir(Math.max(0, t + dir * 0.1)); return; }
+  const d = P[i + 1].seg - P[i].seg, f = (t - P[i].seg) / d * sub;
+  const k = dir > 0 ? Math.floor(f + 1e-3) + 1 : Math.ceil(f - 1e-3) - 1;
+  ir(Math.max(0, P[i].seg + k * d / sub));
+}
+$("fot_menos").onclick = () => pasoFotograma(-1); $("fot_mas").onclick = () => pasoFotograma(1);
+$("sonido_video").onchange = () => { sonidoVideo = $("sonido_video").checked; $("video").muted = !sonidoVideo; if (sonando) escuchar(ahora()); };
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT" || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.code === "Comma") { e.preventDefault(); pasoFotograma(-1); }
+  if (e.code === "Period") { e.preventDefault(); pasoFotograma(1); }
+  if (e.code === "Tab" && hayV() && (marcando || selPis)) { e.preventDefault(); siguienteSinSitio(e.shiftKey ? -1 : 1); return; }
+  if (!marcando) return;
+  if (e.code === "KeyE") { e.preventDefault(); $("estrellas_pis").click(); }
+  const k = { KeyQ: [0, "I"], KeyW: [0, "D"], KeyO: [1, "I"], KeyP: [1, "D"] }[e.code];
+  if (k) { e.preventDefault(); ponPisada(k[0], k[1]); }
+  if (e.code === "KeyZ") { e.preventDefault(); deshazPis(); }
+});
+// ---------- marcas con texto (19-11-2026): tecla M; en verde en la lupa y en la canción entera
+const CLAVE_MARCAS = "tdj_marcas:" + CANCION;
+let MARCAS = [];
+try { MARCAS = JSON.parse(localStorage.getItem(CLAVE_MARCAS) || "[]"); } catch (e) {}
+function guardaMarcas() { MARCAS.sort((x, y) => x[0] - y[0]); try { localStorage.setItem(CLAVE_MARCAS, JSON.stringify(MARCAS)); } catch (e) {} listaMarcas(); pinta(); }
+function ponMarca(t, texto) {
+  if (texto == null) { texto = prompt(`Marca en el compás ${Math.max(1, compasDe(t))} (${reloj(t)}). Texto:`, ""); if (texto == null) return; }
+  MARCAS.push([+t.toFixed(3), texto.trim() || "★"]); guardaMarcas();
+}
+function listaMarcas() {
+  $("lista_marcas").replaceChildren(...MARCAS.map((mk, i) => {
+    const b = document.createElement("span"); b.className = "fila";
+    const ir_ = document.createElement("button"); ir_.textContent = `${Math.max(1, compasDe(mk[0] + 0.01))} · ${mk[1]}`; ir_.title = "Ir ahí"; ir_.onclick = () => ir(mk[0], true);
+    const x = document.createElement("button"); x.textContent = "✕"; x.title = "Borrar esta marca"; x.onclick = () => { MARCAS.splice(i, 1); guardaMarcas(); };
+    b.append(ir_, x); return b;
+  }));
+  $("marcas_txt").textContent = MARCAS.length ? "MARCAS " + MARCAS.map(([t, tx]) => `${t.toFixed(3)}=${tx}`).join(" | ") : "";
+}
+function marcasLupa(g, x, a, b, m, w, h) {
+  g.save(); g.beginPath(); g.rect(m.izq, 0, w - m.izq, h); g.clip();
+  g.font = "600 11.5px Segoe UI"; g.textBaseline = "middle";
+  for (const [t, tx] of MARCAS) {
+    if (t < a || t > b) continue;
+    const xx = x(t); g.fillStyle = "rgba(127,217,154,.75)"; g.fillRect(xx - 1, m.cab, 2, h - m.cab);
+    g.fillStyle = "#7fd99a"; g.fillText("⚑ " + tx, xx + 4, m.cab + m.onda / 2);
+  }
+  g.textBaseline = "alphabetic"; g.restore();
+}
+$("pon_marca").onclick = () => ponMarca(ahora());
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT" || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.code === "KeyM") { e.preventDefault(); ponMarca(ahora()); }
+});
+listaMarcas();
+
+// ---------- recordar dónde se quedó en cada canción (compás, compases a la vista, trozo); ?compas=N manda
+const CLAVE_POS = "tdj_pos:" + CANCION;
+let guardaPosT = 0;
+function guardaPos() {
+  clearTimeout(guardaPosT);
+  guardaPosT = setTimeout(() => { try { localStorage.setItem(CLAVE_POS, JSON.stringify({ t: +ahora().toFixed(2), ncomp: NCOMP, sel })); } catch (e) {} }, 400);
+}
+{
+  let pos = null; try { pos = JSON.parse(localStorage.getItem(CLAVE_POS) || "null"); } catch (e) {}
+  const cN = +new URLSearchParams(location.search).get("compas");
+  if (cN && inicioCompas(cN) !== null) pos = { t: inicioCompas(cN), ncomp: pos ? pos.ncomp : NCOMP, sel: null };
+  if (pos) {
+    if ([1, 2, 4, 8].includes(pos.ncomp)) { NCOMP = pos.ncomp; $("ncomp_btn").textContent = `🔍 ${NCOMP} compás${NCOMP > 1 ? "es" : ""} ▾`; }
+    if (pos.sel && pos.sel.b > pos.sel.a) sel = pos.sel;
+    if (pos.t > 0 && pos.t < DUR()) { cursor = pos.t; vIni = unos.filter(u => u <= cursor + 0.01).pop() || unos[0]; }
+  }
+  setInterval(() => { if (sonando) guardaPos(); }, 3000);
+  addEventListener("pagehide", () => { try { localStorage.setItem(CLAVE_POS, JSON.stringify({ t: +ahora().toFixed(2), ncomp: NCOMP, sel })); } catch (e) {} });
+}
+// ---------- comparar con otra grabación (19-11-2026): su onda en una fila, cuadrada compás a compás con esta
+// (compás N, tiempo k y la fracción de tiempo de aquí = lo mismo allí; «su compás = este + n» si una tiene más introducción)
+let CMP = null;
+function cargaRitmoDe(c) {   // lee _ritmo/<c>/ritmo_datos.js sin pisar el RITMO de esta página
+  return new Promise((ok, mal) => {
+    const viejo = window.RITMO, sc = document.createElement("script");
+    sc.src = "_ritmo/" + encodeURIComponent(c) + "/ritmo_datos.js";
+    sc.onload = () => { const r = window.RITMO; window.RITMO = viejo; sc.remove(); ok(r); };
+    sc.onerror = () => { window.RITMO = viejo; sc.remove(); mal(new Error("no encuentro " + c)); };
+    document.head.appendChild(sc);
+  });
+}
+async function ponComparar(c) {
+  quitaComparar(true);
+  $("cmp_btn").textContent = "⇄ cargando…";
+  try {
+    const R = await cargaRitmoDe(c), PB = R.datos.pulsos, ix = {};
+    PB.forEach((p, j) => { ix[p.compas + "|" + p.tiempo] = j; });
+    const bufB = await fetch(R.audios.mezcla).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b));
+    const d = bufB.getChannelData(0), paso = Math.round(bufB.sampleRate * 0.01), e = new Float32Array(Math.floor(d.length / paso));
+    for (let i = 0; i < e.length; i++) { let q = 0; for (let k = i * paso; k < (i + 1) * paso; k += 2) q += d[k] * d[k]; e[i] = Math.sqrt(2 * q / paso); }
+    const tope = Float32Array.from(e).sort()[Math.floor(e.length * 0.995)] || 1;
+    const corto = c.split(" - ")[0].replace(/^\d+\./, "").slice(0, 22);
+    CMP = { c, f: "⇄ " + corto, PB, ix, buf: bufB, e, tope, off: 0, bpm: R.datos.meta.bpm, src: null };
+    FUENTES.push(CMP.f); COL[CMP.f] = "#b7a4e8"; clic[CMP.f] = false;
+    $("cmp_ajuste").classList.remove("oculto"); marcaCmp();
+  } catch (err) { alert("No se ha podido cargar: " + err.message); }
+  $("cmp_btn").textContent = CMP ? "⇄ " + CMP.f.slice(2) + " ▾" : "⇄ comparar ▾"; $("cmp_btn").classList.toggle("on", !!CMP);
+  pinta();
+}
+function quitaComparar(sinPintar) {
+  if (!CMP) return;
+  if (CMP.src) { try { CMP.src.stop(); } catch (e) {} }
+  const i = FUENTES.indexOf(CMP.f); if (i >= 0) FUENTES.splice(i, 1);
+  CMP = null; $("cmp_ajuste").classList.add("oculto"); $("cmp_btn").textContent = "⇄ comparar ▾"; $("cmp_btn").classList.remove("on");
+  if (!sinPintar) pinta();
+}
+function aComparada(t) {   // segundo de aquí → segundo de la otra grabación (o null si allí no hay ese compás)
+  let i = P.findIndex(p => p.seg > t) - 1; if (i < 0 || i >= P.length - 1) return null;
+  const f = (t - P[i].seg) / (P[i + 1].seg - P[i].seg), j = CMP.ix[(P[i].compas + CMP.off) + "|" + P[i].tiempo];
+  if (j === undefined || j >= CMP.PB.length - 1) return null;
+  return CMP.PB[j].seg + f * (CMP.PB[j + 1].seg - CMP.PB[j].seg);
+}
+function filaComparar(g, x, a, b, y, m, col, X0, X1) {
+  const base = y + m.fila - 3, alto = m.fila - 8;
+  g.save(); g.beginPath(); g.moveTo(X0, base); let hay = false;
+  for (let px = X0; px <= X1; px += 2) {
+    const tB = aComparada(a + (px - X0) / (X1 - X0) * (b - a));
+    const v = tB === null ? 0 : Math.min(1, (CMP.e[Math.floor(tB / 0.01)] || 0) / CMP.tope); if (tB !== null) hay = true;
+    g.lineTo(px, base - v * alto);
+  }
+  g.lineTo(X1, base); g.closePath(); g.globalAlpha = 0.28; g.fillStyle = col; g.fill(); g.globalAlpha = 0.7; g.strokeStyle = col; g.stroke(); g.restore();
+  g.font = "11px Segoe UI"; g.fillStyle = "#a99bc9";
+  g.fillText(hay ? `${Math.round(CMP.bpm)} pulsos/min (aquí ${Math.round(M.bpm)})` + (CMP.off ? ` · su compás = este ${CMP.off > 0 ? "+" : "−"} ${Math.abs(CMP.off)}` : "")
+                 : "en la otra grabación no hay estos compases (prueba «su compás = este ± n»)", X0 + 6, y + 13);
+}
+async function oirComparada() {
+  const tB = aComparada(ahora()); parar(); await ctx.resume();
+  const s = ctx.createBufferSource(); s.buffer = CMP.buf; s.connect(ctx.destination); s.start(0, Math.max(0, tB || 0)); CMP.src = s;
+  s.onended = () => { if (CMP && CMP.src === s) { CMP.src = null; $("play").textContent = "▶ Escuchar"; $("play").classList.remove("sonando"); } };
+  $("play").textContent = "■ Parar (la otra)"; $("play").classList.add("sonando");
+}
+function marcaCmp() { if (CMP) $("cmp_off").textContent = `este ${CMP.off >= 0 ? "+" : "−"} ${Math.abs(CMP.off)}`; }
+document.querySelectorAll("[data-cmpoff]").forEach(b => b.onclick = () => { if (!CMP) return; CMP.off += +b.dataset.cmpoff; marcaCmp(); pinta(); });
+$("cmp_quitar").onclick = () => { quitaComparar(); $("m_comparar").classList.remove("abierto"); };
+{
+  const L = (window.RITMO_LISTA || []).filter(x => x.c !== CANCION);
+  const sinT = t => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const titulo = c => sinT(c.split(" - ").slice(1).join(" - ").replace(/\(.*?\)|_rp|\d{4,}/g, "").trim());
+  const mio = titulo(CANCION);
+  const pintaCmp = () => {
+    const q = sinT($("buscar_cmp").value);
+    const xs = L.filter(x => sinT(x.c).includes(q)).sort((p1, p2) => (titulo(p2.c) === mio) - (titulo(p1.c) === mio));
+    $("lista_cmp").replaceChildren(...xs.slice(0, 50).map(x => { const b = document.createElement("button"); b.textContent = x.c;
+      if (titulo(x.c) === mio) { b.className = "igual"; b.title = "El mismo tango"; }
+      b.onclick = () => { $("m_comparar").classList.remove("abierto"); ponComparar(x.c); }; return b; }));
+  };
+  $("buscar_cmp").oninput = pintaCmp; pintaCmp();
+  $("cmp_btn").addEventListener("click", () => setTimeout(() => $("buscar_cmp").focus(), 30));
+}
+ponInfo(cursor); cargar("mezcla").then(() => pinta()); pinta(); tic();
+// la partitura se prepara de antemano, en silencio, mientras no suena nada (19-11-2026): cargar Verovio y dibujar
+// tardan 10-25 s; así, al abrir el panel ya está. Si está sonando, espera (dibujar congela la página unos segundos).
+if (PT) {
+  const preparar = () => {
+    if (nMedidas || enCurso) return;
+    if (sonando) { setTimeout(preparar, 3000); return; }
+    cargaVerovio().then(t => { tk = t; const ya = () => { if (nMedidas || enCurso) return; if (sonando) setTimeout(ya, 3000); else dibujaPartitura(); }; setTimeout(ya, 300); })
+      .catch(e => console.error(e));
+  };
+  setTimeout(preparar, 2500);
+}
 </script>
 </body>
 </html>

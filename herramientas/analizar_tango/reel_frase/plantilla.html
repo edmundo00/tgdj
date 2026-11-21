@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="es" data-resolution="portrait">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <script src="tiempos.js"></script>
+    <!-- plantilla de reel_frase.py: no editar el index.html del proyecto; cambiar el guion (guion.json) o esta plantilla -->
+    <style>
+      :root { --oro: #f0c05a; --crema: #f8f1e4; --rosa: #e9cfc4; --vino: #3e0a14; --sombra: #1e060c; --rojo: #ff7d8d; --azul: #5fe0e8; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1080px; height: 1920px; overflow: hidden; background: #000; }
+      #root { position: relative; width: 1080px; height: 1920px; overflow: hidden; font-family: Georgia, serif; background: #12030a; }
+      #camara { position: absolute; inset: 0; }
+      .capa { position: absolute; inset: 0; overflow: hidden; visibility: hidden; }
+      .capa video { position: absolute; inset: 0; width: 1080px; height: 1920px; object-fit: cover; }
+      #oscuro { position: absolute; inset: 0; background: #14030a; opacity: 0; pointer-events: none; }
+      #arriba { position: absolute; left: 0; top: 0; width: 1080px; height: 1120px; pointer-events: none;
+        background: linear-gradient(#0c0206 0%, rgba(12,2,6,0.82) 55%, rgba(12,2,6,0) 100%); }
+      #flash { position: absolute; inset: 0; background: #fff3e0; opacity: 0; pointer-events: none; }
+      /* títulos */
+      .tit { position: absolute; left: 30px; width: 1020px; top: 90px; text-align: center; visibility: hidden; }
+      .tit .a { color: var(--crema); font-size: 66px; font-weight: 700; line-height: 1.1;
+        text-shadow: 0 4px 0 var(--sombra), 0 0 18px rgba(20,2,6,0.95); }
+      .tit .b { color: var(--oro); font-size: 150px; font-weight: 700; line-height: 1.0; margin-top: 4px;
+        text-shadow: 0 6px 0 var(--sombra), 0 0 22px rgba(20,2,6,0.95), 0 10px 40px rgba(0,0,0,0.85); }
+      .tit .b.m { font-size: 120px; }
+      .tit .r { color: var(--rojo); }
+      .etiqueta { position: absolute; left: 50%; top: 405px; padding: 10px 30px; border: 3px solid var(--oro); border-radius: 44px;
+        background: rgba(30,6,12,0.88); color: var(--oro); font-family: "Segoe UI", sans-serif; font-weight: 800; font-size: 42px;
+        letter-spacing: 0.04em; white-space: nowrap; transform: translateX(-50%); visibility: hidden; }
+      .etiqueta.roja { border-color: var(--rojo); color: var(--rojo); font-size: 52px; }
+      .chip { position: absolute; left: 24px; top: 24px; padding: 6px 18px; border-radius: 10px; background: #f0c05a; color: #1e060c; font-family: "Segoe UI", sans-serif; font-weight: 800; font-size: 32px; letter-spacing: 0.06em; visibility: hidden; }
+      #lenta { position: absolute; left: 380px; top: 24px; padding: 6px 18px; border-radius: 10px; background: #c8283e; color: #fff;
+        font-family: "Segoe UI", sans-serif; font-weight: 800; font-size: 32px; letter-spacing: 0.06em; visibility: hidden; }
+      /* esquema: qué suena en cada tiempo (EL RITMO · VIOLINES · CANTOR · PISAN) */
+      #rejilla { position: absolute; left: 0; top: 490px; width: 1080px; height: 300px; }
+      .cab { position: absolute; top: 0; width: 150px; height: 56px; text-align: center; line-height: 56px; color: var(--crema);
+        font-size: 54px; font-weight: 700; -webkit-text-stroke: 7px #1e060c; paint-order: stroke fill; transform-origin: 50% 50%; }
+      .fila { position: absolute; left: 0; width: 1080px; height: 68px; }
+      .fila .nom { position: absolute; left: 34px; width: 290px; height: 68px; line-height: 68px; font-family: "Segoe UI", sans-serif;
+        font-weight: 800; font-size: 31px; letter-spacing: 0.04em; text-shadow: 0 2px 0 var(--sombra), 0 0 10px rgba(0,0,0,0.9); }
+      .cs { position: absolute; top: 0; width: 150px; height: 68px; border-radius: 14px; border: 3px solid; background: rgba(30,6,12,0.85); overflow: hidden; }
+      .cs .l { position: absolute; inset: 0; opacity: 0; }
+      .fila .marco { position: absolute; left: 22px; top: -9px; width: 966px; height: 86px; border: 5px solid var(--rojo); border-radius: 22px; opacity: 0; }
+      /* la frase: 8 compases + el 1 de la siguiente */
+      #frase { position: absolute; left: 0; top: 802px; width: 1080px; height: 200px; }
+      .cp { position: absolute; top: 0; width: 100px; height: 100px; overflow: hidden; border-radius: 16px; border: 4px solid rgba(240,192,90,0.55);
+        background: rgba(30,6,12,0.85); color: var(--rosa); font-family: "Segoe UI", sans-serif; font-weight: 800; font-size: 46px;
+        line-height: 92px; text-align: center; transform-origin: 50% 50%; }
+      .cp.nueva { border-color: var(--azul); color: var(--azul); }
+      .cp .ll { position: absolute; inset: 0; background: rgba(240,192,90,0.8); transform-origin: 0 50%; transform: scaleX(0); }
+      .cp.ocho { border-color: rgba(255,125,141,0.8); }
+      .cp.ocho .ll { background: rgba(255,125,141,0.85); }
+      .cp.nueva .ll { background: rgba(95,224,232,0.55); }
+      .cp .tk { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: rgba(248,241,228,0.28); }
+      .cp .tk.uno { width: 7px; margin-left: 0; background: #fff8ec; }
+      .cp span { position: relative; color: #fff8ec; -webkit-text-stroke: 7px #1e060c; paint-order: stroke fill; }
+      .et { position: absolute; top: 112px; width: 200px; margin-left: -100px; text-align: center; color: var(--oro); font-family: "Segoe UI", sans-serif;
+        font-weight: 800; font-size: 30px; line-height: 1.1; letter-spacing: 0.03em; opacity: 0; text-shadow: 0 2px 0 var(--sombra), 0 0 10px rgba(0,0,0,0.9); }
+      #llave { position: absolute; top: 160px; height: 18px; border: 4px solid rgba(248,241,228,0.7); border-top: none; border-radius: 0 0 12px 12px; opacity: 0; }
+      #llave-t { position: absolute; top: 190px; width: 1080px; left: 0; text-align: center; color: var(--crema); font-family: "Segoe UI", sans-serif;
+        font-weight: 700; font-size: 34px; letter-spacing: 0.05em; opacity: 0; text-shadow: 0 2px 0 var(--sombra); }
+      /* destellos en los pies */
+      .chispa { position: absolute; width: 0; height: 0; }
+      .chispa .s { position: absolute; left: -70px; top: -70px; width: 140px; height: 140px; opacity: 0; }
+      .chispa .s svg { width: 140px; height: 140px; overflow: visible; }
+      /* créditos */
+      #creditos { position: absolute; left: 70px; top: 470px; width: 940px; padding: 30px 30px 26px; border-radius: 28px; border: 4px solid var(--oro);
+        background: rgba(30,6,12,0.9); text-align: center; visibility: hidden; font-family: "Segoe UI", sans-serif; }
+      #creditos .q { color: var(--oro); font-family: Georgia, serif; font-weight: 700; font-size: 58px; }
+      #creditos .d { margin-top: 10px; color: var(--crema); font-weight: 600; font-size: 34px; line-height: 1.3; }
+      #creditos .p { margin-top: 10px; color: var(--rosa); font-weight: 600; font-size: 28px; }
+      #firma { position: absolute; right: 24px; top: 24px; padding: 6px 14px; border-radius: 8px; background: rgba(30,6,12,0.8);
+        color: var(--oro); font-family: "Segoe UI", sans-serif; font-weight: 700; font-size: 28px; z-index: 6; }
+      /* la frase sin baile: fondo, imagen congelada, recuadro con ellos, contador */
+      #congelado { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; object-fit: cover; opacity: 0; filter: brightness(0.42) saturate(1.1); transform: scale(1.12); }
+      #pip { position: absolute; left: 716px; top: 1040px; width: 324px; height: 576px; border: 4px solid var(--oro); border-radius: 20px;
+        overflow: hidden; opacity: 0; box-shadow: 0 10px 40px rgba(0,0,0,0.8); background: #000; }
+      #pip video { position: absolute; left: 0; top: 0; width: 316px; height: 568px; object-fit: cover; }
+      #pip .pipn { position: absolute; left: 0; right: 0; bottom: 10px; text-align: center; color: var(--oro); font-family: "Segoe UI", sans-serif;
+        font-weight: 800; font-size: 28px; letter-spacing: 0.06em; text-shadow: 0 2px 0 #1e060c, 0 0 10px rgba(0,0,0,0.9); }
+      #fondo { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 40%, #3e0a14 0%, #1a040b 55%, #0c0206 100%); opacity: 0; }
+      #cuenta { position: absolute; left: 40px; top: 1070px; width: 620px; text-align: center; opacity: 0; }
+      #cuenta .q { color: var(--rosa); font-family: "Segoe UI", sans-serif; font-weight: 800; font-size: 44px; letter-spacing: 0.12em; }
+      #cuenta .num { color: var(--oro); font-size: 250px; font-weight: 700; line-height: 1.0; text-shadow: 0 10px 0 var(--sombra), 0 0 40px rgba(0,0,0,0.8); }
+      #cuenta .de { color: var(--crema); font-family: "Segoe UI", sans-serif; font-weight: 700; font-size: 40px; opacity: 0.8; }
+      #acorde { position: absolute; left: 350px; top: 1500px; transform: translateX(-50%); padding: 10px 30px; border-radius: 40px; border: 3px solid var(--oro);
+        background: rgba(30,6,12,0.9); color: var(--crema); font-family: "Segoe UI", sans-serif; font-weight: 800; font-size: 40px; white-space: nowrap; visibility: hidden; }
+      #lasfrases { position: absolute; left: 40px; width: 1000px; top: 600px; text-align: center; visibility: hidden; }
+      #lasfrases .a, #lasfrases .b { font-weight: 700; line-height: 1.05; white-space: nowrap; text-shadow: 0 8px 0 var(--sombra), 0 0 40px rgba(0,0,0,0.9); }
+      #lasfrases .a { color: var(--crema); font-size: 130px; }
+      #lasfrases .b { color: var(--oro); font-size: 110px; margin-top: 10px; }
+      #lasfrases .le { display: inline-block; }
+      #diapo { position: absolute; left: 60px; width: 960px; top: 620px; text-align: center; visibility: hidden; }
+      #diapo .l1, #diapo .l2 { font-size: 96px; font-weight: 700; line-height: 1.1; opacity: 0; text-shadow: 0 6px 0 var(--sombra), 0 0 30px rgba(0,0,0,0.9); }
+      #diapo .l1 { color: var(--crema); }
+      #diapo .l2 { color: var(--oro); margin-top: 60px; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="__FIN__" data-width="1080" data-height="1920" data-fps="30">
+      <div id="camara" data-layout-allow-overflow>
+        <div id="l-real" class="capa" style="visibility: visible"><video id="v-real" data-start="__real_ini__" data-duration="__real_dur__" src="assets/v_real.mp4" muted playsinline></video></div>
+        <div id="l-lento" class="capa"><video id="v-lento" data-start="__lento_ini__" data-duration="__lento_dur__" src="assets/v_lento.mp4" muted playsinline></video></div>
+        <div id="l-final" class="capa"><video id="v-final" data-start="__final_ini__" data-duration="__final_dur__" src="assets/v_final.mp4" muted playsinline></video></div>
+        <div id="oscuro"></div>
+        <div id="chispas"></div>
+      </div>
+      <div id="fondo"></div>
+      <img id="congelado" src="assets/congelado.jpg" alt="" />
+      <div id="arriba"></div>
+
+      <div id="t-pies" class="tit" style="visibility: visible" data-layout-allow-overflow><div class="a" data-t="pies_a"></div><div class="b" data-t="pies_b"></div></div>
+      <div id="t-chan1" class="tit" style="top: 340px" data-layout-allow-overflow><div class="b" data-t="chan"></div></div>
+      <div id="t-chan2" class="tit" style="top: 340px" data-layout-allow-overflow><div class="b" data-t="chan"></div></div>
+      <div id="t-quietos" class="tit" style="top: 340px" data-layout-allow-overflow><div class="b r" data-t="quietos"></div></div>
+      <div id="e-quien" class="etiqueta" style="top: 560px" data-t="quien"></div>
+      <div id="lasfrases" data-layout-allow-overflow data-layout-allow-overlap><div class="a" data-t="lasfrases_a"></div><div class="b" data-t="lasfrases_b"></div></div>
+      <div id="diapo" data-layout-allow-overflow>
+        <div class="l1" id="dp1" data-t="dp1"></div>
+        <div class="l2" id="dp2" data-t="dp2"></div>
+      </div>
+      <div id="t-empieza" class="tit" data-layout-allow-overflow><div class="a" data-t="empieza_a"></div><div class="b" data-t="empieza_b"></div></div>
+      <div id="e-empieza" class="etiqueta" data-t="e_empieza"></div>
+      <div id="t-ocho" class="tit" data-layout-allow-overflow><div class="a" data-t="ocho_a"></div><div class="b" data-t="ocho_b"></div></div>
+      <div id="t-tension" class="tit" data-layout-allow-overflow><div class="a" data-t="tension_a"></div><div class="b" data-t="tension_b"></div></div>
+      <div id="e-tension" class="etiqueta" data-t="e_tension"></div>
+      <div id="t-casa" class="tit" data-layout-allow-overflow><div class="a" data-t="casa_a"></div><div class="b" style="font-size: 120px" data-t="casa_b"></div></div>
+      <div id="t-silencio" class="tit" data-layout-allow-overflow><div class="a" data-t="silencio_a"></div><div class="b" style="font-size: 100px" data-t="silencio_b"></div></div>
+      <div id="e-arrastra" class="etiqueta" data-t="e_arrastra"></div>
+      <div id="t-asi" class="tit" data-layout-allow-overflow><div class="a" data-t="asi_a"></div><div class="b" style="font-size: 92px; line-height: 1.05" data-t="asi_b"></div></div>
+            <div id="t-c7" class="tit" data-layout-allow-overflow><div class="a" data-t="c7_a"></div><div class="b" data-t="c7_b"></div></div>
+      <div id="e-c7" class="etiqueta" data-t="e_c7"></div>
+      <div id="t-c8" class="tit" data-layout-allow-overflow><div class="a" data-t="c8_a"></div><div class="b" data-t="c8_b"></div></div>
+      <div id="e-c8" class="etiqueta" data-t="e_c8"></div>
+      <div id="t-c1" class="tit" data-layout-allow-overflow><div class="a" data-t="c1_a"></div><div class="b r" data-t="c1_b"></div></div>
+      <div id="e-c1" class="etiqueta roja" data-t="e_c1"></div>
+      <div id="t-porque" class="tit" data-layout-allow-overflow><div class="a" data-t="porque_a"></div><div class="b m" data-t="porque_b"></div></div>
+      <div id="t-gracias" class="tit" data-layout-allow-overflow><div class="a" data-t="gracias_a"></div><div class="b" data-t="gracias_b"></div></div>
+      <div id="e-g1" class="etiqueta" style="top: 400px" data-t="g1"></div>
+      <div id="e-g2" class="etiqueta" style="top: 490px" data-t="g2"></div>
+      <div id="e-g3" class="etiqueta" style="top: 580px; border-color: #ff7d8d; color: #ff7d8d" data-t="g3"></div>
+      <div id="e-g4" class="etiqueta" style="top: 670px; font-size: 40px" data-t="g4"></div>
+      <div id="t-manda" class="tit" data-layout-allow-overflow><div class="a" data-t="manda_a"></div><div class="b m" data-t="manda_b"></div></div>
+      <div id="chip-solo" class="chip" data-t="chip_solo"></div>
+      <div id="chip-ellos" class="chip" data-t="chip_ellos"></div>
+      <div id="lenta" data-t="lenta"></div>
+
+      <div id="rejilla" style="opacity: 0" data-layout-allow-overflow></div>
+      <div id="frase" style="opacity: 0" data-layout-allow-overflow><div id="llave"></div><div id="llave-t" data-t="llave"></div></div>
+      <div id="cuenta"><div class="q" data-t="cuenta"></div><div class="num" id="num">1</div><div class="de" id="de" data-t="de8"></div></div>
+      <div id="acorde"></div>
+      <div id="pip"><video id="v-pip" data-start="__musica_ini__" data-duration="__pip_dur__" src="assets/v_pip.mp4" muted playsinline></video><div class="pipn" data-t="pip"></div></div>
+
+      <div id="creditos">
+        <div class="q" data-t="cred_q"></div>
+        <div class="d" data-t="cred_d"></div>
+        <div class="d" style="font-size: 30px" data-t="cred_d2"></div>
+        <div class="p" data-t="cred_p"></div>
+      </div>
+
+      <div id="flash"></div>
+      <div id="firma" data-t="firma"></div>
+      <audio id="musica" data-start="0" data-duration="__FIN__" data-volume="1" src="assets/audio.m4a"></audio>
+    </div>
+    <script>
+      const TR = window.TRAMOS, PU = window.PULSOS, PI = window.PISADAS, ES = window.ESQUEMA, FR = window.FRASE, FIN = TR.FIN;
+      const G = window.GUION, TX = G.textos;
+      const C = (k) => G.frase - 1 + k;   // compás k de la frase (1-8; 9 = el 1.º de la siguiente) → compás de la canción
+      // los textos salen del guion (reel_frase.py): cada elemento con data-t="clave" recibe TX[clave] (\n = salto de línea)
+      document.querySelectorAll("[data-t]").forEach((e) => { e.innerHTML = String(TX[e.dataset.t] ?? "").replace(/\n/g, "<br />"); });
+      const ini = (k) => TR[k].inicio, fin = (k) => TR[k].inicio + TR[k].dur;
+      const pul = (k) => PU[k].map((p) => ({ t: p[0], c: p[1], k: p[2] }));
+      const pis = (k) => PI[k].map((p) => ({ t: p[0], b: p[1], pie: p[2], x: p[3], y: p[4] }));
+      const uno = (k, c, t = 1) => pul(k).find((p) => p.c === c && p.k === t).t;
+
+      // ---- esquema: cabecera 1 2 3 4 + filas (casilla = lo fuerte que suena ese tiempo en su pista separada) ----
+      const rej = document.getElementById("rejilla"), XR = [334, 498, 662, 826];
+      const FILAS = [["marc", TX.fila_ritmo, "#f0c05a", 0], ["vio", TX.fila_violines, "#7fe0a0", 1], ["voz", TX.fila_cantor, "#c9a6ff", 2], ["pis", TX.fila_pisan, "#5fe0e8", 1]]
+        .filter(([id]) => id !== "vio" || ES.vio);   // sin pista de violines, sin su fila
+      for (let i = 1; i <= 4; i++) {
+        const c = document.createElement("div"); c.className = "cab"; c.id = "n" + i; c.style.left = XR[i - 1] + "px"; c.textContent = i; rej.appendChild(c);
+      }
+      FILAS.forEach(([id, nom, col, f]) => {
+        const d = document.createElement("div"); d.className = "fila"; d.id = "f-" + id; d.style.top = 64 + f * 76 + "px";
+        let h = `<div class="marco" id="mk-${id}"${id !== "marc" ? ` style="border-color:${col}"` : ""}></div><div class="nom" style="color:${col}">${nom}</div>`;
+        for (let i = 1; i <= 4; i++) h += `<div class="cs" style="left:${XR[i - 1]}px;border-color:${col}99"><div class="l" id="l-${id}${i}" style="background:${col}"></div></div>`;
+        d.innerHTML = h; rej.appendChild(d);
+      });
+      // ---- la frase: 8 compases + el 1.º de la siguiente; cada casilla se llena mientras suena (raya gruesa = el 1) ----
+      const fr = document.getElementById("frase"), XF = [], ANCHO = 100, HUECO = 8, SEP = 22;
+      let x0 = (1080 - (9 * ANCHO + 7 * HUECO + SEP)) / 2;
+      for (let i = 1; i <= 9; i++) {
+        const x = x0 + (i - 1) * (ANCHO + HUECO) + (i === 9 ? SEP - HUECO : 0); XF.push(x);
+        const d = document.createElement("div"); d.className = "cp" + (i === 9 ? " nueva" : i === 7 ? " ocho" : ""); d.id = "cp" + i; d.style.left = x + "px";
+        d.innerHTML = `<div class="ll" id="ll${i}"></div><div class="tk uno" style="left:0"></div><div class="tk" style="left:25%"></div><div class="tk" style="left:50%"></div><div class="tk" style="left:75%"></div><span>${i === 9 ? 1 : i}</span>`; fr.appendChild(d);
+        const e = document.createElement("div"); e.className = "et"; e.id = "et" + i; e.style.left = x + ANCHO / 2 + "px"; fr.appendChild(e);
+      }
+      document.getElementById("et9").style.top = "146px"; document.getElementById("et9").style.left = XF[7] + ANCHO / 2 + "px";   // debajo de «LLEGA» (casilla 8), para que no se pisen
+      const llave = document.getElementById("llave"); llave.style.left = XF[0] + "px"; llave.style.width = XF[7] + ANCHO - XF[0] + "px";
+      // ---- «LAS FRASES EN EL TANGO» letra a letra (para que se vaya volando) ----
+      document.querySelectorAll("#lasfrases .a, #lasfrases .b").forEach((d) => {
+        d.innerHTML = [...d.textContent].map((c) => (c === " " ? " " : `<span class="le">${c}</span>`)).join("");
+      });
+      const LETRAS = [...document.querySelectorAll("#lasfrases .le")];
+      // ---- destellos: estrella oro / turquesa en los pies ----
+      const EST = (col) => `<svg viewBox="-50 -50 100 100"><path d="M0 -46 L10 -10 L46 0 L10 10 L0 46 L-10 10 L-46 0 L-10 -10 Z" fill="${col}" stroke="#1e060c" stroke-width="3"/><circle r="9" fill="#fff"/></svg>`;
+      const chis = document.getElementById("chispas"); let nCh = 0;
+      function chispa(t, p, dur) {
+        const d = document.createElement("div"); d.className = "chispa"; d.style.left = p.x + "px"; d.style.top = p.y + "px";
+        d.innerHTML = `<div class="s" id="ch${nCh}">${EST(p.b === 0 ? "#f0c05a" : "#5fe0e8")}</div>`; chis.appendChild(d);
+        tl.fromTo("#ch" + nCh, { opacity: 1, scale: 1.6, rotation: 0 }, { opacity: 1, scale: 0.8, rotation: 45, duration: dur * 0.5, ease: "power3.out" }, t);
+        tl.to("#ch" + nCh, { opacity: 0, duration: dur * 0.5, ease: "power2.in" }, t + dur * 0.5);
+        nCh++;
+      }
+
+      const tl = gsap.timeline({ paused: true, defaults: { immediateRender: false } });
+      const mostrar = (s, t) => tl.set(s, { visibility: "visible" }, t);
+      const ocultar = (s, t) => tl.set(s, { visibility: "hidden" }, t);
+      const golpe = (s, t, desde = 1.6) => { mostrar(s, t); tl.fromTo(s, { scale: desde, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.24, ease: "back.out(1.7)" }, t); };
+      const salir = (s, t, d = 0.12) => { tl.to(s, { opacity: 0, duration: d, ease: "power2.in" }, t - d); ocultar(s, t); };
+      const destello = (t, o = 0.3) => tl.fromTo("#flash", { opacity: o }, { opacity: 0, duration: 0.2, ease: "power2.out" }, t);
+      const latido = (t, s = 1.025) => tl.fromTo("#camara", { scale: s }, { scale: 1, duration: 0.22, ease: "power2.out" }, t);
+      const et = (i, t, txt, col) => { tl.set("#et" + i, { textContent: txt, color: col || "#f0c05a" }, t); tl.fromTo("#et" + i, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.25 }, t); };
+      const capa = (k, t) => { ["real", "lento", "final"].forEach((x) => tl.set("#l-" + x, { visibility: x === k ? "visible" : "hidden" }, t)); };
+      // la barra de la frase en un tramo: cada casilla se llena a lo largo de su compás (sin pasarse del tramo)
+      function frase(k) {
+        const T0 = ini(k), T1 = fin(k);
+        FR[k].forEach(([s, e], j) => {
+          const i = j + 1, f = (t) => Math.min(1, Math.max(0, (t - s) / (e - s)));
+          tl.set("#ll" + i, { scaleX: f(T0) }, T0);
+          if (e > T0 && s < T1) {
+            const a = Math.max(s, T0), b = Math.min(e, T1);
+            tl.fromTo("#ll" + i, { scaleX: f(a) }, { scaleX: f(b), duration: b - a, ease: "none" }, a);
+            if (s >= T0) tl.fromTo("#cp" + i, { scale: 1.18 }, { scale: 1, duration: 0.3, ease: "back.out(2)" }, s);
+          }
+        });
+      }
+      // un tiempo en el esquema: en el 1 se borra el compás anterior; cada casilla se queda encendida hasta el compás siguiente
+      function tiempo(p, filas, pisa) {
+        if (p.k === 1) FILAS.forEach(([id]) => { for (let i = 1; i <= 4; i++) tl.set("#l-" + id + i, { opacity: 0 }, p.t); });
+        filas.forEach((id) => {
+          const v = (ES[id] || {})[p.c + "." + p.k] || 0;
+          if (v > 0.05) tl.fromTo("#l-" + id + p.k, { opacity: Math.min(1, 0.95 * v + 0.25) }, { opacity: 0.9 * v, duration: 0.3, ease: "power2.out" }, p.t);
+        });
+        if (pisa) tl.fromTo("#l-pis" + p.k, { opacity: 1 }, { opacity: 0.85, duration: 0.3 }, p.t);
+        tl.fromTo("#n" + p.k, { scale: 1.35, color: "#f0c05a" }, { scale: 1, color: "#f8f1e4", duration: 0.3, ease: "power2.out" }, p.t);
+      }
+      // marco que parpadea en una fila; el parpadeo acaba antes de «hasta» (si no, se queda encendido)
+      const marco = (id, t, hasta) => {
+        const rep = Math.max(0, Math.floor((hasta - t - 0.25) / 0.3) - 1);
+        tl.fromTo("#mk-" + id, { opacity: 1 }, { opacity: 0.5, duration: 0.3, repeat: rep, yoyo: true }, t);
+        tl.to("#mk-" + id, { opacity: 0, duration: 0.2 }, hasta);
+      };
+
+      // ===== 1 · GANCHO (3 s): dos pasos · ¡CHAN! ¡CHAN! · ¡QUIETOS! (la imagen se congela al cambiar de cámara) =====
+      const g = (c, t) => uno("real", c, t);
+      tl.fromTo("#l-real video", { scale: 1.04 }, { scale: 1.12, duration: TR.real.dur, ease: "none", immediateRender: true }, 0);
+      pis("real").forEach((s) => chispa(s.t, s, 0.36));
+      pul("real").forEach((p) => { if (pis("real").some((s) => s.t > p.t - 0.2 && s.t < p.t + 0.1)) latido(p.t, 1.03); });
+      tl.fromTo("#t-pies", { scale: 1.12 }, { scale: 1, duration: 0.3, ease: "back.out(1.6)", immediateRender: true }, 0);
+      golpe("#e-quien", 0.15, 1.3);
+      golpe("#t-chan1", g(C(7), 4), 1.8); destello(g(C(7), 4), 0.3);
+      salir("#t-chan1", g(C(8))); golpe("#t-chan2", g(C(8)), 2.0); destello(g(C(8)), 0.5);
+      salir("#t-chan2", g(C(8), 2)); golpe("#t-quietos", g(C(8), 2), 1.6); destello(g(C(8), 2), 0.3);
+      tl.to("#oscuro", { opacity: 0.2, duration: 0.3 }, g(C(8), 2));
+
+      // ===== 2 · DIAPO + LA FRASE SOLO CON MÚSICA =====
+      const M0 = ini("musica"), MP = pul("musica"), m = (c, t = 1) => uno("musica", c, t);
+      capa("ninguna", M0); tl.set("#fondo", { opacity: 1 }, M0); tl.set("#arriba", { opacity: 0 }, M0); tl.set("#oscuro", { opacity: 0 }, M0);
+      salir("#t-quietos", M0); salir("#e-quien", M0); salir("#t-pies", M0);
+      // la diapo va encima de la imagen congelada del «¡QUIETOS!» (oscurecida); se funde al granate cuando sale el esquema
+      tl.set("#congelado", { opacity: 1 }, M0); tl.to("#congelado", { opacity: 0, duration: 0.5 }, m(...G.anacrusa) - 0.4);
+      tl.to("#pip", { opacity: 1, duration: 0.4 }, m(...G.anacrusa) - 0.3);
+      mostrar("#diapo", M0); destello(M0, 0.4);
+      tl.fromTo("#dp1", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }, M0 + 0.1);
+      tl.fromTo("#dp2", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.35, ease: "power2.out" }, M0 + 0.8);
+      salir("#diapo", M0 + 2.8);
+      // «LAS FRASES EN EL TANGO»: entra cayendo letra a letra y se va volando (cada letra a su sitio, girando y borrosa)
+      const LF0 = M0 + 2.8, LF1 = m(...G.anacrusa) - 1.05;
+      mostrar("#lasfrases", LF0); destello(LF0, 0.3);
+      LETRAS.forEach((el, i) => {
+        tl.fromTo(el, { opacity: 0, y: -60, scale: 1.6 }, { opacity: 1, y: 0, scale: 1, duration: 0.3, ease: "back.out(2)" }, LF0 + i * 0.025);
+        const a = (i * 137.5) % 360, dx = Math.cos(a * Math.PI / 180) * (300 + (i % 5) * 70), dy = -250 - ((i * 53) % 400);
+        tl.to(el, { x: dx, y: dy, rotation: ((i * 71) % 120) - 60, scale: 0.3, opacity: 0, filter: "blur(6px)", duration: 0.5, ease: "power2.in" }, LF1 + (i % 7) * 0.03);
+      });
+      ocultar("#lasfrases", LF1 + 0.75);
+      golpe("#chip-solo", m(...G.anacrusa) - 0.3, 1.3);
+      tl.set("#f-pis", { opacity: 0 }, M0);
+      tl.to(["#rejilla", "#frase"], { opacity: 1, duration: 0.4 }, m(...G.anacrusa) - 0.3);
+      frase("musica");
+      MP.forEach((p) => tiempo(p, ["marc", "vio", "voz"], false));
+      for (let k = 1; k <= 8; k++) {
+        const s = FR.musica[k - 1][0];
+        tl.set("#num", { textContent: k }, s); tl.fromTo("#num", { scale: 1.3 }, { scale: 1, duration: 0.3, ease: "back.out(2)" }, s);
+      }
+      // el cantor entra antes (anacrusa) · compás 1 de la frase: empieza, en el 1
+      golpe("#e-empieza", m(...G.anacrusa) + 0.1, 1.3);
+      tl.fromTo("#mk-voz", { opacity: 1 }, { opacity: 0, duration: 1.2 }, m(...G.anacrusa));
+      golpe("#t-empieza", m(C(1)), 1.4); et(1, m(C(1)), TX.et_empieza);
+      tl.to("#cuenta", { opacity: 1, duration: 0.3 }, m(C(1)));
+      salir("#t-empieza", m(C(3))); salir("#e-empieza", m(C(3)));
+      golpe("#t-ocho", m(C(3)), 1.4);
+      tl.to(["#llave", "#llave-t"], { opacity: 1, duration: 0.3 }, m(C(3)) + 0.4);
+      // compás 7: tensión
+      salir("#t-ocho", m(C(7))); tl.to(["#llave", "#llave-t"], { opacity: 0, duration: 0.2 }, m(C(7)) - 0.2);
+      golpe("#t-tension", m(C(7)), 1.4); golpe("#e-tension", m(C(7)) + 0.1, 1.3); et(7, m(C(7)), TX.et_tension, "#ff7d8d");
+      tl.set("#acorde", { textContent: TX.acorde_tension, borderColor: "#ff7d8d" }, m(C(7))); golpe("#acorde", m(C(7)) + 0.2, 1.3);
+      salir("#t-tension", m(C(8))); salir("#e-tension", m(C(8)));
+      // compás 8: llega en el 1 y la orquesta calla en el 2-3-4
+      tl.to("#et7", { opacity: 0, duration: 0.15 }, m(C(8)) - 0.15); et(8, m(C(8)), TX.et_llega, "#5fe0e8");
+      tl.set("#num", { textContent: "🏠" }, m(C(8)) + 0.01); tl.set("#de", { textContent: TX.de_llega }, m(C(8)) + 0.01);
+      tl.set("#acorde", { textContent: TX.acorde_casa, borderColor: "#5fe0e8" }, m(C(8)));
+      tl.fromTo("#acorde", { scale: 1.3 }, { scale: 1, duration: 0.3, ease: "back.out(2)" }, m(C(8)));
+      golpe("#t-casa", m(C(8)), 1.5); destello(m(C(8)), 0.45);
+      salir("#t-casa", m(C(8), 4) + 0.15); golpe("#t-silencio", m(C(8), 4) + 0.15, 1.3); golpe("#e-arrastra", m(C(8), 4) + 0.8, 1.3);
+      et(9, m(C(8), 2), TX.et_silencio, "#ff7d8d");
+      tl.set("#de", { textContent: TX.de_silencio }, m(C(8), 2));
+      marco("marc", m(C(8), 2), ini("mapa") + 2.6); marco("vio", m(C(8), 2) + 0.3, ini("mapa") + 2.6); marco("voz", m(C(8), 4) + 0.8, ini("mapa") + 2.6);
+
+      // ===== 3 · «Así termina la frase» (la música sigue) =====
+      const P0 = ini("mapa");
+      tl.set(["#f-voz", "#f-vio"], { opacity: 1 }, P0);
+      // el esquema se queda con el dibujo del compás 8 mientras se explica (no pasa al compás siguiente)
+      salir("#t-silencio", P0 + 2.6); salir("#e-arrastra", P0 + 2.6);
+      tl.to(["#rejilla", "#frase", "#cuenta", "#acorde", "#pip"], { opacity: 0, duration: 0.3 }, P0 + 2.6);
+      golpe("#t-asi", P0 + 2.6, 1.4);
+      salir("#t-asi", fin("mapa"));
+
+
+      // ===== 4 · AHORA CON ELLOS (compases 6-8 de la frase, a cámara lenta) =====
+      const L0 = ini("lento"), LP = pul("lento"), LS = pis("lento"), l = (c, t = 1) => uno("lento", c, t);
+      capa("lento", L0); tl.set("#fondo", { opacity: 0 }, L0); tl.set("#arriba", { opacity: 1 }, L0);
+      salir("#chip-solo", L0); golpe("#chip-ellos", L0, 1.3); mostrar("#lenta", L0);
+      destello(L0, 0.5);
+      tl.set(["#f-voz", "#f-vio"], { opacity: 0 }, L0); tl.set(["#f-pis"], { opacity: 1 }, L0);
+      tl.set(["#rejilla", "#frase"], { opacity: 1 }, L0);
+      for (let j = 1; j <= 9; j++) tl.set("#et" + j, { opacity: 0 }, L0);
+      tl.set("#et8", { top: 146 }, L0);   // «¡PARAN!» debajo de «TODOS», para que no se pisen
+      frase("lento");
+      tl.fromTo("#l-lento video", { scale: 1.0 }, { scale: 1.05, duration: TR.lento.dur, ease: "none" }, L0);
+      LP.forEach((p) => {
+        const pisa = LS.some((s) => s.t > p.t - 0.4 && s.t < p.t + 0.2);   // pisan hasta ~130 ms antes del tiempo (×2 en cámara lenta)
+        tiempo(p, ["marc"], pisa);
+        if (pisa) latido(p.t, p.k === 1 ? 1.03 : 1.015);
+      });
+      LS.forEach((s) => chispa(s.t, s, 0.7));
+      golpe("#t-c7", L0, 1.4); golpe("#e-c7", L0 + 0.4, 1.3); et(6, L0, TX.et_caminan);
+      salir("#t-c7", l(C(7))); salir("#e-c7", l(C(7)));
+      golpe("#t-c8", l(C(7)), 1.4); golpe("#e-c8", l(C(7)) + 0.3, 1.3); et(7, l(C(7)), TX.et_todos);
+      salir("#t-c8", l(C(8))); salir("#e-c8", l(C(8)));
+      golpe("#t-c1", l(C(8)), 1.5); destello(l(C(8)), 0.5); golpe("#e-c1", l(C(8)) + 0.2, 1.3); et(8, l(C(8)), TX.et_paran, "#5fe0e8");
+      marco("marc", l(C(8), 2), fin("lento")); tl.to("#oscuro", { opacity: 0.25, duration: 0.3 }, l(C(8)) + 0.2);
+
+      // ===== 5 · REMATE Y GRACIAS =====
+      const F0 = ini("final");
+      capa("final", F0); salir("#lenta", F0); salir("#chip-ellos", F0);
+      salir("#t-c1", F0); salir("#e-c1", F0);
+      tl.to(["#rejilla", "#frase"], { opacity: 0, duration: 0.3 }, F0);
+      tl.to("#oscuro", { opacity: 0.5, duration: 0.4 }, F0);
+      golpe("#t-porque", F0, 1.4); destello(F0, 0.3);
+      salir("#t-porque", F0 + 2.4);
+      golpe("#t-gracias", F0 + 2.4, 1.5); destello(F0 + 2.4, 0.35); golpe("#e-g1", F0 + 2.8, 1.3); golpe("#e-g2", F0 + 3.8, 1.3); golpe("#e-g3", F0 + 5.0, 1.3); golpe("#e-g4", F0 + 5.7, 1.3); destello(F0 + 5.7, 0.2);
+      tl.to("#oscuro", { opacity: 0.15, duration: 0.4 }, F0 + 2.4); tl.to("#oscuro", { opacity: 0.5, duration: 0.4 }, F0 + 8.2);
+      salir("#t-gracias", F0 + 8.4); ["#e-g1", "#e-g2", "#e-g3", "#e-g4"].forEach((x) => salir(x, F0 + 8.4));
+      golpe("#t-manda", F0 + 8.4, 1.5); destello(F0 + 8.4, 0.3);
+      mostrar("#creditos", F0 + 8.35); tl.fromTo("#creditos", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, F0 + 8.35);
+      tl.to("#oscuro", { opacity: 0.7, duration: 0.5 }, FIN - 0.6);
+
+      tl.set({}, {}, FIN);
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

@@ -96,7 +96,11 @@ Lo que haces (aplicar, editar, deshacer, «No tocar», mover duplicados) se ve a
 (si son más de 40 canciones, en unos segundos).</p>
 <ol>
 <li><b>Cargar</b>: desde Mi biblioteca, o eligiendo canciones con <i>Archivos</i>, <i>Carpeta</i>,
-<i>Playlist</i> (.m3u) o <i>MusicBee</i> (archivo .mbl de la biblioteca).</li>
+<i>Playlist</i> (.m3u) o <i>MusicBee</i> (archivo .mbl de la biblioteca).
+<b>🔊 Reconocida por el sonido</b>: si una canción suena igual que un extracto de El Recodo (o que copias
+suyas bien identificadas), esa ficha sale la primera y es la sugerida, aunque los tags digan otra cosa; nunca
+quita tildes ni signos que tu archivo ya tenía. <i>Archivo → Rehacer el reconocimiento por el sonido</i> lo pone
+al día tras añadir música (solo mira lo nuevo).</li>
 <li><b>Revisar</b>: a la izquierda están las tags actuales del archivo; a la derecha las
 coincidencias encontradas en la base de datos, <u>ya con el formato final</u>.
 Los colores indican cuánto se parece cada campo
@@ -156,7 +160,8 @@ class tango_tags_qt_ventana(QMainWindow):
         self._rellenando = False
 
         self.setWindowTitle("TangoTags")
-        self.setWindowIcon(QIcon(icon_paths["musicbee"]))
+        from src.config.config import PROJECT_ROOT
+        self.setWindowIcon(QIcon(os.path.join(PROJECT_ROOT, "resources", "icons", "tangotags.ico")))
         self.resize(1700, 850)
 
         self.crear_menus()
@@ -298,6 +303,7 @@ class tango_tags_qt_ventana(QMainWindow):
         m_archivo.addAction("Cargar carpeta…", self.cargar_carpeta)
         m_archivo.addAction("Cargar playlist…", self.cargar_playlist)
         m_archivo.addAction("Cargar MusicBee…", self.cargar_musicbee)
+        m_archivo.addAction("Rehacer el reconocimiento por el sonido…", self.rehacer_reconocimiento)
         m_archivo.addSeparator()
         m_archivo.addAction("Deshacer último cambio de tags", self.deshacer_ultimo)
         m_archivo.addAction("Historial de cambios…", self.historial_cambios)
@@ -554,6 +560,27 @@ class tango_tags_qt_ventana(QMainWindow):
                 f"{len(no_encontrados)} archivo(s) no existen o no se pudieron leer:\n\n"
                 + "\n".join(no_encontrados[:15]) + ("\n…" if len(no_encontrados) > 15 else ""))
 
+    def rehacer_reconocimiento(self):
+        """Lanza ordenar_musica.bat (huellas → grupos → fichas) en una ventana aparte, con prioridad baja."""
+        from src.config.config import PROJECT_ROOT
+        bat = os.path.join(PROJECT_ROOT, "herramientas", "ordenar_musica", "ordenar_musica.bat")
+        if not os.path.exists(bat):
+            QMessageBox.warning(self, "Rehacer el reconocimiento", f"No encuentro:\n{bat}")
+            return
+        if QMessageBox.question(
+                self, "Rehacer el reconocimiento",
+                "Saca la huella de sonido de las canciones nuevas o cambiadas, junta las que suenan igual y "
+                "les busca la ficha (no toca ningún archivo de música).\n\n"
+                "Lo ya hecho no se repite: con poca música nueva tarda minutos; la primera vez, unas 6 horas. "
+                "Se abre una ventana negra con lo que va haciendo; se puede cerrar y volver a lanzar.\n\n"
+                "¿Lo lanzo?") != QMessageBox.Yes:
+            return
+        entorno = {k: v for k, v in os.environ.items() if k != "TDJ_SIN_PAUSA"}   # que espere al terminar
+        subprocess.Popen(["cmd", "/c", bat], cwd=os.path.dirname(bat), env=entorno,
+                         creationflags=subprocess.CREATE_NEW_CONSOLE | 0x4000)   # 0x4000 = prioridad baja
+        self.statusBar().showMessage("Reconocimiento por el sonido en marcha (ventana aparte). "
+                                     "Al terminar, Mi biblioteca se pone al día sola.", 15000)
+
     def calcular_contexto_disco(self):
         contexto_disco(self.archivos)
 
@@ -668,6 +695,10 @@ class tango_tags_qt_ventana(QMainWindow):
         else:
             estado, color = CATEGORIAS[archivo.categoria][0], fondo
         explicacion = [CATEGORIAS[archivo.categoria][2]]
+        if getattr(archivo, "por_sonido", None):          # el sonido dice qué grabación es (por_sonido.py)
+            explicacion.append(archivo.explicacion)
+            if archivo.estado_guardado is None:
+                estado = "🔊 " + estado
         motivo = getattr(archivo, "motivo_fecha", "")
         disco = getattr(archivo, "disco", None)
         if motivo and archivo.estado_guardado is None and archivo.categoria == "dudosa":

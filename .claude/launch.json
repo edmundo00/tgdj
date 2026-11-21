@@ -18,6 +18,12 @@
       "runtimeExecutable": "C:\\Users\\edmun\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
       "runtimeArgs": ["-m", "http.server", "8792", "--directory", "D:\\Dropbox\\TDJ\\Instagram\\borradores\\habanera\\alinear"],
       "port": 8792
+    },
+    {
+      "name": "finales-orquestas",
+      "runtimeExecutable": "C:\\Users\\edmun\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+      "runtimeArgs": ["-m", "http.server", "8793", "--directory", "D:\\Dropbox\\TDJ\\Instagram\\borradores\\identificador orquestas"],
+      "port": 8793
     }
   ]
 }

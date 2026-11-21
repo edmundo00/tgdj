@@ -1,0 +1,21 @@
+{
+ "cancion": "Orquesta Típica Victor, Roberto Díaz - Vieja calesita",
+ "video": "D:/Dropbox/TDJ/Instagram/borradores/colegas-DVTtXgTDFjZ/video/DVTtXgTDFjZ.mp4",
+ "video_id": "taller_desbande",
+ "pisadas": "D:/Dropbox/TDJ/Instagram/borradores/colegas-DVTtXgTDFjZ/video/pisadas.txt",
+ "frase": 34,
+ "anacrusa": [33, 2],
+ "congelar": [41, 2],
+ "corte_camara": 81.35,
+ "acordes": ["RE 7", "SOL MENOR"],
+ "subir_violines": 0.7,
+ "proyecto": "C:/Users/edmun/video-pruebas/bailar-la-frase",
+ "salida": "D:/Dropbox/TDJ/Instagram/borradores/colegas-DVTtXgTDFjZ",
+ "nombre": "bailar_la_frase",
+ "version": "v15",
+ "pareja": "Dan y Vero",
+ "cuenta": "@el.taller.tango",
+ "textos": {
+  "cred_p": "en El Desbande · «Vieja calesita», Orquesta Típica Victor con Roberto Díaz (1929)\nvídeo: @marianopages"
+ }
+}

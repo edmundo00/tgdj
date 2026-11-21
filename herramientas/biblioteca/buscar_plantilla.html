@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Biblioteca TDJ</title>
+<style>
+:root{--fondo:#faf8f4;--papel:#fff;--tinta:#222;--suave:#6b6660;--linea:#e2ddd5;--acento:#9b2c2c;--marca:#ffe28a;--marca-t:#222}
+@media (prefers-color-scheme:dark){:root{--fondo:#17161a;--papel:#211f24;--tinta:#e8e4dc;--suave:#a39e96;--linea:#36333a;--acento:#e07a6e;--marca:#7a5d00;--marca-t:#fff}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fondo);color:var(--tinta);font:16px/1.5 system-ui,Segoe UI,sans-serif}
+header{position:sticky;top:0;background:var(--fondo);border-bottom:1px solid var(--linea);padding:14px 16px;z-index:2}
+h1{font-size:20px;margin:0 0 8px;font-weight:650}h1 span{color:var(--suave);font-weight:400;font-size:14px}
+#q{width:100%;font-size:18px;padding:10px 12px;border:1px solid var(--linea);border-radius:8px;background:var(--papel);color:var(--tinta)}
+.filtros{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:14px;color:var(--suave)}
+.filtros label{cursor:pointer}
+.tabs{display:flex;gap:4px;margin-top:10px}
+.tabs button{border:1px solid var(--linea);background:var(--papel);color:var(--tinta);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:14px}
+.tabs button.on{background:var(--acento);color:#fff;border-color:var(--acento)}
+main{max-width:980px;margin:0 auto;padding:12px 16px 60px}
+.info{color:var(--suave);font-size:14px;margin:6px 0 14px}
+.doc{background:var(--papel);border:1px solid var(--linea);border-radius:10px;padding:12px 14px;margin-bottom:12px}
+.doc h3{margin:0 0 6px;font-size:16px}.doc h3 a{color:var(--tinta)}
+.doc .g{font-size:12px;color:var(--suave);font-weight:400;margin-left:6px}
+.hit{margin:6px 0;font-size:14.5px;padding-left:10px;border-left:3px solid var(--linea)}
+.hit a{color:var(--acento);font-weight:600;text-decoration:none;margin-right:6px;white-space:nowrap}
+mark{background:var(--marca);color:var(--marca-t);border-radius:2px;padding:0 1px}
+.mas{font-size:13px;color:var(--acento);cursor:pointer;background:none;border:0;padding:0}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--linea);vertical-align:top}
+th{color:var(--suave);font-weight:500}
+td a{color:var(--tinta)}
+.nota{font-size:12px;color:var(--suave)}
+.part{font-size:14px;margin:3px 0;word-break:break-word}
+@media (max-width:600px){.oc{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Biblioteca TDJ <span id="hecho"></span></h1>
+  <input id="q" type="search" placeholder='Buscar… (ej.: tresillo · 3-3-2 · "mal de amores" · yumba)' autofocus>
+  <div class="filtros" id="filtros"></div>
+  <div class="tabs"><button id="t1" class="on">Buscar</button><button id="t2">Qué hay</button></div>
+</header>
+<main>
+  <div id="buscar"><div class="info" id="info"></div><div id="res"></div></div>
+  <div id="cat" hidden></div>
+</main>
+<script src="datos.js"></script>
+<script>
+const B = window.BIBLIOTECA, D = B.docs;
+document.getElementById('hecho').textContent = '· índice del ' + B.hecho;
+const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+D.forEach(d => d.pn = null);                     // texto normalizado, se calcula al buscar la 1.ª vez
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const grupos = [...new Set(D.map(d => d.g))];
+const nombreG = g => g === 'Partituras' ? 'Partituras (solo nombres)' : g;
+const F = document.getElementById('filtros');
+grupos.forEach(g => { F.insertAdjacentHTML('beforeend', `<label><input type="checkbox" value="${esc(g)}" checked> ${esc(nombreG(g))} (${D.filter(d=>d.g===g).length})</label>`); });
+F.addEventListener('change', buscar);
+
+function terminos(q){
+  const t = []; q.replace(/"([^"]+)"|(\S+)/g, (_, a, b) => { t.push(norm(a || b)); });
+  return t.filter(x => x.length > 1);
+}
+function trozo(orig, nrm, ts){
+  // la normalización no cambia longitudes salvo casos raros: usamos las mismas posiciones
+  let k = -1, f = ts[0];
+  for (const t of ts){ const i = nrm.indexOf(t); if (i >= 0){ k = i; f = t; break; } }
+  const a = Math.max(0, k - 160), b = Math.min(orig.length, k + f.length + 160);
+  let s = esc(orig.slice(a, b)), sn = norm(orig.slice(a, b));
+  // marcar todos los términos
+  const marcas = [];
+  ts.forEach(t => { let i = sn.indexOf(t); while (i >= 0){ marcas.push([i, i + t.length]); i = sn.indexOf(t, i + 1); } });
+  marcas.sort((x, y) => y[0] - x[0]);
+  let raw = orig.slice(a, b);
+  for (const [i, j] of marcas) raw = raw.slice(0, i) + '\u0001' + raw.slice(i, j) + '\u0002' + raw.slice(j);
+  s = esc(raw).replace(/\u0001/g, '<mark>').replace(/\u0002/g, '</mark>');
+  return (a > 0 ? '…' : '') + s + (b < orig.length ? '…' : '');
+}
+let temp;
+document.getElementById('q').addEventListener('input', () => { clearTimeout(temp); temp = setTimeout(buscar, 250); });
+function buscar(){
+  const q = document.getElementById('q').value.trim(), ts = terminos(q);
+  const res = document.getElementById('res'), info = document.getElementById('info');
+  try { history.replaceState(null, '', q ? '#' + encodeURIComponent(q) : '#'); } catch(e) {}
+  if (!ts.length){ res.innerHTML = ''; info.textContent = 'Escribe una o varias palabras: salen las páginas que tienen todas. Entre comillas, la frase exacta. Da igual mayúsculas y acentos.'; return; }
+  const activos = new Set([...F.querySelectorAll('input:checked')].map(i => i.value));
+  let html = '', ndoc = 0, npag = 0;
+  for (const d of D){
+    if (!activos.has(d.g)) continue;
+    if (!d.pn) d.pn = d.p.map(norm);
+    const pags = [];
+    d.pn.forEach((t, i) => { if (ts.every(x => t.includes(x))) pags.push(i); });
+    if (!pags.length) continue;
+    ndoc++; npag += pags.length;
+    const enl = i => d.pdf && d.g !== 'Partituras' ? d.u + '#page=' + (i + 1) : d.u;
+    if (d.g === 'Partituras'){
+      html += `<div class="part">🎼 <a href="${d.u}">${esc(d.n)}</a> <span class="nota">${esc(d.sub || '')}</span></div>`;
+      continue;
+    }
+    const et = d.pdf ? 'pág.' : 'parte';
+    const hits = pags.map((i, k) => `<div class="hit"${k >= 5 ? ' hidden' : ''}><a href="${enl(i)}">${et} ${i + 1}</a>${trozo(d.p[i], d.pn[i], ts)}</div>`).join('');
+    html += `<div class="doc"><h3><a href="${d.u}">${esc(d.n)}</a><span class="g">${esc(nombreG(d.g))} · ${pags.length} pág.</span></h3>${hits}` +
+            (pags.length > 5 ? `<button class="mas" onclick="this.parentNode.querySelectorAll('.hit[hidden]').forEach(h=>h.hidden=false);this.remove()">ver las ${pags.length} páginas</button>` : '') + '</div>';
+  }
+  info.textContent = ndoc ? `${npag} páginas en ${ndoc} documentos. El enlace «pág.» abre el PDF en esa página. Lo leído con OCR puede tener alguna letra cambiada.` : 'Nada. Prueba con menos palabras, en inglés (los libros de Lavocah están en inglés) o con otra forma (tresillo / triplet / 3-3-2 / síncopa).';
+  res.innerHTML = html;
+}
+// catálogo
+function catalogo(){
+  let h = '<table><tr><th>Documento</th><th>Págs.</th><th class="oc">Leído con OCR</th></tr>';
+  let gAnt = '';
+  for (const d of D.filter(d => d.g !== 'Partituras')){
+    if (d.g !== gAnt){ h += `<tr><th colspan="3" style="padding-top:18px;color:var(--acento)">${esc(nombreG(d.g))}</th></tr>`; gAnt = d.g; }
+    const o = d.falta ? `${d.ocr} (faltan ${d.falta})` : (d.ocr ? d.ocr : '—');
+    h += `<tr><td><a href="${d.u}">${esc(d.n)}</a></td><td>${d.p.length}</td><td class="oc">${o}</td></tr>`;
+  }
+  h += '</table>';
+  const P = D.filter(d => d.g === 'Partituras'), sub = {};
+  P.forEach(d => { const k = (d.sub || '').split('\\').slice(0, 2).join(' / ') || '(raíz)'; sub[k] = (sub[k] || 0) + 1; });
+  h += `<h3 style="margin-top:26px">Partituras: ${P.length} archivos</h3><p class="nota">De las partituras se busca por nombre de archivo, por el texto de las dos primeras páginas (si lo tienen) y por lo que hay dentro de cada .zip/.rar. No se les pasa OCR: son notas, no texto.</p><table>`;
+  Object.entries(sub).sort().forEach(([k, n]) => h += `<tr><td>${esc(k)}</td><td>${n}</td></tr>`);
+  document.getElementById('cat').innerHTML = h + '</table>';
+}
+const t1 = document.getElementById('t1'), t2 = document.getElementById('t2');
+t1.onclick = () => { t1.classList.add('on'); t2.classList.remove('on'); buscarDiv.hidden = false; cat.hidden = true; };
+t2.onclick = () => { t2.classList.add('on'); t1.classList.remove('on'); buscarDiv.hidden = true; cat.hidden = false; if (!cat.innerHTML) catalogo(); };
+const buscarDiv = document.getElementById('buscar'), cat = document.getElementById('cat');
+if (location.hash.length > 1) document.getElementById('q').value = decodeURIComponent(location.hash.slice(1));
+buscar();
+</script>
+</body>
+</html>

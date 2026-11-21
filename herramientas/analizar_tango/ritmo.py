@@ -27,6 +27,14 @@ from scipy.signal import butter, sosfiltfilt
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import golpes as golpes_mod
 
+# ffmpeg: si no está en el PATH (p. ej. el PC del trabajo), buscarlo en las carpetas de siempre
+import shutil
+if not shutil.which("ffmpeg"):
+    for _d in (r"C:\ffmpeg\bin", os.path.expandvars(r"%USERPROFILE%\herramientas\ffmpeg\bin")):
+        if os.path.isfile(os.path.join(_d, "ffmpeg.exe")):
+            os.environ["PATH"] = _d + os.pathsep + os.environ.get("PATH", "")
+            break
+
 SR = 44100
 SALIDA_DEF = r"D:\Dropbox\TDJ\Analisis tangos"
 AQUI = os.path.dirname(os.path.abspath(__file__))
@@ -173,6 +181,31 @@ def detectar_golpes(nombre, x):
     v = env[on] / (np.percentile(env[on], 90) + 1e-9)
     tt = afinar(x, librosa.frames_to_time(on, sr=SR, hop_length=H))
     return [(float(t), float(20 * np.log10(max(a, 1e-3)))) for t, a in zip(tt, v)]
+
+
+def cambios_nota(x):
+    """Notas por cambio de ALTURA, no por golpe: instantes en que aparece una frecuencia nueva (flujo del CQT).
+    Ve también las notas ligadas, que casi no dan golpe (bandoneón, violín). Devuelve [(seg, fuerza dB, midi)].
+    Nombrar la nota no es fiable con la orquesta entera (octavas, acordes); el instante sí (18-11-2026)."""
+    sr2, hop = 22050, 128                                    # ~5,8 ms
+    z = librosa.resample(x, orig_sr=SR, target_sr=sr2)
+    C = np.abs(librosa.cqt(z, sr=sr2, hop_length=hop, fmin=librosa.note_to_hz("C2"), n_bins=72, bins_per_octave=12))
+    L = np.log1p(30 * C / (C.max() + 1e-9))
+    D = np.maximum(0, L[:, 2:] - L[:, :-2])
+    fl = np.r_[0, D.sum(0), 0]
+    fl = np.convolve(fl, np.ones(3) / 3, "same")
+    # cada trozo comparado con lo que suena alrededor (~2 s): así salen las notas flojas de un pasaje suave
+    from scipy.ndimage import maximum_filter1d
+    fl = fl / (maximum_filter1d(fl, size=int(2.0 * sr2 / hop)) + 1e-9)
+    pk = librosa.util.peak_pick(fl, pre_max=6, post_max=6, pre_avg=12, post_avg=12, delta=0.08, wait=12)
+    if not len(pk):
+        return []
+    ref = np.percentile(fl[pk], 90) + 1e-9
+    out = []
+    for i in pk:
+        j = int(np.clip(i - 1, 0, D.shape[1] - 1))
+        out.append((float(i * hop / sr2), float(20 * np.log10(max(fl[i] / ref, 1e-3))), int(36 + np.argmax(D[:, j]))))
+    return out
 
 
 def afinar(x, tiempos):
@@ -391,6 +424,28 @@ def analizar(audio, ayuda_cli):
                  desvio_ms=int(round((f - (k / 3 if tipo == "tresillo" else k / 4)) * (beats[j + 1] - beats[j]) * 1000)),
                  casilla=nombre_casilla(int(tiem[j]), tipo, k))
 
+    # cambios de nota (por altura) de cada fuente, colocados en su casilla como los golpes
+    notas = []
+    for n, x in src.items():
+        det = [(t, d, mi) for t, d, mi in cambios_nota(x) if beats[0] - 0.1 <= t < beats[-1]]
+        gs = np.array(sorted(g["seg"] for g in golpes if g["fuente"] == n))
+        # el flujo de altura llega un poco tarde: se corrige con los golpes de la misma fuente que caen cerca
+        if len(gs):
+            dif = [t - gs[np.argmin(np.abs(gs - t))] for t, _, _ in det]
+            dif = [d for d in dif if abs(d) < 0.04]
+            corr = float(np.median(dif)) if len(dif) >= 8 else 0.0
+        else:
+            corr = 0.0
+        for t, d, mi in det:
+            t -= corr
+            j = int(np.clip(np.searchsorted(beats, t) - 1, 0, len(beats) - 2))
+            f = (t - beats[j]) / (beats[j + 1] - beats[j])
+            tipo, k, _ = casilla(f)
+            if tipo == "binaria" and k == 0 and f > 0.5:
+                j = min(j + 1, len(beats) - 2)
+            notas.append(dict(fuente=n, seg=round(float(t), 3), compas=int(comp[j]), tiempo=int(tiem[j]), tipo=tipo,
+                              casilla=nombre_casilla(int(tiem[j]), tipo, k), fuerza=round(float(np.clip(1 + d / 24, 0, 1)), 2), midi=mi))
+
     print("4/4 Dibujos y sucesos…", flush=True)
     dibujos = leer_dibujos(os.path.join(AQUI, "dibujos.txt"))
     nombres_f = list(src)
@@ -436,14 +491,21 @@ def analizar(audio, ayuda_cli):
                  pulsos=[dict(seg=round(float(b), 3), compas=int(c), tiempo=int(t)) for b, c, t in zip(beats, comp, tiem)],
                  golpes=[dict(fuente=g["fuente"], seg=round(g["seg"], 3), compas=g["compas"], tiempo=g["tiempo"], casilla=g["casilla"],
                               tipo=g["tipo"], desvio_ms=g["desvio_ms"], fuerza=round(g["s"], 2)) for g in golpes],
-                 compases=compases, dibujos=encontrados)
+                 compases=compases, dibujos=encontrados, notas=notas)
     json.dump(datos, open(os.path.join(out, "ritmo.json"), "w", encoding="utf-8"), ensure_ascii=False)
     escribir_txt(os.path.join(out, "ritmo.txt"), datos, nombres_f)
     import pagina_ritmo
-    html = pagina_ritmo.generar(out, datos, audio, SALIDA_DEF)
+    url = pagina_ritmo.generar(out, datos, audio, SALIDA_DEF)
+    if os.path.exists(os.path.join(out, "partitura.json")):   # tiene partitura: cuadrarla otra vez con los pulsos nuevos
+        try:
+            import partitura
+            partitura.hacer(out)
+        except BaseException as e:
+            print("  (no se pudo rehacer la partitura:", e, ")")
     pagina_ritmo.actualizar_indice(SALIDA_DEF)
+    print(f"Página: {url}")
     if ayuda_cli.get("abrir") and os.name == "nt":
-        os.startfile(html)
+        pagina_ritmo.abrir(url)
     print(f"Hecho en {time.time() - t0:.0f} s → {out}")
     return datos
 

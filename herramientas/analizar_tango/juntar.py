@@ -71,17 +71,17 @@ def main():
     titulo = " + ".join(c["nombre"] for c in canciones)
     carpeta = os.path.join(ritmo.SALIDA_DEF, "_juntar", " + ".join(c["nombre"][:40] for c in canciones))
     os.makedirs(carpeta, exist_ok=True)
-    html = open(os.path.join(AQUI, "juntar_plantilla.html"), encoding="utf-8").read()
-    html = html.replace("/*CANCIONES*/null", json.dumps(canciones, ensure_ascii=False)).replace("<!--TITULO-->", titulo)
-    ruta = os.path.join(carpeta, "juntar.html")
-    open(ruta, "w", encoding="utf-8").write(html)
+    pagina_ritmo.escribir_js(os.path.join(carpeta, "juntar_datos.js"), "JUNTAR", dict(titulo=titulo, canciones=canciones))
+    if os.path.exists(os.path.join(carpeta, "juntar.html")):   # antes, una página por cada junta
+        os.remove(os.path.join(carpeta, "juntar.html"))
+    ruta = pagina_ritmo.url_cancion(ritmo.SALIDA_DEF, "juntar", os.path.basename(carpeta))
     for c in canciones:
         t = c["tonalidad"]
         print(f"  {c['nombre']}: {c['meta']['compas']}, compás de {c['compas_seg']:.3f} s, {t['tonica']} {t['modo']} ({t['afinacion_cents']:+d} cents)")
     pagina_ritmo.actualizar_indice(ritmo.SALIDA_DEF)
     print(f"Hecho → {ruta}")
     if a.abrir and os.name == "nt":
-        os.startfile(ruta)
+        pagina_ritmo.abrir(ruta)
 
 
 if __name__ == "__main__":

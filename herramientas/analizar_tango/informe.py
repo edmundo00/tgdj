@@ -1,4 +1,5 @@
-"""Paso 4: lo que se entrega por cada tango: tablas, resumen en texto, gráficas y página para escuchar."""
+"""Paso 4: lo que se entrega por cada tango: tablas y resumen en texto.
+(Las gráficas, datos.js y visor.html se dejaron de hacer el 19-11-2026: ahora se ve en la página de ritmo.)"""
 import os, csv, json
 import numpy as np
 import matplotlib; matplotlib.use("Agg")
@@ -113,12 +114,9 @@ def actualizar_visor(raiz):
     return len(tangos)
 
 
-def guardar_todo(dir_out, titulo, P, golpes, niveles, filas, pistas_rel):
+def guardar_todo(dir_out, titulo, P, golpes, niveles, filas, pistas_rel=None):
     _csv(os.path.join(dir_out, "golpes.csv"), golpes)
     _csv(os.path.join(dir_out, "compases.csv"), filas)
     _csv(os.path.join(dir_out, "pulsos.csv"), [dict(seg=round(float(b), 3), compas=int(c), tiempo=int(t))
                                                for b, c, t in zip(P["beats"], P["compas"], P["tiempo"])])
     resumen_txt(os.path.join(dir_out, "resumen.txt"), titulo, P, filas)
-    os.makedirs(os.path.join(dir_out, "graficas"), exist_ok=True)
-    graficas(os.path.join(dir_out, "graficas"), golpes, niveles, P)
-    datos_visor(os.path.join(dir_out, "datos.js"), titulo, P, golpes, pistas_rel, niveles, filas)

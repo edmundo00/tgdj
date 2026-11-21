@@ -159,6 +159,8 @@ class Cancion:
         self.tags = leer_tags(ruta_archivo) if tags is None else tags_de_lista(tags)
         self.artists1, self.artists2 = separar_artistas(self.tags.artist)
         self.buscar()
+        from src.motor import por_sonido
+        por_sonido.aplicar(self)          # si el sonido dice qué grabación es, esa manda (data/fichas_sonido.csv)
         self.categoria = categoria_de(self)
         self.estado_guardado = None
         c = coincidencias(self)
@@ -287,7 +289,7 @@ def elegir_preferida(booleanos, candidatas, usar_fecha=True):
 
 
 # Súbelo cuando cambie la lógica del motor: obliga a re-emparejar toda la biblioteca
-VERSION_MOTOR = "2026-10-03.1"
+VERSION_MOTOR = "2026-11-20.1"     # + ficha por el sonido (por_sonido.py)
 
 
 def version_reglas(usar_fecha=True):
@@ -299,7 +301,8 @@ def version_reglas(usar_fecha=True):
     import hashlib
     from src.config.config import DB_CSV_PATH
     from src.utils import correcciones, grafias
-    h = hashlib.sha1(f"{VERSION_MOTOR}|fecha={bool(usar_fecha)}".encode())
+    from src.motor import por_sonido
+    h = hashlib.sha1(f"{VERSION_MOTOR}|fecha={bool(usar_fecha)}|{por_sonido.version()}".encode())
     for ruta in (DB_CSV_PATH, grafias.ARCHIVO, correcciones.ARCHIVO):
         if os.path.exists(ruta):
             st = os.stat(ruta)

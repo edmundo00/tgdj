@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marcar pisadas</title>
+<script src="datos.js"></script>
+<style>
+  :root { --oro: #f0c05a; --crema: #f8f1e4; --rosa: #d6beb4; --fondo: #14030a; --panel: #2a0a12; --casilla: #42141c; --borde: #5a2530;
+          --verde: #7fd18b; --ambar: #f0c05a; --rojo: #f07a6a; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--fondo); color: var(--crema); font-family: "Segoe UI", sans-serif; }
+  #app { display: flex; gap: 14px; padding: 12px; height: 100vh; }
+  #izq { position: relative; height: calc(100vh - 24px); aspect-ratio: 9 / 16; flex: none; }
+  #izq canvas { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 12px; }
+  #img { background: #000; }
+  #capa { cursor: crosshair; }
+  #der { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 460px; overflow-y: auto; padding-right: 4px; }
+  .caja { background: var(--panel); border-radius: 12px; padding: 8px 12px; }
+  .fila { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  h1 { margin: 0; font-family: Georgia, serif; color: var(--oro); font-size: 22px; }
+  .sub { color: var(--rosa); font-size: 13px; }
+  .rot { color: var(--rosa); font-size: 12px; font-weight: 700; letter-spacing: .06em; margin-right: 2px; }
+  #fot { font-family: Georgia, serif; font-size: 28px; }
+  #pos { font-family: Georgia, serif; font-size: 28px; color: var(--oro); margin-left: 12px; }
+  .chip { display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 6px; background: var(--oro); color: #3e0a14; font-weight: 700; font-size: 13px; }
+  #plano { background: var(--rojo); }
+  button { background: var(--casilla); color: var(--crema); border: 2px solid transparent; border-radius: 9px; padding: 5px 10px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+  button:hover { border-color: var(--rosa); }
+  button.on { border-color: var(--oro); color: var(--oro); background: #4a3010; }
+  button.peq { padding: 3px 8px; font-size: 13px; }
+  #play { font-size: 18px; padding: 6px 18px; background: #2f5a2a; }
+  #play.parar { background: #8a1f1f; }
+  .carril { border-width: 3px; }
+  kbd { background: #1d0509; border: 1px solid var(--borde); border-radius: 4px; padding: 0 5px; font-size: 11px; color: var(--rosa); font-family: Consolas, monospace; }
+  #rej { border-collapse: separate; border-spacing: 3px; width: 100%; table-layout: fixed; }
+  #rej th { font-family: Georgia, serif; font-weight: 400; font-size: 15px; color: var(--rosa); padding: 0; cursor: pointer; }
+  #rej th.num { color: var(--crema); font-weight: 700; font-size: 18px; }
+  #rej th.cur { color: #3e0a14; background: var(--crema); border-radius: 6px; }
+  #rej td { height: 22px; background: var(--casilla); border-radius: 6px; text-align: center; font-size: 11px; font-weight: 800; cursor: pointer; color: #2a0a12; }
+  #rej td.cur { outline: 2px solid var(--crema); }
+  #rej td.t1 { border-left: 2px solid var(--borde); }
+  #rej .nom { background: none; text-align: right; font-size: 11px; width: 96px; cursor: default; padding-right: 4px; letter-spacing: .03em; color: var(--rosa); }
+  #lineaCaja { position: relative; }
+  #linea { width: 100%; display: block; border-radius: 8px; background: #1d0509; cursor: pointer; }
+  #tip { position: absolute; pointer-events: none; background: rgba(20,3,10,.95); border: 1px solid var(--oro); border-radius: 8px; padding: 4px 8px; font-size: 12px; display: none; white-space: nowrap; z-index: 5; }
+  #lista { max-height: 180px; overflow: auto; font-size: 13px; }
+  #lista div { display: flex; gap: 8px; align-items: center; padding: 2px 6px; border-radius: 6px; cursor: pointer; }
+  #lista div:hover { background: #3a0f18; }
+  #lista div.aqui { background: var(--casilla); }
+  #lista div.sel { outline: 2px solid var(--oro); }
+  #lista i { width: 16px; height: 16px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-style: normal; font-weight: 800; color: #2a0a12; flex: none; }
+  #lista b { width: 42px; } #lista span { flex: 1; color: var(--rosa); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #lista em { font-style: normal; font-size: 12px; width: 92px; text-align: right; }
+  .verde { color: var(--verde); } .ambar { color: var(--ambar); } .rojo { color: var(--rojo); }
+  #stats table { border-collapse: collapse; font-size: 13px; width: 100%; }
+  #stats td, #stats th { padding: 2px 6px; text-align: right; } #stats th { color: var(--rosa); font-weight: 600; }
+  #stats td:first-child, #stats th:first-child { text-align: left; }
+  #aviso { color: var(--oro); font-size: 13px; min-height: 18px; }
+  #ayuda { position: fixed; inset: 30px; background: rgba(20,3,10,.97); border: 2px solid var(--oro); border-radius: 16px; padding: 20px 28px; overflow: auto; display: none; z-index: 9; columns: 2; font-size: 14px; line-height: 1.7; }
+  #ayuda h2 { column-span: all; margin: 0 0 8px; font-family: Georgia, serif; color: var(--oro); }
+  summary { cursor: pointer; color: var(--rosa); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  details[open] > summary { margin-bottom: 6px; }
+  input[type=number] { width: 64px; background: #1d0509; color: var(--crema); border: 1px solid var(--borde); border-radius: 6px; padding: 3px 5px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="izq"><canvas id="img"></canvas><canvas id="capa"></canvas></div>
+  <div id="der">
+    <div class="fila" style="justify-content:space-between"><div><h1>Marcar pisadas</h1><div class="sub" id="titulo"></div></div>
+      <div class="fila"><button id="bCopiar" class="on" title="copia las pisadas: pégalas en el chat de Claude">📋 Copiar para Claude</button><button id="bGuardar" title="Ctrl+S: guarda pisadas.json en la carpeta de esta página">💾 Guardar</button><button id="bAbrir">📂 Abrir</button><button id="bCsv">CSV</button><button id="bAyuda">? Ayuda</button></div></div>
+    <div class="caja fila"><button id="play">▶ Escuchar</button>
+      <button id="bInicio" title="al principio (tecla Inicio)">⏮ Al principio</button>
+      <button id="bA1" class="peq" title="fotograma anterior (←)">‹ 1</button><button id="bD1" class="peq" title="fotograma siguiente (→)">1 ›</button>
+      <span class="rot" style="margin-left:6px">VELOCIDAD</span>
+      <button data-vel="0.1" class="peq">10%</button><button data-vel="0.25" class="peq">25%</button><button data-vel="0.5" class="peq on">50%</button><button data-vel="0.75" class="peq">75%</button><button data-vel="1" class="peq">100%</button>
+      <span style="margin-left:8px"><span id="fot"></span><span id="pos"></span><span id="chips"></span></span></div>
+    <div class="caja fila"><span class="rot">PISA</span><span id="carriles" class="fila"></span>
+      <button id="tA" class="on peq" title="pisa con peso">Apoyo</button><button id="tO" class="peq" title="toca o dibuja sin peso">Adorno</button><kbd>A</kbd></div>
+    <div class="caja" id="lineaCaja">
+      <div class="fila" style="margin-bottom:6px"><span class="rot">LÍNEA DE TIEMPO</span>
+        <button id="zCompas" class="peq" title="ver solo este compás">🔍 compás</button><button id="zTodo" class="peq" title="ver todo (tecla 0)">↔ todo</button>
+        <span class="rot" style="margin-left:8px">IMÁN</span><button id="iSon" class="peq on" title="pega la pisada al tope de la onda del sonido más cercano">sonido</button><button id="iRej" class="peq">rejilla</button><button id="iIns" class="peq">instrumento</button><button id="iNo" class="peq">no</button><kbd>N</kbd>
+        <span class="rot" style="margin-left:8px">RETRASO DEDO</span><input type="number" id="lat" value="90" step="10" min="0" max="400"> ms
+        <span class="sub" style="margin-left:auto">doble clic en un carril = pisada · arrastra para mover · Mayús+clic = varias</span></div>
+      <canvas id="linea"></canvas><div id="tip"></div>
+      <div class="fila" style="margin-top:6px"><span class="rot">FILAS</span><span id="filasInst"></span>
+        <span class="rot" style="margin-left:8px">ESCUCHAR</span>
+        <button id="oBucle" class="peq" title="repetir lo que se ve en la línea de tiempo (R)">🔁 bucle</button>
+        <button id="oSon" class="peq on" title="clic en cada pisada al escuchar (G)">🔊 pisadas</button>
+        <button id="oMet" class="peq" title="clic en cada tiempo (B)">🥁 tiempo</button></div></div>
+    <details class="caja" open><summary>Rejilla del compás</summary><table id="rej"></table></details>
+    <details class="caja"><summary>Más: ir, imagen, afinar</summary>
+    <div class="fila" style="margin-top:6px"><span class="rot">IR</span>
+      <button id="a5" class="peq">« 5</button><button id="a1" class="peq">‹ 1</button><button id="d1" class="peq">1 ›</button><button id="d5" class="peq">5 »</button>
+      <button id="tPrev" class="peq">‹ tiempo</button><button id="tNext" class="peq">tiempo ›</button>
+      <button id="mPrev" class="peq">‹ pisada</button><button id="mNext" class="peq">pisada ›</button>
+      <span class="rot" style="margin-left:6px">IMAGEN</span>
+      <button id="oLupa" class="peq on">🔍 lupa</button><button id="oMov" class="peq" title="lo que se mueve, claro; lo quieto, oscuro (V)">〰 movimiento</button><button id="oReel" class="peq" title="solo destellos (F)">✨ vista reel</button></div>
+    <div class="fila" style="margin-top:6px"><span class="rot">AFINAR</span><span id="selTxt" class="sub" style="min-width:190px"></span>
+      <button id="mAntes" class="peq">◂ 1 fot <kbd>,</kbd></button><button id="mDesp" class="peq">1 fot ▸ <kbd>.</kbd></button>
+      <button id="mPiano" class="peq">→ al instrumento <kbd>K</kbd></button><button id="mTiempo" class="peq">→ a la rejilla <kbd>T</kbd></button>
+      <button id="mTodas" class="peq" title="lleva TODAS las pisadas a su casilla si están a 2 fotogramas o menos">→ todas a la rejilla</button>
+      <button id="bBorrarC" class="peq" title="borra todas las pisadas del compás que se ve">✕ compás</button></div></details>
+    <div id="aviso"></div>
+    <details class="caja"><summary>Lista de pisadas</summary><div id="lista"></div></details>
+    <details class="caja"><summary>Estadísticas</summary><div id="stats"></div></details>
+  </div>
+</div>
+<div id="ayuda"></div>
+<audio id="au" src="audio.m4a" preload="auto"></audio>
+<input type="file" id="fich" accept=".json" style="display:none">
+<script>
+"use strict";
+const D = window.DATOS, FPS = D.fps, F0 = D.f0, F1 = D.f1, N = F1 - F0 + 1;
+const $ = (id) => document.getElementById(id);
+const img = $("img"), capa = $("capa"), ci = img.getContext("2d"), cc = capa.getContext("2d"), au = $("au");
+img.width = capa.width = D.ancho; img.height = capa.height = D.alto;
+const EV = D.ancho / D.anchoVideo;
+const B = D.bailarines, NOMINST = { piano: "PIANO", contrabajo: "CONTRABAJO", bandoneones: "BANDONEONES", orquesta: "ORQUESTA", voz: "VOZ", violines: "VIOLINES" };
+const INST = Object.keys(D.golpes).sort((a, b) => (a === "piano" ? -1 : b === "piano" ? 1 : a.localeCompare(b)));
+const filas = Object.fromEntries(INST.map(k => [k, k === "piano"]));
+const CLAVE = "marcar_" + D.id, SUB = ["", "e", "y", "a"];
+// carriles: cada bailarín con sus dos pies. Ella cálidos, él fríos; izq más oscuro, der más claro.
+const PALETA = [["240,192,90", "250,140,60"], ["80,160,250", "70,225,205"], ["240,110,170", "190,120,250"], ["120,220,130", "210,235,90"]];
+const TECLAS = [["q", "w"], ["o", "p"], [null, null], [null, null]];
+const CARRILES = []; B.forEach((bb, b) => ["I", "D"].forEach((p, k) => CARRILES.push({ b, pie: p, col: PALETA[b % 4][k], tecla: TECLAS[b] ? TECLAS[b][k] : null })));
+const carrilDe = (m) => m.b * 2 + (m.pie === "D" ? 1 : 0);
+const colorDe = (m) => m.tipo === "adorno" ? "214,190,180" : CARRILES[carrilDe(m)].col;
+const quien = (b) => B[b].rol || B[b].nombre;           // «Follower» / «Leader» (el nombre va aparte)
+const nomCarril = (c) => `${quien(CARRILES[c].b)} ${CARRILES[c].pie === "I" ? "izq" : "der"}`;
+// picos de la onda del sonido (el «tope» de cada golpe), en fotogramas: el imán «sonido» pega las pisadas ahí
+const PICOS = [];
+if (D.onda) for (let k = 2; k < D.onda.length - 2; k++) { const v = D.onda[k]; if (v > 0.22 && v >= D.onda[k - 1] && v >= D.onda[k + 1] && v >= D.onda[k - 2] && v >= D.onda[k + 2] && v - Math.min(...D.onda.slice(Math.max(0, k - 6), k)) > 0.06) PICOS.push(F0 + k / 2); }
+
+let marcas = [], sel = new Set(), carril = 0, tipo = "apoyo", i = 0, vel = 0.5, iman = "sonido", instAfinar = "piano";
+let op = { bucle: false, son: true, met: false, lupa: true, mov: false, reel: false };
+let deshacer = [], rehacer = [], raton = null, arrastre = null, jugando = null, destello = [], manejador = null;
+let vista = { a: F0, b: F1 };
+let aColocar = null;          // pisada que espera que hagas clic en su pie en la imagen
+const selUna = () => sel.size === 1 ? [...sel][0] : null;
+
+// ---------- tiempo musical ----------
+const semis = [];
+for (let j = 0; j < D.pulsos.length - 1; j++) { const [a, c, k] = D.pulsos[j], b = D.pulsos[j + 1][0]; for (let s = 0; s < 4; s++) semis.push({ f: a + (b - a) * s / 4, c, k, s }); }
+const tiempos = D.pulsos.map(p => p[0]);
+const compasIni = {}; D.pulsos.forEach(([f, c, k]) => { if (k === 1 && compasIni[c] === undefined) compasIni[c] = f; });
+function semiIdx(fr) { let b = 0; for (let j = 0; j < semis.length; j++) if (Math.abs(semis[j].f - fr) < Math.abs(semis[b].f - fr)) b = j; return b; }
+function semiActual(fr) { let b = 0; for (let j = 0; j < semis.length; j++) if (semis[j].f <= fr + 0.5) b = j; return b; }
+const posDe = (fr) => { const s = semis[semiIdx(fr)]; return `c${s.c} · ${s.k}${SUB[s.s]}`; };
+const compasDe = (fr) => semis[semiActual(fr)].c;
+const golpesDe = (k) => D.golpes[k] ? D.golpes[k].filter(([f, db]) => db > -25).map(([f]) => f) : [];
+function cercano(lista_, n, max = 8) { let b = null; for (const f of lista_) if (b === null || Math.abs(f - n) < Math.abs(b - n)) b = f; return b !== null && Math.abs(b - n) <= max ? b : null; }
+function conIman(fr) {
+  const l = iman === "sonido" ? PICOS : iman === "rejilla" ? semis.map(s => s.f) : iman === "instrumento" ? golpesDe(instAfinar) : null;
+  if (!l) return Math.round(fr);
+  const t = cercano(l, fr, 2.5); return Math.round(t === null ? fr : t);
+}
+
+// ---------- fotogramas ----------
+const fotos = [], fotosMov = [];
+for (let k = 0; k < N; k++) { const im = new Image(); im.src = "fotogramas/f" + String(F0 + k).padStart(5, "0") + ".jpg"; im.onload = () => { if (k === i) pintar(); }; fotos.push(im); }
+function movimiento(k) { if (!fotosMov[k]) { const im = new Image(); im.src = "fotogramas_mov/f" + String(F0 + k).padStart(5, "0") + ".jpg"; im.onload = () => { if (k === i) pintar(); }; fotosMov[k] = im; } return fotosMov[k]; }
+
+// ---------- guardar ----------
+function json() {
+  const ps = marcas.slice().sort((a, b) => a.n - b.n || a.b - b.b).map(m => ({ n: m.n, t: +(m.n / FPS).toFixed(3), bailarin: B[m.b].nombre, b: m.b, pie: m.pie, tipo: m.tipo, x: m.x, y: m.y, pos: posDe(m.n) }));
+  return JSON.stringify({ video: D.video, cancion: D.cancion, inicio: D.inicio, fps: FPS, bailarines: B.map(b => b.nombre), pisadas: ps }, null, 1);
+}
+function guardarLocal() { try { localStorage.setItem(CLAVE, JSON.stringify(marcas)); } catch (e) {} }
+function cambio() { deshacer.push(JSON.stringify(marcas)); if (deshacer.length > 300) deshacer.shift(); rehacer = []; }
+function aviso(t) { $("aviso").textContent = t; clearTimeout(aviso.t); aviso.t = setTimeout(() => $("aviso").textContent = "", 6000); }
+async function guardar() {
+  guardarLocal();
+  if (window.showSaveFilePicker) {
+    try {
+      if (!manejador) manejador = await showSaveFilePicker({ suggestedName: "pisadas.json", types: [{ description: "Pisadas", accept: { "application/json": [".json"] } }] });
+      const w = await manejador.createWritable(); await w.write(json()); await w.close();
+      return aviso(`💾 Guardadas ${marcas.length} pisadas en ${manejador.name} (Ctrl+S vuelve a guardar ahí)`);
+    } catch (e) { if (e.name === "AbortError") return; }
+  }
+  descargar("pisadas.json", json(), "application/json"); aviso(`💾 Descargadas ${marcas.length} pisadas (pisadas.json en Descargas)`);
+}
+function descargar(nombre, texto, tipoM) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([texto], { type: tipoM })); a.download = nombre; a.click(); }
+function cargarDe(obj) {
+  const ps = Array.isArray(obj) ? obj : obj.pisadas || []; cambio();
+  marcas = ps.map(p => ({ n: p.n, b: p.b !== undefined ? p.b : Math.max(0, B.findIndex(x => x.nombre === p.bailarin)), pie: p.pie || "I", tipo: p.tipo || "apoyo", x: p.x, y: p.y }));
+  sel.clear(); guardarLocal(); pintar();
+}
+(function iniciar() {
+  try { marcas = JSON.parse(localStorage.getItem(CLAVE) || "[]"); } catch (e) { marcas = []; }
+  if (!marcas.length) for (let k = 0; k < localStorage.length; k++) {           // páginas antiguas
+    const key = localStorage.key(k); if (!key.startsWith("pisadas_")) continue;
+    try { const v = JSON.parse(localStorage.getItem(key));
+      if (Array.isArray(v) && v.length && v.every(m => m.n >= F0 - 2 && m.n <= F1 + 2)) { marcas = v.map(m => ({ n: m.n, b: m.quien === "L" ? 1 : 0, pie: m.pie || "I", tipo: "apoyo", x: m.x, y: m.y })); aviso(`Recuperadas ${marcas.length} pisadas de la versión anterior`); guardarLocal(); break; }
+    } catch (e) {}
+  }
+})();
+
+// ---------- crear pisadas ----------
+function sitioPara(c, n) {          // dónde poner el destello si no se hace clic en la imagen: la pisada más cercana de ese pie
+  const cand = marcas.filter(m => carrilDe(m) === c).sort((a, b) => Math.abs(a.n - n) - Math.abs(b.n - n));
+  if (cand.length) return { x: cand[0].x, y: cand[0].y };
+  const otro = marcas.filter(m => m.b === CARRILES[c].b).sort((a, b) => Math.abs(a.n - n) - Math.abs(b.n - n));
+  if (otro.length) return { x: otro[0].x + (CARRILES[c].pie === "D" ? 60 : -60), y: otro[0].y };
+  return { x: Math.round(D.anchoVideo * (CARRILES[c].b === 0 ? 0.35 : 0.65)), y: Math.round(D.altoVideo * 0.87) };
+}
+function nueva(c, n, x, y, provisional) {
+  cambio();
+  const m = { n: Math.min(F1, Math.max(F0, n)), b: CARRILES[c].b, pie: CARRILES[c].pie, tipo, x, y };
+  if (provisional) m.provisional = true;          // sitio copiado: el próximo clic en la imagen (en ese fotograma) lo coloca
+  marcas = marcas.filter(q => !(q.n === m.n && carrilDe(q) === c));
+  marcas.push(m); sel = new Set([m]); guardarLocal();
+  destello.push({ m, t0: performance.now() });
+  return m;
+}
+function pisaAhora(c) {                 // tecla Q W O P: pisada en este momento (al vuelo si suena la música)
+  ponCarril(c);
+  let fr = F0 + i;
+  if (jugando) fr = frAhora() - (+$("lat").value || 0) / 1000 * FPS * vel;
+  const s = sitioPara(c, fr);
+  const m = nueva(c, conIman(fr), s.x, s.y, true);
+  if (!jugando) { aColocar = m; ir(m.n - F0); }
+  clic(CARRILES[c].b === 0 ? 1600 : 1000, 0.05, 0.25);
+}
+
+// ---------- dibujo de la imagen ----------
+function flash(ctx, x, y, t, col) {
+  const r = 26 + 80 * t, a = 1 - t;
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, `rgba(255,250,230,${0.95 * a})`); g.addColorStop(0.35, `rgba(${col},${0.8 * a})`); g.addColorStop(1, `rgba(${col},0)`);
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = `rgba(255,240,190,${a})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(x, y, 20 + 95 * t, 0, Math.PI * 2); ctx.stroke();
+}
+function pintar() {
+  const n = F0 + i, im = fotos[i], fuente = op.mov ? movimiento(i) : im;
+  if (fuente.complete && fuente.naturalWidth) ci.drawImage(fuente, 0, 0, D.ancho, D.alto);
+  else if (im.complete && im.naturalWidth) ci.drawImage(im, 0, 0, D.ancho, D.alto);
+  cc.clearRect(0, 0, D.ancho, D.alto);
+  for (const m of marcas) {
+    const d = n - m.n; if (d < -2 || d > 8) continue;
+    const x = m.x * EV, y = m.y * EV, col = colorDe(m);
+    if (d >= 0 && d <= 5) flash(cc, x, y, d / 6, col);
+    if (op.reel) continue;
+    const a = d === 0 ? 1 : d < 0 ? 0.3 : Math.max(0.2, 1 - d / 9);
+    cc.lineWidth = d === 0 ? 5 : 3; cc.strokeStyle = `rgba(${col},${a})`;
+    if (m.tipo === "adorno") cc.setLineDash([6, 5]);
+    cc.beginPath(); cc.arc(x, y, 20, 0, Math.PI * 2); cc.stroke(); cc.setLineDash([]);
+    if (sel.has(m)) { cc.strokeStyle = `rgba(248,241,228,${a})`; cc.lineWidth = 2; cc.beginPath(); cc.arc(x, y, 27, 0, Math.PI * 2); cc.stroke(); }
+    cc.font = "bold 17px Segoe UI"; cc.fillStyle = `rgba(${col},${a})`; cc.fillText(nomCarril(carrilDe(m)) + (m.tipo === "adorno" ? " ·adorno" : ""), x + 25, y + 6);
+  }
+  // la pisada que espera sitio: anillo grande discontinuo + letrero arriba (así se sabe cuál se va a colocar)
+  if (!op.reel) {
+    let txt, col = CARRILES[carril].col;
+    if (aColocar && marcas.includes(aColocar)) {
+      col = colorDe(aColocar);
+      const x = aColocar.x * EV, y = aColocar.y * EV, lejos = Math.abs(aColocar.n - n) > 8;
+      cc.setLineDash([10, 7]); cc.lineWidth = 4; cc.strokeStyle = `rgba(${col},${lejos ? 0.35 : 1})`;
+      cc.beginPath(); cc.arc(x, y, 40, 0, Math.PI * 2); cc.stroke(); cc.setLineDash([]);
+      txt = lejos ? `«${nomCarril(carrilDe(aColocar))}» está en el fotograma ${aColocar.n}: pulsa ] o [ para ir` :
+                    `👆 Clic en el pie para colocar: ${nomCarril(carrilDe(aColocar))}` + (aColocar.n !== n ? ` (fot ${aColocar.n})` : "");
+    } else txt = `Clic en un pie = pisada nueva de ${nomCarril(carril)}`;
+    cc.font = "bold 22px Segoe UI"; const w = cc.measureText(txt).width + 28;
+    const yL = Math.round(D.alto * 0.11);           // debajo de las marcas de agua que suelen llevar los vídeos arriba
+    cc.fillStyle = "rgba(20,3,10,.82)"; cc.fillRect((D.ancho - w) / 2, yL, w, 38);
+    cc.strokeStyle = `rgb(${col})`; cc.lineWidth = 2; cc.strokeRect((D.ancho - w) / 2, yL, w, 38);
+    cc.fillStyle = `rgb(${col})`; cc.textAlign = "center"; cc.fillText(txt, D.ancho / 2, yL + 27); cc.textAlign = "left";
+  }
+  const ahora = performance.now();
+  destello = destello.filter(d => ahora - d.t0 < 450);
+  for (const d of destello) flash(cc, d.m.x * EV, d.m.y * EV, (ahora - d.t0) / 450, colorDe(d.m));
+  if (destello.length && !jugando) requestAnimationFrame(pintar);
+  if (op.lupa && raton && !jugando && !op.reel) lupa();
+  $("fot").textContent = "fotograma " + n;
+  $("pos").textContent = posDe(n);
+  const suenan = INST.filter(k => D.golpes[k].some(([f, db]) => Math.abs(f - n) <= 0.7 && db > -25)).map(k => `<span class="chip">${NOMINST[k] || k.toUpperCase()}</span>`);
+  if (D.cortes.some(c => c === n)) suenan.push('<span class="chip" id="plano">CAMBIO DE PLANO</span>');
+  $("chips").innerHTML = suenan.join("");
+  rejilla(n); linea();
+  if (!jugando) lista(n);
+}
+function lupa() {
+  const { x, y } = raton, R = 95, Z = 2.6, im = op.mov ? movimiento(i) : fotos[i];
+  if (!im.complete || !im.naturalWidth) return;
+  const sx = im.naturalWidth / D.ancho, sy = im.naturalHeight / D.alto;
+  cc.save(); cc.beginPath(); cc.arc(x, y, R, 0, Math.PI * 2); cc.clip();
+  cc.drawImage(im, (x - R / Z) * sx, (y - R / Z) * sy, (2 * R / Z) * sx, (2 * R / Z) * sy, x - R, y - R, 2 * R, 2 * R); cc.restore();
+  cc.strokeStyle = "rgba(248,241,228,.9)"; cc.lineWidth = 3; cc.beginPath(); cc.arc(x, y, R, 0, Math.PI * 2); cc.stroke();
+  cc.strokeStyle = `rgb(${CARRILES[carril].col})`; cc.lineWidth = 2; cc.beginPath(); cc.moveTo(x - 10, y); cc.lineTo(x + 10, y); cc.moveTo(x, y - 10); cc.lineTo(x, y + 10); cc.stroke();
+}
+
+// ---------- rejilla del compás ----------
+function rejilla(n) {
+  const c = compasDe(n), cur = semiActual(n), idx = semis.map((s, j) => j).filter(j => semis[j].c === c);
+  if (!idx.length) { $("rej").innerHTML = ""; return; }
+  let h = '<tr><th class="nom" style="cursor:default">COMPÁS ' + c + "</th>";
+  for (const j of idx) { const s = semis[j]; h += `<th data-j="${j}" class="${s.s === 0 ? "num" : ""} ${j === cur ? "cur" : ""}">${s.s === 0 ? s.k : SUB[s.s]}</th>`; }
+  h += "</tr>";
+  for (const k of INST.filter(k => filas[k])) {
+    h += `<tr><td class="nom">${NOMINST[k] || k.toUpperCase()}</td>`;
+    for (const j of idx) {
+      let b = 0; for (const [f, db] of D.golpes[k]) if (semiIdx(f) === j) b = Math.max(b, Math.min(1, Math.max(0.15, (db + 30) / 30)));
+      h += `<td data-j="${j}" class="${semis[j].s === 0 ? "t1" : ""} ${j === cur ? "cur" : ""}" style="${b ? `background:rgba(240,192,90,${semis[j].f <= n + 0.5 ? b : b * 0.35})` : ""}"></td>`;
+    }
+    h += "</tr>";
+  }
+  CARRILES.forEach((ca, k) => {
+    h += `<tr><td class="nom" style="color:rgb(${ca.col})">${nomCarril(k).toUpperCase()}</td>`;
+    for (const j of idx) {
+      const ms_ = marcas.filter(m => carrilDe(m) === k && semiIdx(m.n) === j);
+      const st = ms_.length ? `background:rgba(${ca.col},${ms_.some(m => m.n <= n) ? 1 : 0.4})` : "";
+      h += `<td data-j="${j}" class="${semis[j].s === 0 ? "t1" : ""} ${j === cur ? "cur" : ""}" style="${st}">${ms_.length ? ca.pie : ""}</td>`;
+    }
+    h += "</tr>";
+  });
+  $("rej").innerHTML = h;
+}
+$("rej").addEventListener("click", (e) => { const t = e.target.closest("[data-j]"); if (t) { parar(); ir(Math.round(semis[+t.dataset.j].f) - F0); } });
+
+// ---------- línea de tiempo ----------
+const LC = $("linea"), lc = LC.getContext("2d"), IZQ = 92, ALTO_CARRIL = 30;
+function geom() {
+  const nf = INST.filter(k => filas[k]).length;
+  const yOnda = 34, yInst = yOnda + 30, yCarr = yInst + nf * 14 + 6;
+  const H = yCarr + CARRILES.length * ALTO_CARRIL + 6;
+  LC.style.height = H + "px";
+  const W = Math.round(LC.getBoundingClientRect().width) || 600;
+  if (LC.width !== W || LC.height !== H) { LC.width = W; LC.height = H; }
+  const x = (fr) => IZQ + (fr - vista.a) / (vista.b - vista.a) * (W - IZQ - 8);
+  const f = (px) => vista.a + (px - IZQ) / (W - IZQ - 8) * (vista.b - vista.a);
+  return { W, H, x, f, yOnda, yInst, yCarr, nf };
+}
+function linea() {
+  const g = geom(), { W, H } = g;
+  lc.clearRect(0, 0, W, H);
+  let par = false;
+  for (const c of Object.keys(compasIni).map(Number).sort((a, b) => a - b)) {
+    const a = compasIni[c], b = compasIni[c + 1] !== undefined ? compasIni[c + 1] : F1 + 60;
+    if (b < vista.a || a > vista.b) continue;
+    lc.fillStyle = (par = !par) ? "#2a0a12" : "#21070d"; lc.fillRect(Math.max(IZQ, g.x(a)), 0, g.x(b) - Math.max(IZQ, g.x(a)), H);
+    if (g.x(a) >= IZQ - 2) { lc.fillStyle = "#f0c05a"; lc.font = "bold 13px Segoe UI"; lc.fillText("c" + c, g.x(a) + 4, 13); }
+  }
+  for (const [f, c, k] of D.pulsos) {
+    if (f < vista.a || f > vista.b) continue;
+    lc.strokeStyle = k === 1 ? "rgba(248,241,228,.75)" : "rgba(214,190,180,.28)"; lc.lineWidth = k === 1 ? 2 : 1;
+    lc.beginPath(); lc.moveTo(g.x(f), 18); lc.lineTo(g.x(f), H); lc.stroke();
+    lc.fillStyle = k === 1 ? "#f8f1e4" : "rgba(214,190,180,.8)"; lc.font = (k === 1 ? "bold " : "") + "11px Georgia"; lc.fillText(k, g.x(f) + 3, 29);
+  }
+  // onda de la música
+  if (D.onda) {
+    lc.fillStyle = "rgba(214,190,180,.35)";
+    for (let k = 0; k < D.onda.length; k++) { const fr = F0 + k / 2; if (fr < vista.a || fr > vista.b) continue; const h = D.onda[k] * 26; lc.fillRect(g.x(fr), g.yOnda + 26 - h, Math.max(1, g.x(fr + 0.5) - g.x(fr)), h); }
+    lc.fillStyle = iman === "sonido" ? "#f8f1e4" : "rgba(248,241,228,.45)";          // los topes (donde pega el imán «sonido»)
+    for (const p of PICOS) { if (p < vista.a || p > vista.b) continue; const h = D.onda[Math.round((p - F0) * 2)] * 26; lc.beginPath(); lc.arc(g.x(p), g.yOnda + 26 - h - 2, 2.5, 0, Math.PI * 2); lc.fill(); }
+  }
+  for (const c of D.cortes) { if (c < vista.a || c > vista.b) continue; lc.strokeStyle = "rgba(240,122,106,.9)"; lc.setLineDash([3, 3]); lc.beginPath(); lc.moveTo(g.x(c), 0); lc.lineTo(g.x(c), H); lc.stroke(); lc.setLineDash([]); }
+  let y = g.yInst;
+  for (const k of INST.filter(k => filas[k])) {
+    for (const [f, db] of D.golpes[k]) { if (f < vista.a || f > vista.b) continue; const a = Math.min(1, Math.max(0.2, (db + 30) / 30)); lc.fillStyle = `rgba(240,192,90,${a})`; lc.fillRect(g.x(f) - 1.5, y, 3, 11); }
+    rotulo(NOMINST[k] || k, y - 1, "rgba(214,190,180,.9)", false); y += 14;
+  }
+  CARRILES.forEach((ca, k) => {
+    const yc = g.yCarr + k * ALTO_CARRIL;
+    lc.fillStyle = k === carril ? `rgba(${ca.col},.13)` : (k % 2 ? "rgba(255,255,255,.025)" : "rgba(0,0,0,0)"); lc.fillRect(IZQ, yc, W - IZQ, ALTO_CARRIL - 2);
+    if (CARRILES[k].pie === "I" && k > 0) { lc.fillStyle = "rgba(248,241,228,.15)"; lc.fillRect(0, yc - 2, W, 1); }
+    const nCar = marcas.filter(m => carrilDe(m) === k).length;
+    rotulo(`${nomCarril(k)} ${nCar ? "· " + nCar : ""}`, yc + 7, `rgb(${ca.col})`, k === carril);
+    for (const m of marcas.filter(m => carrilDe(m) === k)) {
+      if (m.n < vista.a - 2 || m.n > vista.b + 2) continue;
+      const xm = g.x(m.n), ym = yc + ALTO_CARRIL / 2 - 1, r = sel.has(m) ? 11 : 9;
+      lc.beginPath(); lc.arc(xm, ym, r, 0, Math.PI * 2);
+      if (m.tipo === "adorno") { lc.fillStyle = "rgba(20,3,10,.9)"; lc.fill(); lc.strokeStyle = `rgb(${ca.col})`; lc.lineWidth = 2.5; lc.setLineDash([3, 2]); lc.stroke(); lc.setLineDash([]); }
+      else { lc.fillStyle = `rgb(${ca.col})`; lc.fill(); }
+      if (sel.has(m)) { lc.strokeStyle = "#f8f1e4"; lc.lineWidth = 2.5; lc.stroke(); }
+      lc.fillStyle = m.tipo === "adorno" ? `rgb(${ca.col})` : "#2a0a12"; lc.font = "bold 11px Segoe UI"; lc.textAlign = "center"; lc.fillText(ca.pie, xm, ym + 4); lc.textAlign = "left";
+    }
+  });
+  if (arrastre && arrastre.linea && arrastre.fantasma !== undefined) { lc.strokeStyle = "rgba(248,241,228,.5)"; lc.setLineDash([4, 3]); lc.beginPath(); lc.moveTo(g.x(arrastre.fantasma), 18); lc.lineTo(g.x(arrastre.fantasma), H); lc.stroke(); lc.setLineDash([]); }
+  const xp = g.x(F0 + i); if (xp >= IZQ) { lc.strokeStyle = "#f8f1e4"; lc.lineWidth = 2; lc.beginPath(); lc.moveTo(xp, 0); lc.lineTo(xp, H); lc.stroke(); }
+  function rotulo(t, yy, col, fuerte) { lc.font = "bold 11px Segoe UI"; lc.fillStyle = fuerte ? "rgba(74,48,16,1)" : "rgba(20,3,10,.95)"; lc.fillRect(0, yy - 1, IZQ - 4, 15); lc.fillStyle = col; lc.fillText(t, 4, yy + 10); }
+}
+function dondeLinea(ev) {
+  const g = geom(), r = LC.getBoundingClientRect(), x = (ev.clientX - r.left) * LC.width / r.width, y = (ev.clientY - r.top) * LC.height / r.height;
+  const k = Math.floor((y - g.yCarr) / ALTO_CARRIL), enCarril = k >= 0 && k < CARRILES.length;
+  let m = null, dm = 13;
+  if (enCarril) for (const q of marcas) if (carrilDe(q) === k && Math.abs(g.x(q.n) - x) < dm) { dm = Math.abs(g.x(q.n) - x); m = q; }
+  return { f: g.f(x), x, y, carril: enCarril ? k : null, m, izq: x < IZQ };
+}
+LC.addEventListener("mousedown", (ev) => {
+  parar(); const p = dondeLinea(ev);
+  if (p.izq && p.carril !== null) return ponCarril(p.carril);
+  if (p.m) {
+    if (ev.shiftKey) { sel.has(p.m) ? sel.delete(p.m) : sel.add(p.m); pintar(); return; }
+    if (!sel.has(p.m)) sel = new Set([p.m]);
+    aColocar = p.m;
+    cambio(); arrastre ={ linea: true, m: p.m, f0: p.f, orig: [...sel].map(q => [q, q.n, q.b, q.pie]), carril0: p.carril, movido: false };
+    ponCarril(carrilDe(p.m), true);
+    return;
+  }
+  if (!ev.shiftKey) { sel.clear(); aColocar = null; }
+  if (p.carril !== null) ponCarril(p.carril, true);
+  ir(Math.round(Math.min(F1, Math.max(F0, p.f))) - F0);
+  arrastre = { buscar: true };
+});
+LC.addEventListener("dblclick", (ev) => {
+  const p = dondeLinea(ev); if (p.carril === null || p.izq || p.m) return;
+  const fr = conIman(p.f), s = sitioPara(p.carril, fr);
+  ponCarril(p.carril, true); aColocar = nueva(p.carril, fr, s.x, s.y, true); ir(Math.round(fr) - F0);
+});
+LC.addEventListener("wheel", (ev) => {
+  ev.preventDefault(); const p = dondeLinea(ev), z = ev.deltaY > 0 ? 1.25 : 0.8;
+  const a = p.f - (p.f - vista.a) * z, b = p.f + (vista.b - p.f) * z;
+  vista = { a: Math.max(F0, a), b: Math.min(F1, b) }; if (vista.b - vista.a < 12) vista.b = vista.a + 12; pintar();
+}, { passive: false });
+window.addEventListener("mousemove", (ev) => {
+  if (arrastre && arrastre.linea) {
+    const p = dondeLinea(ev), df = p.f - arrastre.f0;
+    const dc = p.carril !== null ? p.carril - arrastre.carril0 : 0;
+    for (const [q, n0, b0, pie0] of arrastre.orig) {
+      q.n = Math.min(F1, Math.max(F0, Math.round(n0 + df)));
+      if (arrastre.orig.length === 1 && p.carril !== null) { q.b = CARRILES[p.carril].b; q.pie = CARRILES[p.carril].pie; }
+    }
+    arrastre.movido = true; arrastre.fantasma = arrastre.m.n; ir(arrastre.m.n - F0);
+  } else if (arrastre && arrastre.buscar && ev.buttons === 1) { const p = dondeLinea(ev); ir(Math.round(Math.min(F1, Math.max(F0, p.f))) - F0); }
+  else if (ev.target === LC) {
+    const p = dondeLinea(ev), t = $("tip");
+    if (p.m) { const dI = desfase(p.m, golpesDe(instAfinar)), dR = desfase(p.m, semis.map(s => s.f));
+      t.innerHTML = `<b style="color:rgb(${colorDe(p.m)})">${nomCarril(carrilDe(p.m))}</b> · fot ${p.m.n} · ${posDe(p.m.n)}${p.m.tipo === "adorno" ? " · adorno" : ""}<br>rejilla <span class="${clase(dR)}">${txtD(dR)}</span> · ${instAfinar} <span class="${clase(dI)}">${txtD(dI)}</span>`;
+      const r = LC.getBoundingClientRect(), rc = $("lineaCaja").getBoundingClientRect();
+      t.style.display = "block"; t.style.left = (ev.clientX - rc.left + 14) + "px"; t.style.top = (ev.clientY - rc.top + 14) + "px";
+    } else t.style.display = "none";
+  }
+});
+LC.addEventListener("mouseleave", () => { $("tip").style.display = "none"; });
+window.addEventListener("mouseup", () => {
+  if (arrastre && arrastre.linea) {
+    if (!arrastre.movido) deshacer.pop();
+    else if (iman !== "no") for (const [q] of arrastre.orig) q.n = Math.min(F1, Math.max(F0, conIman(q.n)));
+    guardarLocal(); arrastre = null; if (selUna()) ir(selUna().n - F0); else pintar(); return;
+  }
+  if (arrastre && arrastre.img) { if (!arrastre.movido) deshacer.pop(); guardarLocal(); }
+  arrastre = null;
+});
+
+// ---------- lista y estadísticas ----------
+function desfase(m, lista_) { let b = null; for (const f of lista_) if (b === null || Math.abs(f - m.n) < Math.abs(b - m.n)) b = f; return b === null ? null : m.n - b; }
+const clase = (d) => d === null ? "" : Math.abs(d) <= 1.2 ? "verde" : Math.abs(d) <= 2.5 ? "ambar" : "rojo";
+const txtD = (d) => d === null ? "—" : `${d > 0 ? "+" : ""}${Math.round(d / FPS * 1000)} ms`;
+function lista(n) {
+  const L = $("lista"), gs = golpesDe(instAfinar), rs = semis.map(s => s.f);
+  if (!marcas.length) L.innerHTML = '<span class="sub">Sin pisadas todavía. Haz clic en el pie en la imagen, doble clic en un carril de la línea de tiempo, o pulsa Q W (ella) / O P (él) mientras suena la música.</span>';
+  else {
+    L.innerHTML = "";
+    marcas.slice().sort((a, b) => a.n - b.n || a.b - b.b).forEach((m) => {
+      const r = document.createElement("div"); r.className = (m.n === n ? "aqui " : "") + (sel.has(m) ? "sel" : "");
+      const dI = desfase(m, gs), dR = desfase(m, rs), ca = CARRILES[carrilDe(m)];
+      r.innerHTML = `<i style="background:rgb(${ca.col})">${ca.pie}</i><b>${m.n}</b><span>${posDe(m.n)} · ${nomCarril(carrilDe(m))}${m.tipo === "adorno" ? " · adorno" : ""}</span>` +
+        `<em class="${clase(dR)}" title="respecto a la casilla más cercana">rej ${txtD(dR)}</em><em class="${clase(dI)}" title="respecto al golpe más cercano de ${instAfinar}">${(NOMINST[instAfinar] || instAfinar).slice(0, 5).toLowerCase()} ${txtD(dI)}</em>`;
+      r.onclick = (e) => { if (e.shiftKey) { sel.has(m) ? sel.delete(m) : sel.add(m); pintar(); } else { sel = new Set([m]); aColocar = m; parar(); ir(m.n - F0); } };
+      const x = document.createElement("button"); x.className = "peq"; x.textContent = "✕"; x.title = "borrar";
+      x.onclick = (e) => { e.stopPropagation(); cambio(); marcas = marcas.filter(q => q !== m); sel.delete(m); guardarLocal(); pintar(); };
+      r.append(x); L.appendChild(r);
+    });
+  }
+  const s1 = selUna();
+  $("selTxt").textContent = sel.size > 1 ? `${sel.size} pisadas elegidas` : s1 ? `${nomCarril(carrilDe(s1))} · fot ${s1.n} · ${posDe(s1.n)}` : "elige una pisada (clic en ella)";
+  stats();
+}
+function stats() {
+  const rs = semis.map(s => s.f), gs = golpesDe(instAfinar);
+  let h = `<table><tr><th>pie</th><th>apoyos</th><th>adornos</th><th title="a ±40 ms de una casilla">en rejilla</th><th title="a ±40 ms de un golpe">en ${(NOMINST[instAfinar] || instAfinar).toLowerCase()}</th><th title="media respecto a la rejilla: + tarde, − antes">media</th><th>en 1-2-3-4</th><th>en «y»</th><th>en «e/a»</th></tr>`;
+  CARRILES.forEach((ca, k) => {
+    const ms_ = marcas.filter(m => carrilDe(m) === k), ap = ms_.filter(m => m.tipo === "apoyo"); if (!ms_.length) return;
+    const dR = ap.map(m => desfase(m, rs)), dI = ap.map(m => desfase(m, gs)).filter(d => d !== null);
+    const pct = (arr) => arr.length ? Math.round(arr.filter(d => Math.abs(d) <= 1.2).length / arr.length * 100) + " %" : "—";
+    const media = dR.length ? dR.reduce((a, b) => a + b, 0) / dR.length : null, cnt = (s) => ap.filter(m => semis[semiIdx(m.n)].s === s).length;
+    h += `<tr><td style="color:rgb(${ca.col})">${nomCarril(k)}</td><td>${ap.length}</td><td>${ms_.length - ap.length}</td><td>${pct(dR)}</td><td>${pct(dI)}</td><td class="${clase(media)}">${txtD(media)}</td><td>${cnt(0)}</td><td>${cnt(2)}</td><td>${cnt(1) + cnt(3)}</td></tr>`;
+  });
+  $("stats").innerHTML = marcas.length ? h + "</table>" : "";
+}
+
+// ---------- reproducir ----------
+function ir(k) { i = Math.min(N - 1, Math.max(0, k)); const fr = F0 + i; if (fr < vista.a || fr > vista.b) { const w = vista.b - vista.a; vista.a = Math.max(F0, Math.min(F1 - w, fr - w * 0.2)); vista.b = vista.a + w; } pintar(); }
+let actx = null;
+function clic(f = 1200, dur = 0.05, vol = 0.25) { try { actx = actx || new AudioContext(); const o = actx.createOscillator(), g = actx.createGain(); o.frequency.value = f; g.gain.setValueAtTime(vol, actx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + dur); o.connect(g).connect(actx.destination); o.start(); o.stop(actx.currentTime + dur); } catch (e) {} }
+function frAhora() { return jugando.conAudio ? F0 + au.currentTime * FPS : F0 + jugando.i0 + (performance.now() - jugando.t0) / 1000 * FPS * vel; }
+function parar() { if (!jugando) return; cancelAnimationFrame(jugando.raf); jugando = null; au.pause(); $("play").textContent = "▶ Escuchar"; $("play").classList.remove("parar"); pintar(); }
+function reproducir() {
+  if (jugando) return parar();
+  const lim = op.bucle ? [vista.a, vista.b] : [F0, F1];
+  if (F0 + i >= lim[1] - 1 || F0 + i < lim[0]) i = Math.round(lim[0]) - F0;
+  const conAudio = au.readyState >= 2;
+  jugando = { raf: 0, ultimo: F0 + i, conAudio, t0: performance.now(), i0: i };
+  if (conAudio) { au.preservesPitch = true; au.playbackRate = vel; au.currentTime = i / FPS; au.play().catch(() => {}); }
+  const paso = () => {
+    let fr = frAhora();
+    if (fr >= lim[1]) { if (op.bucle) { fr = lim[0]; if (conAudio) au.currentTime = (lim[0] - F0) / FPS; jugando.t0 = performance.now(); jugando.i0 = lim[0] - F0; jugando.ultimo = fr; } else { ir(Math.round(lim[1]) - F0); return parar(); } }
+    const a = jugando.ultimo;
+    if (op.son) for (const m of marcas) if (m.n > a && m.n <= fr) clic(m.b === 0 ? (m.pie === "I" ? 1500 : 1800) : (m.pie === "I" ? 800 : 1000), 0.06, m.tipo === "adorno" ? 0.12 : 0.3);
+    if (op.met) for (const [f, c, k] of D.pulsos) if (f > a && f <= fr) clic(k === 1 ? 600 : 420, 0.04, 0.2);
+    jugando.ultimo = fr;
+    const k = Math.floor(fr + 1e-6) - F0; if (k !== i) ir(k); else linea();
+    jugando.raf = requestAnimationFrame(paso);
+  };
+  $("play").textContent = "⏸ PARAR"; $("play").classList.add("parar");
+  jugando.raf = requestAnimationFrame(paso);
+}
+function saltaA(lista_, dir) { const n = F0 + i; const c = dir > 0 ? lista_.filter(f => f > n + 0.5).sort((a, b) => a - b) : lista_.filter(f => f < n - 0.5).sort((a, b) => b - a); if (c.length) { parar(); ir(Math.round(c[0]) - F0); } }
+
+// ---------- imagen: clic = pisada ----------
+function xy(ev) { const r = capa.getBoundingClientRect(); return { x: (ev.clientX - r.left) / r.width * D.ancho, y: (ev.clientY - r.top) / r.height * D.alto }; }
+function marcaCerca(p) { const n = F0 + i; let b = null, dm = 28; for (const m of marcas) { if (m.n > n || n - m.n > 8) continue; const d = Math.hypot(m.x * EV - p.x, m.y * EV - p.y); if (d < dm) { dm = d; b = m; } } return b; }
+capa.addEventListener("mousemove", (ev) => { raton = xy(ev); if (arrastre && arrastre.img) { arrastre.m.x = Math.round(raton.x / EV); arrastre.m.y = Math.round(raton.y / EV); arrastre.movido = true; } if (!jugando) pintar(); });
+capa.addEventListener("mouseleave", () => { raton = null; if (!jugando) pintar(); });
+capa.addEventListener("mousedown", (ev) => {
+  if (ev.button !== 0) return;
+  parar(); const p = xy(ev);
+  // hay una pisada esperando su sitio (elegida en la línea, creada con doble clic, al vuelo o desde un botón): este clic la coloca
+  // (y si arrastras, la sigues moviendo)
+  if (aColocar && marcas.includes(aColocar) && Math.abs(aColocar.n - (F0 + i)) <= 8) {
+    const m2 = aColocar; cambio(); m2.x = Math.round(p.x / EV); m2.y = Math.round(p.y / EV); delete m2.provisional;
+    sel = new Set([m2]); aColocar = null; guardarLocal(); destello.push({ m: m2, t0: performance.now() });
+    arrastre = { img: true, m: m2, movido: true };
+    aviso(`Colocada: ${nomCarril(carrilDe(m2))} en el fotograma ${m2.n}`); pintar(); return;
+  }
+  const m = marcaCerca(p);
+  if (m && m.n === F0 + i) { sel = new Set([m]); ponCarril(carrilDe(m), true); cambio(); arrastre = { img: true, m, movido: false }; return; }
+  aColocar = null;
+  nueva(carril, F0 + i, Math.round(p.x / EV), Math.round(p.y / EV));
+  const otro = carril % 2 === 0 ? carril + 1 : carril - 1; if (CARRILES[otro]) ponCarril(otro, true);
+  pintar();
+});
+capa.addEventListener("contextmenu", (ev) => { ev.preventDefault(); const m = marcaCerca(xy(ev)); if (m) { cambio(); marcas = marcas.filter(q => q !== m); sel.delete(m); guardarLocal(); pintar(); } });
+function mover(nuevo) { const s1 = selUna(); if (!s1) return aviso("Elige primero una pisada"); cambio(); s1.n = Math.min(F1, Math.max(F0, Math.round(nuevo))); guardarLocal(); parar(); ir(s1.n - F0); }
+function moverSel(df) { if (!sel.size) return aviso("Elige primero una pisada"); cambio(); for (const m of sel) m.n = Math.min(F1, Math.max(F0, m.n + df)); guardarLocal(); parar(); const s1 = selUna(); s1 ? ir(s1.n - F0) : pintar(); }
+
+// ---------- botones ----------
+function ponCarril(k, sinPintar) { carril = k; document.querySelectorAll("#carriles button").forEach((b, j) => { const on = j === k; b.style.background = on ? `rgba(${CARRILES[j].col},.28)` : ""; b.style.borderColor = `rgba(${CARRILES[j].col},${on ? 1 : 0.35})`; b.style.color = `rgb(${CARRILES[j].col})`; }); if (!sinPintar) pintar(); }
+function ponTipo(t) { tipo = t; $("tA").classList.toggle("on", t === "apoyo"); $("tO").classList.toggle("on", t === "adorno"); }
+function ponIman(v) { iman = v; for (const [id, k] of [["iNo", "no"], ["iRej", "rejilla"], ["iIns", "instrumento"], ["iSon", "sonido"]]) $(id).classList.toggle("on", v === k); pintar(); }
+CARRILES.forEach((ca, k) => {
+  const b = document.createElement("button"); b.className = "carril";
+  b.innerHTML = `<span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:rgb(${ca.col});color:#2a0a12;font-size:11px;line-height:18px;text-align:center;font-weight:800;margin-right:4px">${ca.pie}</span>${nomCarril(k)}${ca.tecla ? ` <kbd>${ca.tecla.toUpperCase()}</kbd>` : ""}`;
+  b.title = `${B[ca.b].nombre}: arrástralo a la línea de tiempo o al pie en la imagen` + (ca.tecla ? `; tecla ${ca.tecla.toUpperCase()} = pisa ya` : "");
+  b.addEventListener("mousedown", (ev) => { if (ev.button !== 0) return; ev.preventDefault(); arrBoton = { c: k, x0: ev.clientX, y0: ev.clientY, movido: false }; });
+  b.onclick = () => { ponCarril(k); b.blur(); };
+  $("carriles").appendChild(b);
+});
+// arrastrar un pie desde su botón: a la línea de tiempo (pisada en ese momento) o a la imagen (pisada aquí, en ese sitio)
+let arrBoton = null;
+const fantasma = document.createElement("div");
+fantasma.style.cssText = "position:fixed;width:30px;height:30px;border-radius:50%;pointer-events:none;display:none;z-index:20;color:#2a0a12;font:800 14px Segoe UI;text-align:center;line-height:30px;box-shadow:0 0 14px 4px rgba(255,240,190,.6)";
+document.body.appendChild(fantasma);
+window.addEventListener("mousemove", (ev) => {
+  if (!arrBoton) return;
+  if (Math.hypot(ev.clientX - arrBoton.x0, ev.clientY - arrBoton.y0) > 6) arrBoton.movido = true;
+  if (!arrBoton.movido) return;
+  const ca = CARRILES[arrBoton.c];
+  fantasma.style.display = "block"; fantasma.style.background = `rgb(${ca.col})`; fantasma.textContent = ca.pie;
+  fantasma.style.left = ev.clientX - 15 + "px"; fantasma.style.top = ev.clientY - 15 + "px";
+});
+window.addEventListener("mouseup", (ev) => {
+  if (!arrBoton) return;
+  const c = arrBoton.c, movido = arrBoton.movido; arrBoton = null; fantasma.style.display = "none";
+  if (!movido) return;
+  const el = document.elementFromPoint(ev.clientX, ev.clientY);
+  ponCarril(c, true);
+  if (el === LC) {
+    const p = dondeLinea(ev), fr = conIman(p.f), s = sitioPara(c, fr);
+    aColocar = nueva(c, fr, s.x, s.y, true); parar(); ir(aColocar.n - F0);
+  } else if (el === capa) {
+    const q = xy(ev); aColocar = null; nueva(c, F0 + i, Math.round(q.x / EV), Math.round(q.y / EV)); pintar();
+  }
+});
+INST.forEach((k) => { const b = document.createElement("button"); b.className = "peq" + (filas[k] ? " on" : ""); b.textContent = NOMINST[k] || k;
+  b.onclick = () => { filas[k] = !filas[k]; b.classList.toggle("on", filas[k]); if (filas[k]) { instAfinar = k; $("mPiano").innerHTML = `→ al ${(NOMINST[k] || k).toLowerCase()} <kbd>K</kbd>`; $("iIns").textContent = (NOMINST[k] || k).toLowerCase(); } b.blur(); pintar(); };
+  $("filasInst").appendChild(b); });
+const on = (id, f) => $(id).addEventListener("click", (e) => { f(); e.currentTarget.blur(); });
+const interruptor = (id, clave) => on(id, () => { op[clave] = !op[clave]; $(id).classList.toggle("on", op[clave]); pintar(); });
+on("tA", () => ponTipo("apoyo")); on("tO", () => ponTipo("adorno"));
+on("iNo", () => ponIman("no")); on("iRej", () => ponIman("rejilla")); on("iIns", () => ponIman("instrumento")); on("iSon", () => ponIman("sonido"));
+interruptor("oBucle", "bucle"); interruptor("oSon", "son"); interruptor("oMet", "met"); interruptor("oLupa", "lupa"); interruptor("oMov", "mov"); interruptor("oReel", "reel");
+on("a1", () => { parar(); ir(i - 1); }); on("d1", () => { parar(); ir(i + 1); }); on("a5", () => { parar(); ir(i - 5); }); on("d5", () => { parar(); ir(i + 5); });
+on("tPrev", () => saltaA(tiempos, -1)); on("tNext", () => saltaA(tiempos, 1));
+on("mPrev", () => saltaA(marcas.map(m => m.n), -1)); on("mNext", () => saltaA(marcas.map(m => m.n), 1));
+on("play", reproducir);
+on("bInicio", () => { parar(); ir(op.bucle ? Math.round(vista.a) - F0 : 0); });
+on("bA1", () => { parar(); ir(i - 1); }); on("bD1", () => { parar(); ir(i + 1); });
+on("zTodo", () => { vista = { a: F0, b: F1 }; pintar(); });
+on("zCompas", () => { const c = compasDe(F0 + i); const a = compasIni[c] !== undefined ? compasIni[c] : F0, b = compasIni[c + 1] !== undefined ? compasIni[c + 1] : F1; vista = { a: Math.max(F0, a - 3), b: Math.min(F1, b + 3) }; pintar(); });
+document.querySelectorAll("[data-vel]").forEach(b => b.addEventListener("click", () => { vel = +b.dataset.vel; document.querySelectorAll("[data-vel]").forEach(x => x.classList.toggle("on", x === b)); b.blur(); if (jugando) { parar(); reproducir(); } }));
+on("mAntes", () => moverSel(-1)); on("mDesp", () => moverSel(1));
+on("mPiano", () => { const s1 = selUna(); if (!s1) return aviso("Elige primero una pisada"); const t = cercano(golpesDe(instAfinar), s1.n); t === null ? aviso("No hay golpe de " + instAfinar + " cerca") : mover(t); });
+on("mTiempo", () => { const s1 = selUna(); if (!s1) return aviso("Elige primero una pisada"); const t = cercano(semis.map(s => s.f), s1.n); if (t !== null) mover(t); });
+on("mTodas", () => { cambio(); let k = 0; for (const m of marcas) { const t = cercano(semis.map(s => s.f), m.n, 2); if (t !== null && Math.round(t) !== m.n) { m.n = Math.round(t); k++; } } guardarLocal(); pintar(); aviso(`${k} pisadas llevadas a su casilla`); });
+on("bBorrarC", () => { const c = compasDe(F0 + i), ms_ = marcas.filter(m => compasDe(m.n) === c); if (!ms_.length) return aviso("No hay pisadas en el compás " + c); if (!confirm(`¿Borrar las ${ms_.length} pisadas del compás ${c}? (se puede deshacer con Z)`)) return; cambio(); marcas = marcas.filter(m => !ms_.includes(m)); sel.clear(); guardarLocal(); pintar(); });
+on("bGuardar", guardar);
+// copiar: texto corto (una pisada por línea) para pegarlo en el chat; marcar_pisadas.py / video_pisadas.py lo entienden
+function textoCopia() {
+  const ps = marcas.slice().sort((a, b) => a.n - b.n || a.b - b.b);
+  return `PISADAS ${D.id} · ${B.map(b => b.nombre).join(",")} · ${ps.length}\n` + ps.map(m => `${m.n} ${m.b} ${m.pie} ${m.tipo === "adorno" ? "o" : "a"} ${m.x} ${m.y}`).join("\n");
+}
+on("bCopiar", async () => {
+  const t = textoCopia(); let hecho = false;
+  try { await navigator.clipboard.writeText(t); hecho = true; } catch (e) {}
+  if (!hecho) { const ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { hecho = document.execCommand("copy"); } catch (e) {} ta.remove(); }
+  aviso(hecho ? `📋 Copiadas ${marcas.length} pisadas: pégalas en el chat de Claude (Ctrl+V)` : "No se pudo copiar: usa 💾 Guardar");
+}); on("bAbrir", () => $("fich").click());
+on("bCsv", () => {
+  const f_ = ["fotograma;segundo;compas_tiempo;bailarin;pie;tipo;x;y;ms_a_rejilla;ms_a_" + instAfinar], rs = semis.map(s => s.f), gs = golpesDe(instAfinar);
+  for (const m of marcas.slice().sort((a, b) => a.n - b.n)) { const dR = desfase(m, rs), dI = desfase(m, gs); f_.push([m.n, (m.n / FPS).toFixed(3), posDe(m.n), B[m.b].nombre, m.pie, m.tipo, m.x, m.y, dR === null ? "" : Math.round(dR / FPS * 1000), dI === null ? "" : Math.round(dI / FPS * 1000)].join(";")); }
+  descargar("pisadas.csv", "﻿" + f_.join("\n"), "text/csv"); aviso("CSV descargado (se abre en Excel)");
+});
+$("fich").addEventListener("change", async (e) => { const f = e.target.files[0]; if (!f) return; try { cargarDe(JSON.parse(await f.text())); aviso(`Abiertas ${marcas.length} pisadas de ${f.name}`); } catch (er) { aviso("Ese archivo no es de pisadas"); } e.target.value = ""; });
+on("bAyuda", () => { const a = $("ayuda"); a.style.display = a.style.display === "block" ? "none" : "block"; });
+const teclasTap = CARRILES.map((c, k) => c.tecla ? `<kbd>${c.tecla.toUpperCase()}</kbd> ${nomCarril(k)}` : "").filter(Boolean).join(" · ");
+$("ayuda").innerHTML = `<h2>Marcar pisadas · cómo se usa</h2>
+<b>Tres formas de poner una pisada</b><br>1. <b>Clic en el pie</b> en la imagen, en el fotograma en que apoya (marca en el carril elegido y luego cambia al otro pie).<br>
+2. <b>Doble clic en un carril</b> de la línea de tiempo (el destello va donde estaba ese pie; si no cae en el pie, clic en el pie en la imagen o arrástralo).<br>
+3. <b>Al vuelo</b>, mientras suena la música: ${teclasTap}. «Retraso dedo» descuenta lo que tardas en pulsar (prueba 60–120 ms).<br><br>
+<b>Corregir</b><br>arrastrar una pisada en la línea: a los lados = tiempo; arriba/abajo = otro pie u otra persona<br>
+el imán la lleva al soltar a la casilla (rejilla) o al golpe del instrumento si está a 2,5 fotogramas o menos (<kbd>N</kbd> cambia)<br>
+Mayús+clic = elegir varias y moverlas juntas · <kbd>,</kbd> <kbd>.</kbd> un fotograma · <kbd>T</kbd> a la rejilla · <kbd>K</kbd> al instrumento<br>
+en la imagen: arrastrar el círculo = cambiar el sitio · clic derecho = borrar · <kbd>Supr</kbd> borrar las elegidas<br><kbd>A</kbd> apoyo ↔ adorno (adorno = toca o dibuja sin peso)<br><br>
+<b>Moverse y escuchar</b><br><kbd>Espacio</kbd> escuchar / PARAR · <kbd>R</kbd> bucle de lo que se ve · rueda del ratón sobre la línea = zoom · <kbd>0</kbd> ver todo · <kbd>C</kbd> ver el compás<br>
+<kbd>←</kbd> <kbd>→</kbd> fotograma · <kbd>Mayús</kbd>+flecha cinco · <kbd>Ctrl</kbd>+flecha tiempo · <kbd>RePág</kbd> <kbd>AvPág</kbd> compás · <kbd>[</kbd> <kbd>]</kbd> pisada<br>
+<kbd>Tab</kbd> siguiente carril · clic en el nombre del carril = elegirlo<br><kbd>G</kbd> clic en las pisadas (ella agudo, él grave) · <kbd>B</kbd> clic en los tiempos<br>
+<kbd>M</kbd> lupa · <kbd>V</kbd> movimiento (el pie apoyado se «apaga») · <kbd>F</kbd> vista reel<br><br>
+<b>Guardar</b><br><kbd>Ctrl</kbd>+<kbd>S</kbd> guarda pisadas.json (la 1.ª vez elige la carpeta de esta página) · se guarda solo en el navegador mientras trabajas<br>
+<kbd>Z</kbd> deshacer · <kbd>Y</kbd> rehacer<br><br>
+<b>Colores</b><br>${CARRILES.map((c, k) => `<span style="color:rgb(${c.col})">● ${nomCarril(k)}</span>`).join(" · ")} · adorno = gris rosado<br>
+lista: <span class="verde">verde</span> a ±40 ms · <span class="ambar">ámbar</span> a ±80 ms · <span class="rojo">rojo</span> más lejos (+ tarde, − antes)<br><br><kbd>?</kbd> o <kbd>Esc</kbd> cerrar`;
+
+document.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "INPUT") return;
+  const k = e.key, kl = k.toLowerCase();
+  if (k === "Escape") { $("ayuda").style.display = "none"; aColocar = null; sel.clear(); pintar(); return; }
+  if (e.ctrlKey && kl === "s") { e.preventDefault(); guardar(); return; }
+  if (e.ctrlKey && kl === "c" && !window.getSelection().toString()) { e.preventDefault(); $("bCopiar").click(); return; }
+  const tap = CARRILES.findIndex(c => c.tecla === kl);
+  if (tap >= 0 && !e.ctrlKey) { pisaAhora(tap); e.preventDefault(); return; }
+  if (k === "ArrowRight" || k === "ArrowLeft") { const d = k === "ArrowRight" ? 1 : -1; if (e.ctrlKey) saltaA(tiempos, d); else { parar(); ir(i + d * (e.shiftKey ? 5 : 1)); } }
+  else if (k === "PageDown" || k === "PageUp") saltaA(Object.values(compasIni), k === "PageDown" ? 1 : -1);
+  else if (k === "Home") $("bInicio").click(); else if (k === "End") { parar(); ir(N - 1); }
+  else if (k === "[") saltaA(marcas.map(m => m.n), -1); else if (k === "]") saltaA(marcas.map(m => m.n), 1);
+  else if (k === " ") reproducir();
+  else if (k === "Tab") ponCarril((carril + (e.shiftKey ? CARRILES.length - 1 : 1)) % CARRILES.length);
+  else if (kl === "a") ponTipo(tipo === "apoyo" ? "adorno" : "apoyo");
+  else if (k === ",") moverSel(-1); else if (k === ".") moverSel(1);
+  else if (kl === "k") $("mPiano").click(); else if (kl === "t") $("mTiempo").click();
+  else if (kl === "n") ponIman({ sonido: "rejilla", rejilla: "instrumento", instrumento: "no", no: "sonido" }[iman]);
+  else if (kl === "z") { if (deshacer.length) { rehacer.push(JSON.stringify(marcas)); marcas = JSON.parse(deshacer.pop()); sel.clear(); guardarLocal(); pintar(); } }
+  else if (kl === "y") { if (rehacer.length) { deshacer.push(JSON.stringify(marcas)); marcas = JSON.parse(rehacer.pop()); sel.clear(); guardarLocal(); pintar(); } }
+  else if (k === "Delete" || k === "Backspace") { if (sel.size) { cambio(); marcas = marcas.filter(q => !sel.has(q)); sel.clear(); guardarLocal(); pintar(); } }
+  else if (kl === "r") $("oBucle").click(); else if (kl === "m") $("oLupa").click(); else if (kl === "v") $("oMov").click();
+  else if (kl === "f") $("oReel").click(); else if (kl === "g") $("oSon").click(); else if (kl === "b") $("oMet").click();
+  else if (k === "0") $("zTodo").click(); else if (kl === "c") $("zCompas").click();
+  else if (k === "?") $("bAyuda").click();
+  else return;
+  e.preventDefault();
+});
+window.addEventListener("resize", pintar);
+$("titulo").textContent = `${D.cancion} · fotogramas ${F0}–${F1} · ${B.map(b => b.nombre).join(" y ")}`;
+$("titulo").textContent = `${D.cancion} · ${B.map(b => `${b.nombre} (${(b.rol || "").toLowerCase()})`).join(" y ")}`;
+ponCarril(0, true); ponIman("sonido");
+</script>
+</body>
+</html>

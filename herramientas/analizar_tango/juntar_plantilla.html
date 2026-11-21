@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Juntar · <!--TITULO--></title>
+<title>Canciones juntas</title>
 <style>
   :root { --fondo:#17130f; --panel:#221c16; --borde:#3a3026; --texto:#efe6d8; --suave:#a8998a; --oro:#f0c05a; }
   * { box-sizing:border-box; }
@@ -29,10 +29,19 @@
   .ayuda { color:var(--suave); font-size:12.5px; }
   #estado { font-variant-numeric:tabular-nums; color:var(--suave); }
   input[type=range] { accent-color:var(--oro); }
+  .elige { padding:2px 18px 0; display:flex; gap:10px; flex-wrap:wrap; font-size:14px; }
+  .elige a { color:var(--oro); text-decoration:none; }
+  #lista a { display:block; background:var(--panel); border:1px solid var(--borde); border-radius:9px; padding:9px 14px; margin:6px 0; color:var(--texto); text-decoration:none; }
+  #lista a:hover { border-color:var(--oro); }
 </style>
 </head>
 <body>
-<header><h1><!--TITULO--></h1></header>
+<header><h1 id="titulo">Canciones juntas</h1></header>
+<div class="elige"><a href="../HERRAMIENTAS.html">☰ Herramientas</a><a href="juntar.html">Otras canciones juntas</a></div>
+<section id="elegir" hidden style="padding:6px 18px 30px">
+  <p style="color:var(--suave)">Para juntar 2, 3 o 4 canciones nuevas: arrastra los audios a la vez encima de <code>juntar.bat</code>. Aparecen aquí solas.</p>
+  <div id="lista"></div>
+</section>
 <main>
   <div class="panel">
     <div class="titulo">Cómo se usa</div>
@@ -79,8 +88,25 @@
   <div id="carriles" style="display:grid; gap:12px"></div>
 </main>
 
+<script src="_juntar/indice.js"></script>
 <script>
-const C = /*CANCIONES*/null;
+// Una sola página: juntar.html?c=<carpeta de _juntar>; los datos y el audio están en _juntar/<carpeta>/juntar_datos.js
+const JUNTA = new URLSearchParams(location.search).get("c") || "";
+if (JUNTA) document.write('<script src="_juntar/' + encodeURIComponent(JUNTA) + '/juntar_datos.js"><\/script>');
+</script>
+<script>
+if (!window.JUNTAR) {
+  document.querySelector("main").hidden = true; document.getElementById("elegir").hidden = false;
+  if (JUNTA) document.getElementById("titulo").textContent = "No encuentro «" + JUNTA + "»";
+  document.getElementById("lista").replaceChildren(...(window.JUNTAR_LISTA || []).map(c => {
+    const a = document.createElement("a"); a.href = "?c=" + encodeURIComponent(c); a.textContent = c; return a; }));
+}
+</script>
+<script>
+if (!window.JUNTAR) throw new Error("sin canciones elegidas");
+const C = JUNTAR.canciones;
+document.title = "Juntar · " + JUNTAR.titulo;
+document.getElementById("titulo").textContent = JUNTAR.titulo;
 const $ = id => document.getElementById(id);
 const COLORES = ["#f0c05a", "#7fb7d9", "#c96b8f", "#8fd18f"];
 const ctx = new AudioContext();

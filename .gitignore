@@ -96,3 +96,10 @@ output/
 
 # Caché del estado de la colección (una por ordenador, se regenera sola)
 data/cache_coleccion_*.csv
+
+# --- TDJ (21-11-2026) ---
+# programa de otros (Audiveris + su Java, 148 MB): está en Dropbox, no en git
+herramientas/partituras/audiveris/
+# resultados que vuelven a salir con las herramientas (ordenar_musica, fichas por sonido)
+herramientas/ordenar_musica/_*
+data/fichas_sonido.csv
