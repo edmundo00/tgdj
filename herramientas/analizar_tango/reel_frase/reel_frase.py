@@ -1,6 +1,6 @@
 """REEL «BAILAR LA FRASE» para cualquier tango y cualquier pareja (21-11-2026).
 
-Hecho a partir del reel de El Taller Tango con «Vieja calesita» (Instagram\\borradores\\colegas-DVTtXgTDFjZ, v14).
+Hecho a partir del reel de El Taller Tango con «Vieja calesita» (Instagram\\publicados\\2026-11-21_bailar-la-frase, v14).
 Todo sale de un guion.json (ejemplo: guion_calesita.json, al lado de este archivo):
   gancho (dos pasos · ¡CHAN! ¡CHAN! · ¡QUIETOS!, imagen congelada) → diapo «¿Por qué se han parado?» →
   «LAS FRASES EN EL TANGO» → la frase SOLO CON MÚSICA (esquema EL RITMO / VIOLINES / CANTOR, barra de 8 compases,
