@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elegir efectos</title>
+<style>
+  :root { --fondo:#faf6ef; --tarjeta:#fffdf9; --borde:#e4d8c6; --texto:#2a1f17; --suave:#8a7a6a; --oro:#b8892c; --azul:#1565c0; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--fondo); color:var(--texto); font:15px/1.4 "Segoe UI", system-ui, sans-serif; }
+  header { position:sticky; top:0; z-index:5; background:#2a1f17; color:#fff; padding:10px 16px; display:flex; flex-wrap:wrap;
+           gap:10px; align-items:center; box-shadow:0 2px 8px #0003; }
+  header h1 { font-size:18px; margin:0 12px 0 0; }
+  header .cuenta { font-weight:600; }
+  header button, header label { font:inherit; }
+  header button { background:var(--oro); color:#fff; border:0; border-radius:6px; padding:7px 14px; font-weight:600; cursor:pointer; }
+  header button.gris { background:#5a4636; }
+  header .ok { color:#9be59b; }
+  main { max-width:1100px; margin:0 auto; padding:12px 16px 80px; }
+  .ayuda { color:var(--suave); margin:6px 0 14px; }
+  h2 { font-size:17px; margin:22px 0 6px; border-bottom:2px solid var(--borde); padding-bottom:4px; }
+  .fila { display:grid; grid-template-columns:32px 44px minmax(160px,1.2fr) minmax(120px,1fr) 64px; gap:8px; align-items:center;
+          background:var(--tarjeta); border:1px solid var(--borde); border-radius:8px; padding:5px 8px; margin:4px 0; }
+  .fila.marcado { border-color:var(--oro); background:#fff6e2; }
+  .fila.suena { background:var(--azul); color:#fff; border-color:var(--azul); }
+  .fila.suena .orig, .fila.suena .dur { color:#dbe8ff; }
+  .fila input[type=checkbox] { width:20px; height:20px; cursor:pointer; }
+  .play { width:40px; height:32px; border-radius:6px; border:1px solid var(--borde); background:#fff; cursor:pointer; font-size:15px; }
+  .fila.suena .play { background:#fff; color:var(--azul); }
+  .nombre { width:100%; font:inherit; padding:4px 6px; border:1px solid var(--borde); border-radius:5px; background:#fff; color:var(--texto); }
+  .orig { color:var(--suave); font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .dur { color:var(--suave); font-size:13px; text-align:right; font-variant-numeric:tabular-nums; }
+  textarea { width:100%; height:180px; font:13px Consolas, monospace; margin-top:8px; }
+  @media (max-width:640px) {
+    .fila { grid-template-columns:28px 40px 1fr 52px; }
+    .orig { display:none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>🔔 Elegir efectos</h1>
+  <span class="cuenta" id="cuenta"></span>
+  <label><input type="checkbox" id="solo"> ver solo los marcados</label>
+  <button class="gris" id="parar">⏹ Parar</button>
+  <button id="copiar">📋 Copiar la lista para Claude</button>
+  <span class="ok" id="ok"></span>
+</header>
+<main>
+  <p class="ayuda">Efectos de <b>Mixkit</b> (gratis, sin tener que citar a nadie; suenan desde su web, hace falta
+    internet). ▶ para escuchar (otra vez = parar; espacio = parar lo que suena). Marca ☑ los que quieras y cambia el
+    nombre si quieres. Arriba de cada grupo van los que te propongo (ya marcados); al final, los de la Valentino que
+    marcaste antes, para comparar. Al acabar, <b>📋 Copiar la lista para Claude</b> y pégala en el chat. Se acuerda de lo
+    marcado aunque cierres la página.</p>
+  <div id="lista"></div>
+  <textarea id="texto" readonly hidden></textarea>
+</main>
+<audio id="audio"></audio>
+<script>
+const DATOS = __DATOS__;
+const GRUPOS = __GRUPOS__;
+const CLAVE = "tdj_elegir_efectos";
+let guardado = {};
+try { guardado = JSON.parse(localStorage.getItem(CLAVE) || "{}"); } catch (e) {}
+for (const f of DATOS) {
+  const g = guardado[f.id];
+  if (g) { f.marcado = g.m; if (g.n !== undefined) f.nombre = g.n; }
+}
+function guardar() {
+  const o = {};
+  for (const f of DATOS) o[f.id] = { m: f.marcado, n: f.nombre };
+  try { localStorage.setItem(CLAVE, JSON.stringify(o)); } catch (e) {}
+}
+const audio = document.getElementById("audio");
+let sonando = null;
+const mmss = s => s == null ? "" : (s >= 60 ? Math.floor(s / 60) + ":" + String(Math.round(s % 60)).padStart(2, "0") : s.toFixed(1) + " s");
+
+function pintar() {
+  const lista = document.getElementById("lista");
+  lista.innerHTML = "";
+  const solo = document.getElementById("solo").checked;
+  for (const g of GRUPOS) {
+    const filas = DATOS.filter(f => f.grupo === g && (!solo || f.marcado));
+    if (!filas.length) continue;
+    const h = document.createElement("h2");
+    h.textContent = `${g}  (${filas.filter(f => f.marcado).length} de ${filas.length})`;
+    lista.appendChild(h);
+    for (const f of filas) {
+      const d = document.createElement("div");
+      d.className = "fila" + (f.marcado ? " marcado" : "") + (sonando === f ? " suena" : "");
+      d.innerHTML = `<input type="checkbox" ${f.marcado ? "checked" : ""} title="Lo quiero">
+        <button class="play" title="Escuchar">${sonando === f ? "⏹" : "▶"}</button>
+        <input class="nombre" placeholder="(pon un nombre)">
+        <span class="orig" title="${f.original}">${f.original}</span>
+        <span class="dur" title="Lo que suena (el archivo dura ${mmss(f.seg)}: el resto es silencio; al copiarlo se quita)">${mmss(f.suena ?? f.seg)}</span>`;
+      d.querySelector(".nombre").value = f.nombre;
+      d.querySelector("input[type=checkbox]").onchange = e => {
+        f.marcado = e.target.checked;
+        if (f.marcado && !f.nombre) f.nombre = f.original;
+        guardar(); pintar();
+      };
+      d.querySelector(".nombre").onchange = e => { f.nombre = e.target.value.trim(); guardar(); };
+      d.querySelector(".play").onclick = () => tocar(f);
+      f.fila = d;
+      lista.appendChild(d);
+    }
+  }
+  const marcados = DATOS.filter(f => f.marcado);
+  const mb = marcados.reduce((a, f) => a + f.mb, 0);
+  document.getElementById("cuenta").textContent = `${marcados.length} marcados · ${mb.toFixed(0)} MB`;
+}
+function tocar(f) {
+  if (sonando === f) { parar(); return; }
+  audio.src = f.url;
+  audio.play().catch(() => alert("No se pudo reproducir: " + f.original));
+  sonando = f;
+  pintar();
+}
+function parar() { audio.pause(); sonando = null; pintar(); }
+audio.onended = () => { sonando = null; pintar(); };
+audio.ontimeupdate = () => {      // los efectos traen silencio al final: se para cuando deja de sonar
+  if (sonando && sonando.suena && audio.currentTime > sonando.suena + 0.4) parar();
+};
+document.getElementById("parar").onclick = parar;
+document.getElementById("solo").onchange = pintar;
+document.addEventListener("keydown", e => {
+  if (e.code === "Space" && e.target.tagName !== "INPUT") { e.preventDefault(); parar(); }
+});
+document.getElementById("copiar").onclick = async () => {
+  const lineas = ["EFECTOS"].concat(DATOS.filter(f => f.marcado).map(f => `${f.id} = ${f.nombre || f.original}`));
+  const texto = lineas.join("\n");
+  const t = document.getElementById("texto");
+  t.value = texto; t.hidden = false;
+  let ok = false;
+  try { await navigator.clipboard.writeText(texto); ok = true; } catch (e) {
+    t.select(); try { ok = document.execCommand("copy"); } catch (e2) {}
+  }
+  document.getElementById("ok").textContent = ok ? "✓ Copiada: pégala en el chat" : "Cópiala de abajo";
+};
+pintar();
+</script>
+</body>
+</html>

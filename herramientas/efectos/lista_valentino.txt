@@ -1,0 +1,26 @@
+EFECTOS
+VAL12-22 = Silbato de policía (varios pitidos)
+VAL02-38 = Aplausos 1
+VAL02-39 = Aplausos 2
+VAL02-42 = Aplausos 3
+VAL02-45 = Aplausos 4
+VAL12-73 = Campanilla de mostrador (atención)
+VAL12-10 = Campana suiza, 3 toques
+VAL12-76 = Campana de barco, un toque
+VAL12-66 = Triángulo, un golpe
+VAL01-87 = Timbre de puerta din-don
+VAL24-67 = Campanas de iglesia
+VAL01-90 = Campanas de iglesia - las 12
+VAL12-53 = Campana de ring de boxeo, 3 toques (última tanda)
+VAL10-24 = Corneta - toque de diana
+VAL10-27 = Corneta - toque de silencio
+VAL21-28 = Redoble de caja corto con platillo
+VAL02-26 = Gong grande
+VAL24-52 = Reloj de cuco - las 12
+VAL08-04 = Reloj de pared dando la hora
+VAL21-74 = Castañuelas
+VAL27-07 = Claqué, un paso
+VAL27-52 = Risas enlatadas 1
+VAL27-56 = Risas enlatadas 2
+VAL27-59 = Risas enlatadas 3
+VAL24-74 = Carillón de viento de cristal
