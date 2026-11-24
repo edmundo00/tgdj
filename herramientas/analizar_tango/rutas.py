@@ -14,7 +14,7 @@ Dentro de TDJ:
   MUSICA\\            donde se buscan los audios guardados con ruta relativa
   Partituras\\convertidas\\   donde se buscan las partituras .mxl
 """
-import os, json, shutil
+import os, json, glob, shutil
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 
@@ -29,6 +29,10 @@ def _local():
 
 
 _L = _local()
+# las rutas de rutas_local.json pueden ser relativas a esta carpeta (p. ej. "../Analisis tangos" en el paquete para compartir)
+for _k in ("tdj", "analisis", "venvs"):
+    if _L.get(_k) and not os.path.isabs(_L[_k]):
+        _L[_k] = os.path.join(AQUI, _L[_k])
 
 
 def _elegir_tdj():
@@ -79,7 +83,10 @@ def preparar_ffmpeg():
     """si ffmpeg no está en el PATH, lo busca en las carpetas de siempre y lo añade. Devuelve (ffmpeg, ffprobe)."""
     if not shutil.which("ffmpeg"):
         for d in (os.environ.get("FFMPEG_DIR", ""), r"C:\ffmpeg\bin",
-                  os.path.join(os.path.expanduser("~"), "herramientas", "ffmpeg", "bin")):
+                  os.path.join(os.path.expanduser("~"), "herramientas", "ffmpeg", "bin"),
+                  os.path.join(os.environ.get("LOCALAPPDATA", ""), "Microsoft", "WinGet", "Links"),   # winget install Gyan.FFmpeg
+                  *glob.glob(os.path.join(os.environ.get("LOCALAPPDATA", ""), "Microsoft", "WinGet", "Packages",
+                                          "Gyan.FFmpeg*", "ffmpeg-*", "bin"))):
             if d and (os.path.isfile(os.path.join(d, "ffmpeg.exe")) or os.path.isfile(os.path.join(d, "ffmpeg"))):
                 os.environ["PATH"] = d + os.pathsep + os.environ.get("PATH", "")
                 break

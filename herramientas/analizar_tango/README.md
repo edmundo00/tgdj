@@ -17,9 +17,25 @@ Hecho por Edmundo (@tdj.edmundo), DJ de tango, para preparar sus milongas y sus 
 - **Partitura** (si se la das) cuadrada compás a compás con la grabación.
 - **Vídeo** de bailarines cuadrado con la música (se puede subir desde la misma página) y marcar las pisadas.
 
-Funciona con doble clic, sin servidor: los datos de cada canción van en un `.js` junto a la página.
+Para **verlo** basta abrir `ritmo.html` con doble clic: los datos de cada canción van en un `.js` junto a la página.
+Para **analizar desde la página**, se abre con `abrir_visor.bat`.
 
-## Instalar (Windows)
+## Lo fácil (Windows)
+
+1. Doble clic en **`instalar.bat`** (una sola vez, unos minutos): instala Python y ffmpeg con winget si
+   faltan, crea el entorno en `%USERPROFILE%\venvs\analizar_tango` e instala las librerías.
+2. Doble clic en **`abrir_visor.bat`**: se abre el visor en el navegador (http://127.0.0.1:8765/ritmo.html).
+   Deja abierta la ventana negra mientras lo usas.
+3. En la página:
+   - **➕ Analizar una canción nueva** (o arrastrar un audio a la página). Opción de separar instrumentos.
+   - Herramientas → **«Aquí suena un 1»** + **«🔁 Volver a analizar así»** si el 1 o el compás salen mal.
+   - Herramientas → **«𝄞 Poner partitura…»** (MusicXML).
+   - **🎬 Vídeo** para poner un vídeo de baile.
+
+Los audios subidos se guardan en `Analisis tangos\_canciones\`. Todo se queda en el ordenador: el servidor
+solo escucha en 127.0.0.1.
+
+## Instalar a mano
 
 1. **Python 3.11 o más nuevo** (probado con 3.13).
 2. **ffmpeg**: bájalo de https://ffmpeg.org y deja `ffmpeg.exe` y `ffprobe.exe` en el PATH

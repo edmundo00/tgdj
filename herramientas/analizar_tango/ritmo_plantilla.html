@@ -640,6 +640,197 @@ if (CANCION) document.write('<script src="_ritmo/' + encodeURIComponent(CANCION)
 })();
 </script>
 <script>
+// ---------- analizar desde la página (24-11-2026). Solo con el visor abierto con abrir_visor.bat (servidor.py):
+// abierto con doble clic (file://) no puede lanzar programas y solo explica cómo hacerlo.
+(function () {
+  const G = id => document.getElementById(id);
+  const conServidor = location.protocol.startsWith("http");
+  const css = document.createElement("style");
+  css.textContent = `
+  .tdj_nueva { display:block; width:100%; margin:6px 0 2px; padding:9px 12px; font:inherit; font-weight:650; color:#1b140c;
+    background:var(--oro); border:0; border-radius:9px; cursor:pointer; text-align:left; }
+  .tdj_nueva:hover { background:var(--oro2); }
+  .tdj_nueva.apagada { background:var(--panel2); color:var(--suave); font-weight:400; border:1px dashed var(--borde); }
+  #tdj_dlg { width:min(560px, 94vw); background:var(--panel); color:var(--texto); border:1px solid var(--borde); border-radius:14px; padding:20px 22px; }
+  #tdj_dlg::backdrop { background:rgba(0,0,0,.6); }
+  #tdj_dlg h2 { margin:0 0 12px; color:var(--oro); font-size:20px; }
+  #tdj_dlg .zona { border:2px dashed var(--borde); border-radius:12px; padding:26px 14px; text-align:center; cursor:pointer; color:var(--suave); }
+  #tdj_dlg .zona.encima, #tdj_dlg .zona:hover { border-color:var(--oro); color:var(--texto); background:var(--sel); }
+  #tdj_dlg .zona b { color:var(--oro); font-size:17px; display:block; margin-bottom:4px; }
+  #tdj_dlg label { display:flex; gap:8px; align-items:flex-start; margin:12px 0 0; color:var(--texto); }
+  #tdj_dlg label span { color:var(--suave); font-size:13.5px; display:block; }
+  #tdj_dlg select { font:inherit; background:var(--panel2); color:var(--texto); border:1px solid var(--borde); border-radius:6px; }
+  #tdj_dlg .botones { display:flex; gap:8px; justify-content:flex-end; margin-top:16px; }
+  #tdj_dlg .botones button { font:inherit; padding:8px 16px; border-radius:9px; border:1px solid var(--borde); background:var(--panel2); color:var(--texto); cursor:pointer; }
+  #tdj_dlg .botones button.si { background:var(--oro); color:#1b140c; border:0; font-weight:700; }
+  #tdj_dlg .botones button:disabled { opacity:.45; cursor:default; }
+  #tdj_dlg pre { background:#0f0c09; border:1px solid var(--borde); border-radius:8px; padding:8px 10px; max-height:220px; overflow:auto;
+    font:12.5px/1.45 Consolas, monospace; color:var(--suave); white-space:pre-wrap; margin:12px 0 0; }
+  #tdj_dlg .estado { margin-top:12px; font-weight:650; }
+  #tdj_dlg .estado.mal { color:#ff8a7a; }
+  #tdj_dlg .barra_p { height:6px; background:var(--panel2); border-radius:3px; overflow:hidden; margin-top:8px; }
+  #tdj_dlg .barra_p i { display:block; height:100%; width:30%; background:var(--oro); animation:tdj_va 1.4s ease-in-out infinite; }
+  @keyframes tdj_va { 0% { margin-left:-30%; } 100% { margin-left:100%; } }
+  #tdj_dlg code { color:var(--oro); }
+  #tdj_dlg .nota { color:var(--suave); font-size:13.5px; margin:8px 0 0; }`;
+  document.head.append(css);
+
+  const dlg = document.createElement("dialog"); dlg.id = "tdj_dlg"; document.body.append(dlg);
+  dlg.addEventListener("keydown", e => e.stopPropagation());          // que espacio, R, flechas… no muevan la música de detrás
+  const cancion = window.RITMO ? RITMO.datos.meta.cancion : "";
+  const quita = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+  function sinServidor() {
+    dlg.innerHTML = `<h2>Analizar canciones nuevas</h2>
+      <p>Abierta con doble clic, la página solo puede <b>ver</b> lo analizado: el navegador no la deja lanzar programas.</p>
+      <p>Para analizar desde aquí, cierra esta pestaña y abre el visor con <code>ABRIR VISOR.bat</code>
+      (o <code>abrir_visor.bat</code> en la carpeta del programa). Se abre esta misma página con los botones para analizar.</p>
+      <p class="nota">La primera vez hay que pasar <code>INSTALAR.bat</code> (una sola vez, unos minutos).</p>
+      <div class="botones"><button class="si" data-cierra>Entendido</button></div>`;
+    dlg.querySelector("[data-cierra]").onclick = () => dlg.close();
+    dlg.showModal();
+  }
+
+  async function api(ruta, cuerpo) {
+    const r = await fetch(ruta, { method: "POST", headers: { "X-TDJ": "1" }, body: cuerpo || "" });
+    const j = await r.json().catch(() => ({ error: "respuesta rara del visor" }));
+    if (!r.ok || j.error) throw new Error(j.error || r.statusText);
+    return j;
+  }
+
+  // sigue un trabajo hasta el final; al terminar va a la canción (o la recarga)
+  function seguir(id, titulo, carpeta) {
+    dlg.innerHTML = `<h2>${quita(titulo)}</h2><div class="estado">Empezando…</div><div class="barra_p"><i></i></div>
+      <pre>…</pre><p class="nota">Puedes dejarlo trabajando. Sin separar instrumentos tarda 1–3 minutos; separando, 5–15.</p>
+      <div class="botones"><button data-cierra>Seguir en segundo plano</button></div>`;
+    dlg.querySelector("[data-cierra]").onclick = () => dlg.close();
+    if (!dlg.open) dlg.showModal();
+    const est = dlg.querySelector(".estado"), pre = dlg.querySelector("pre");
+    const vuelta = async () => {
+      let T;
+      try { T = await (await fetch("/api/trabajo?id=" + id)).json(); } catch (e) { est.textContent = "Se ha perdido el visor: ¿has cerrado su ventana negra?"; est.className = "estado mal"; return; }
+      pre.textContent = (T.lineas || []).join("\n") || "…"; pre.scrollTop = 1e9;
+      const min = Math.floor(T.segundos / 60), seg = String(T.segundos % 60).padStart(2, "0");
+      if (T.estado === "esperando") est.textContent = "Esperando a que termine el análisis anterior…";
+      else if (T.estado === "trabajando") est.textContent = `Trabajando… ${min}:${seg}`;
+      if (T.estado === "hecho") {
+        est.textContent = "¡Listo! Abriendo la canción…";
+        dlg.querySelector(".barra_p").hidden = true;
+        const c = T.carpeta || carpeta;
+        setTimeout(() => { location.href = "ritmo.html?c=" + encodeURIComponent(c); }, 700);
+        return;
+      }
+      if (T.estado === "error") {
+        est.textContent = "No ha salido: " + (T.error || "error"); est.className = "estado mal";
+        dlg.querySelector(".barra_p").hidden = true;
+        return;
+      }
+      setTimeout(vuelta, 1500);
+    };
+    vuelta();
+  }
+
+  function abrirNueva(archivoInicial) {
+    if (!conServidor) return sinServidor();
+    let archivo = archivoInicial || null;
+    dlg.innerHTML = `<h2>➕ Analizar una canción nueva</h2>
+      <div class="zona" tabindex="0"><b>Arrastra aquí el audio</b>o haz clic para elegirlo (flac, mp3, wav, m4a…)</div>
+      <input type="file" accept="audio/*,.flac,.mp3,.wav,.m4a,.ogg,.opus,.aif,.aiff" hidden>
+      <label><input type="checkbox" id="tdj_sep"><div>Separar instrumentos<span>Más lento (5–15 min), pero ve contrabajo, piano y bandoneones por separado:
+        los golpes y las notas de cada uno salen mucho mejor. Sin separar: 1–3 min, solo el pulso, el compás y el 1.</span></div></label>
+      <label><div>Compás <select id="tdj_compas"><option value="">que lo averigüe</option><option>2/4</option><option>3/4</option><option>4/4</option></select>
+        <span>Déjalo así salvo que ya sepas que lo pone mal (valses = 3/4).</span></div></label>
+      <div class="botones"><button data-cierra>Cancelar</button><button class="si" disabled>Analizar</button></div>`;
+    const zona = dlg.querySelector(".zona"), inp = dlg.querySelector("input[type=file]"), si = dlg.querySelector(".si");
+    const pon = f => { archivo = f; zona.innerHTML = `<b>🎵 ${quita(f.name)}</b>${(f.size / 1e6).toFixed(1)} MB · clic para cambiarla`; si.disabled = false; };
+    if (archivo) pon(archivo);
+    zona.onclick = () => inp.click();
+    inp.onchange = () => inp.files[0] && pon(inp.files[0]);
+    zona.ondragover = e => { e.preventDefault(); zona.classList.add("encima"); };
+    zona.ondragleave = () => zona.classList.remove("encima");
+    zona.ondrop = e => { e.preventDefault(); zona.classList.remove("encima"); if (e.dataTransfer.files[0]) pon(e.dataTransfer.files[0]); };
+    dlg.querySelector("[data-cierra]").onclick = () => dlg.close();
+    si.onclick = async () => {
+      si.disabled = true; si.textContent = "Subiendo…";
+      const q = new URLSearchParams({ nombre: archivo.name, separar: G("tdj_sep").checked ? "1" : "", compas: G("tdj_compas").value });
+      try { const j = await api("/api/analizar?" + q, archivo); seguir(j.id, "Analizando «" + archivo.name.replace(/\.[^.]+$/, "") + "»", j.carpeta); }
+      catch (e) { si.textContent = "Analizar"; si.disabled = false; alert(e.message); }
+    };
+    if (!dlg.open) dlg.showModal();
+  }
+
+  function abrirPartitura() {
+    if (!conServidor) return sinServidor();
+    dlg.innerHTML = `<h2>𝄞 Poner partitura a «${quita(cancion)}»</h2>
+      <div class="zona" tabindex="0"><b>Arrastra aquí la partitura</b>MusicXML: .mxl o .musicxml (en MuseScore: Archivo → Exportar → MusicXML)</div>
+      <input type="file" accept=".mxl,.musicxml,.xml" hidden>
+      <p class="nota">La cuadra sola con la grabación compás a compás. Si queda corrida, luego se arrastran en la lupa las rayas azules «P…».</p>
+      <div class="botones"><button data-cierra>Cancelar</button></div>`;
+    const zona = dlg.querySelector(".zona"), inp = dlg.querySelector("input[type=file]");
+    const subir = async f => {
+      zona.innerHTML = `<b>Subiendo ${quita(f.name)}…</b>`;
+      try { const j = await api("/api/partitura?" + new URLSearchParams({ c: CANCION || cancion, nombre: f.name }), f); seguir(j.id, "Cuadrando la partitura", j.carpeta); }
+      catch (e) { alert(e.message); dlg.close(); }
+    };
+    zona.onclick = () => inp.click(); inp.onchange = () => inp.files[0] && subir(inp.files[0]);
+    zona.ondragover = e => { e.preventDefault(); zona.classList.add("encima"); };
+    zona.ondragleave = () => zona.classList.remove("encima");
+    zona.ondrop = e => { e.preventDefault(); if (e.dataTransfer.files[0]) subir(e.dataTransfer.files[0]); };
+    dlg.querySelector("[data-cierra]").onclick = () => dlg.close();
+    dlg.showModal();
+  }
+
+  async function reanalizar() {
+    if (!conServidor) return sinServidor();
+    const t = (G("orden") || {}).textContent || "";
+    const compas = (t.match(/--compas (\d\/4)/) || [])[1] || "", uno = (t.match(/--uno ([\d.]+)/) || [])[1] || "";
+    if (!compas && !uno) { alert("Primero pulsa «Aquí suena un 1» justo cuando suene un 1, o elige el compás."); return; }
+    try { const j = await api("/api/reanalizar?" + new URLSearchParams({ c: CANCION || cancion, compas, uno }));
+          seguir(j.id, "Volviendo a analizar" + (compas ? " en " + compas : "") + (uno ? " con el 1 en " + (+uno).toFixed(2) + " s" : ""), j.carpeta); }
+    catch (e) { alert(e.message); }
+  }
+
+  const boton = (texto, titulo, fn, apagado) => { const b = document.createElement("button"); b.type = "button";
+    b.className = "tdj_nueva" + (apagado ? " apagada" : ""); b.textContent = texto; b.title = titulo; b.onclick = fn; return b; };
+  const tNueva = conServidor ? "➕ Analizar una canción nueva" : "➕ Analizar una canción nueva (abre el visor con ABRIR VISOR.bat)";
+  // en el desplegable de canciones y en la portada (sin canción)
+  const pop = G("buscar_c") && G("buscar_c").parentNode;
+  if (pop) pop.insertBefore(boton(tNueva, "Arrastra un audio y lo analiza", () => abrirNueva(), !conServidor), G("lista_c"));
+  if (!window.RITMO) {                 // portada: el panel de la lupa vacío no pinta nada (main lleva display propio y no hace caso de hidden)
+    const m = document.querySelector("main"); if (m) m.style.display = "none";
+    const p = G("elegir") && G("elegir").querySelector("p");
+    if (p) p.innerHTML = conServidor ? "Elige una canción analizada, o arrastra un audio a la página para analizarlo."
+                                     : "Elige una canción analizada (las nuevas aparecen solas al pasarles <code>ritmo.bat</code>).";
+  }
+  const lista = G("lista");
+  if (lista) lista.parentNode.insertBefore(boton(tNueva, "Arrastra un audio y lo analiza", () => abrirNueva(), !conServidor), lista);
+  // en Herramientas: corregir el compás / el 1 y poner partitura
+  if (window.RITMO) {
+    const orden = G("orden");
+    if (orden) orden.parentNode.after(Object.assign(boton("🔁 Volver a analizar así", "Lo analiza otra vez con el compás y el 1 que has marcado", reanalizar, !conServidor), { style: "width:auto;margin-top:10px" }));
+    if (orden && conServidor) { const ay = orden.closest(".caja").querySelector(".ayuda");
+      if (ay) ay.textContent = "Escucha y, justo cuando suene un 1, pulsa «Aquí suena un 1» (y el compás, si está mal). Luego, «Volver a analizar así»."; }
+    const herr = G("herramientas");
+    if (herr) {
+      const caja = document.createElement("div"); caja.className = "caja";
+      caja.innerHTML = `<h3>Partitura</h3><div class="ayuda">Pon la partitura (MusicXML) de esta grabación: se cuadra sola y sale debajo de la lupa.</div>`;
+      caja.append(Object.assign(boton("𝄞 Poner partitura…", "Subir un .mxl o .musicxml", abrirPartitura, !conServidor), { style: "width:auto" }));
+      herr.querySelector("summary").after(caja);
+    }
+  }
+  // soltar un audio en cualquier sitio de la página = analizarlo
+  if (conServidor) {
+    document.addEventListener("dragover", e => { if ([...e.dataTransfer.types].includes("Files") && !dlg.open) e.preventDefault(); });
+    document.addEventListener("drop", e => {
+      if (dlg.open) return;
+      const f = e.dataTransfer.files[0];
+      if (f && /\.(flac|mp3|wav|m4a|ogg|opus|aiff?|aac|wma)$/i.test(f.name)) { e.preventDefault(); abrirNueva(f); }
+    });
+  }
+  window.TDJ_ANALIZAR = { abrirNueva, abrirPartitura, reanalizar, conServidor };
+})();
+</script>
+<script>
 if (!window.RITMO) throw new Error("sin canción elegida");
 // ajustes de los destellos de las pisadas (⚙ del vídeo; se guardan en este navegador)
 const EST_DEF = { r: 46, c: 5, f: 0.8, d: 0.6 };
