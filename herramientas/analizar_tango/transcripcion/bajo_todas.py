@@ -9,7 +9,9 @@ Uso (python de venvs\\analizar_tango):  python bajo_todas.py
 import os, sys, json, time, subprocess, datetime
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
-RAIZ = r"D:\Dropbox\TDJ\Analisis tangos"
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import rutas
+RAIZ = rutas.ANALISIS
 RITMO = os.path.join(RAIZ, "_ritmo")
 ESTADO = os.path.join(RITMO, "_BAJO_ESTADO.txt")
 BAJA = 0x00004000   # BELOW_NORMAL_PRIORITY_CLASS
@@ -17,7 +19,7 @@ BAJA = 0x00004000   # BELOW_NORMAL_PRIORITY_CLASS
 
 def audio_de(a):
     # algunos análisis guardaron la ruta relativa (a MUSICA o a TDJ), como en pagina_ritmo.py
-    for r in (a, os.path.join(r"D:\Dropbox\TDJ\MUSICA", a), os.path.join(r"D:\Dropbox\TDJ", a)):
+    for r in (a, os.path.join(rutas.MUSICA, a), os.path.join(rutas.TDJ, a)):
         if r and os.path.exists(r):
             return r
     return None

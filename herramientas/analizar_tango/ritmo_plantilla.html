@@ -332,7 +332,7 @@
       <span id="donde"></span>
       <div class="menu" id="m_ncomp" title="Cuántos compases se ven en la lupa (también Ctrl + rueda del ratón, o pellizcar)">
         <button class="abre" id="ncomp_btn">🔍 2 compases ▾</button>
-        <div class="pop"><div class="seg" id="seg_ncomp"><button data-ncomp="1">1</button><button data-ncomp="2">2</button><button data-ncomp="4">4</button><button data-ncomp="8">8</button></div></div>
+        <div class="pop"><div class="seg" id="seg_ncomp"><button data-ncomp="1">1</button><button data-ncomp="2">2</button><button data-ncomp="4">4</button><button data-ncomp="8">8</button><button id="ncomp_rep" title="Ver en la lupa justo los compases que se repiten (los de «repetir de … a …»)">🔁 el trozo</button></div></div>
       </div>
       <div class="menu" id="m_comprobar">
         <button class="abre" title="Clics para comprobar el ritmo de oído">🔔 Comprobar ▾</button>
@@ -384,7 +384,7 @@
     <div id="caja_lupa"><canvas id="lupa"></canvas><div id="menu_fila" class="pop" hidden></div>
       <div id="pis_sel" class="pop" hidden>
         <span id="pis_sel_que"></span>
-        <div class="seg"><button data-pmueve="-1" title="Un fotograma antes (←)">◀ 1 fot.</button><button data-pmueve="1" title="Un fotograma después (→)">1 fot. ▶</button></div>
+        <div class="seg"><button data-pmueve="-1" title="Mover la pisada un fotograma antes">◀ 1 fot.</button><button data-pmueve="1" title="Mover la pisada un fotograma después">1 fot. ▶</button></div>
         <span class="ayuda">🧲 a</span>
         <div class="seg"><button data-piman="1" title="Al tiempo más cercano">1 tiempo</button><button data-piman="2" title="A la corchea más cercana (½ tiempo)">½</button><button data-piman="4" title="A la semicorchea más cercana (¼ de tiempo)">¼</button><button data-piman="3" title="Al tresillo más cercano (⅓ de tiempo)">tresillo</button></div>
         <button id="pis_pie" title="Cambiar de pie (izquierdo ↔ derecho)">I ↔ D</button>
@@ -512,9 +512,9 @@
       <li><b>🎬 Vídeo</b>: a la derecha (en el móvil en vertical, encima), va solo con la música; clic = escuchar / parar; <kbd>V</kbd> = enseñarlo u ocultarlo;
         ‹ › = fotograma a fotograma. <b>⚓ ▾</b>: si va antes o después que la música (±50 ms, ±1 fotograma; o arrastrar en la lupa la raya morada
         «▶ vídeo»), 🔊 oír el sonido del vídeo en vez del disco, añadir o quitar vídeos.</li>
-      <li><b>👣 marcar</b>: los botones salen a la izquierda del vídeo y el vídeo se hace tan alto como la pantalla. Botones <b>I D</b> (pie izquierdo / derecho) de la follower (teclas <kbd>Q</kbd> <kbd>W</kbd>) y del leader (<kbd>O</kbd> <kbd>P</kbd>); el nombre se cambia escribiendo encima. Moviola (con el vídeo a la vista): <kbd>←</kbd> <kbd>→</kbd> = un fotograma, Mayús + flecha = ¼ de tiempo, Ctrl + flecha = un compás; el espacio sigue desde donde paraste. Para colocar los pies: <kbd>Tab</kbd> = la siguiente pisada sin sitio, y clic en su pie en el vídeo (al pasar el ratón sale una lupa ×3 con una cruz); <kbd>E</kbd> = esconder las marcas. Sonando (con
-        «retraso del dedo») o parado, fotograma a fotograma con <kbd>,</kbd> <kbd>.</kbd>. <kbd>Z</kbd> = deshacer. <b>Tocar una pisada = elegirla</b>: arrastrarla, <kbd>←</kbd> <kbd>→</kbd> = un fotograma, 🧲 1 tiempo / ½ / ¼ / tresillo, I ↔ D, adorno, 🗑 (<kbd>Supr</kbd>); <kbd>Esc</kbd> = soltarla.
-        Salen en las filas «👣» (I arriba, D abajo; aro = adorno). 🧲 imán = la pisada se va sola al tiempo (o a la casilla, o al golpe de sonido) más cercano; «🧲 ajustar todas» lo hace con las ya puestas. Clic en el pie, en el vídeo = dónde está (⭐ estrella al sonar). «📋 Copiar para Claude» = el texto PISADAS para guardarlas para siempre.</li>
+      <li><b>👣 marcar</b>: los botones salen a la izquierda del vídeo y el vídeo se hace tan alto como la pantalla. Botones <b>I D</b> (pie izquierdo / derecho) de la follower (teclas <kbd>Q</kbd> <kbd>W</kbd>) y del leader (<kbd>O</kbd> <kbd>P</kbd>); el nombre se cambia escribiendo encima. <b>Así se marca</b>: busca el fotograma con <kbd>←</kbd> <kbd>→</kbd>, pulsa el pie (I D o su tecla) y haz clic en ese pie en el vídeo; la pisada nueva queda elegida hasta que te vas a otro fotograma. Al escuchar se ven todas. Moviola (con el vídeo a la vista): <kbd>←</kbd> <kbd>→</kbd> = un fotograma, Mayús + flecha = ¼ de tiempo, Ctrl + flecha = un compás; el espacio sigue desde donde paraste. Para colocar los pies: <kbd>Tab</kbd> = la siguiente pisada sin sitio, y clic en su pie en el vídeo (al pasar el ratón sale una lupa ×3 con una cruz); <kbd>E</kbd> = esconder las marcas. Sonando (con
+        «retraso del dedo») o parado, fotograma a fotograma con <kbd>,</kbd> <kbd>.</kbd>. <kbd>Z</kbd> = deshacer. <b>Tocar una pisada = elegirla</b>: arrastrarla, ◀ 1 fot. ▶ = moverla un fotograma (las flechas mueven el vídeo, no la pisada), 🧲 1 tiempo / ½ / ¼ / tresillo, I ↔ D, adorno, 🗑 (<kbd>Supr</kbd>); <kbd>Esc</kbd> = soltarla.
+        Salen en las filas «👣» (I arriba, D abajo; aro = adorno). 🧲 imán (solo marcando con la música sonando; parado, va al fotograma que ves) = la pisada se va sola al tiempo (o a la casilla, o al golpe de sonido) más cercano; «🧲 ajustar todas» lo hace con las ya puestas. Clic en el pie, en el vídeo = dónde está (⭐ estrella al sonar). «📋 Copiar para Claude» = el texto PISADAS para guardarlas para siempre.</li>
       <li><b>Clip para un reel</b>: elige el trozo, «Herramientas → 💾 Guardar el trozo» y arrastra el archivo encima de <code>clip_reel.bat</code>.</li>
       <li><b>〰 ondas</b>: detrás de cada fila, la onda de su pista separada: se ve quién suena y cuándo.</li>
     </ul>
@@ -537,6 +537,13 @@
           </div>
           <div class="ayuda">También: arrastrar en la lupa la raya morada «▶ vídeo».</div>
           <label class="interruptor" title="Un destello en el pie de cada pisada al sonar (las que tienen su sitio marcado)"><input type="checkbox" id="ver_estrellas" checked> ⭐ estrellas en los pies</label>
+          <div id="ajuste_estrellas" title="Cómo se ven los destellos de las pisadas (se guarda en este navegador)">
+            <div class="fila"><span class="ayuda" style="min-width:5.5em">tamaño</span><input type="range" id="est_r" min="15" max="120" step="1"><span id="est_r_v" class="ayuda"></span></div>
+            <div class="fila"><span class="ayuda" style="min-width:5.5em">centro opaco</span><input type="range" id="est_c" min="1" max="30" step="1"><span id="est_c_v" class="ayuda"></span></div>
+            <div class="fila"><span class="ayuda" style="min-width:5.5em">color fuerte</span><input type="range" id="est_f" min="0" max="1" step="0.05"><span id="est_f_v" class="ayuda"></span></div>
+            <div class="fila"><span class="ayuda" style="min-width:5.5em">dura</span><input type="range" id="est_d" min="0.2" max="2" step="0.05"><span id="est_d_v" class="ayuda"></span></div>
+            <div class="fila"><button id="est_probar" title="Enseña un destello en el centro del vídeo con estos ajustes">👁 probar</button><button id="est_defecto" title="Volver a los de siempre">↺ los de siempre</button></div>
+          </div>
           <label class="interruptor" title="Se oye el sonido del propio vídeo (la sala, los aplausos) en vez del disco: sirve para comprobar de oído que cuadra"><input type="checkbox" id="sonido_video" autocomplete="off"> 🔊 sonido del vídeo en vez del disco</label>
           <div class="fila"><button id="video_mas" title="Añadir otro vídeo de este ordenador">＋ añadir otro vídeo</button>
             <button id="video_quitar" class="oculto" title="Quitar este vídeo de la página">🗑 quitar este vídeo</button></div>
@@ -562,7 +569,7 @@
         <input class="bailarin" id="nom_b1" title="Nombre (escribe para cambiarlo)" autocomplete="off">
         <div class="pies"><button class="tecla" data-pon="1,I" title="Pie izquierdo (tecla O)">I<small>O</small></button><button class="tecla" data-pon="1,D" title="Pie derecho (tecla P)">D<small>P</small></button></div>
       </div>
-      <div class="bloque" title="Imán: cada pisada nueva se va sola al punto más cercano (si está a menos de 0,15 s)">
+      <div class="bloque" title="Imán: marcando CON LA MÚSICA SONANDO, cada pisada nueva se va sola al punto más cercano (si está a menos de 0,15 s). Parado, la pisada va al fotograma que se ve, sin imán">
         <div class="etq">🧲 Imán</div>
         <div class="seg" id="seg_iman"><button data-iman="tiempos" class="on" title="Al tiempo (1 2 3 4)">tiempo</button><button data-iman="2" title="A la corchea (½ tiempo)">½</button><button data-iman="4" title="A la semicorchea (¼ de tiempo)">¼</button><button data-iman="3" title="Al tresillo (⅓ de tiempo)">tresillo</button><button data-iman="sonido" title="Al golpe de sonido más cercano">golpe</button><button data-iman="" title="Sin imán: donde pulses">no</button></div>
         <input type="hidden" id="iman" value="tiempos">
@@ -634,6 +641,10 @@ if (CANCION) document.write('<script src="_ritmo/' + encodeURIComponent(CANCION)
 </script>
 <script>
 if (!window.RITMO) throw new Error("sin canción elegida");
+// ajustes de los destellos de las pisadas (⚙ del vídeo; se guardan en este navegador)
+const EST_DEF = { r: 46, c: 5, f: 0.8, d: 0.6 };
+let EST = { ...EST_DEF };
+try { Object.assign(EST, JSON.parse(localStorage.getItem("tdj_estrellas") || "{}")); } catch (e) {}
 const D = RITMO.datos;
 const AUD = RITMO.audios;
 document.title = "Ritmo · " + D.meta.cancion;
@@ -662,9 +673,73 @@ const vidFin = () => vidIni() + VV().dur * VV().velocidad;
 // pistas separadas sin golpes (la voz): una fila solo con su onda (19-11-2026)
 const SOLO_ONDA = Object.keys(AUD).filter(n => n !== "mezcla" && !FUENTES.includes(n));
 SOLO_ONDA.forEach(n => { FUENTES.push(n); COL[n] = COL[n] || "#8fd18f"; });
+// golpes de la PARTITURA en la lupa (23-11-2026, Edmundo: «una barra con los toques de la partitura donde toca
+// exactamente, no con notación sino con golpes en la cuadrícula»). Salen del MusicXML que ya trae partitura_datos.js
+// (no hay que volver a analizar). Cada nota guarda su sitio en negras dentro de su compás; el segundo se calcula al
+// dibujar con TP (el cuadre + las anclas de la página), así que si se mueven las rayas P… los golpes van con ellas.
+// Una fila «♪ …» por grupo de partes (bandoneones, piano, contrabajo, cuerdas, voz, otros).
+const PTF = {};                               // fila → { grupo, notas: [[parte, q, dur, midi, acento, nAcorde]] }
+const PT_PARTES = [];                         // por parte: { Q0: inicio de cada compás en negras, LQ: largo }
+const PT_FILAS = [];
+(function golpesPartitura() {
+  const PTd = window.PARTITURA; if (!PTd || !PTd.xml) return;
+  let doc; try { doc = new DOMParser().parseFromString(PTd.xml, "application/xml"); } catch (e) { return; }
+  const SEMI = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  const NOMG = { bandoneones: "Bandoneones", piano: "Piano", contrabajo: "Contrabajo", cuerdas: "Cuerdas", voz: "Voz", otros: "Otros" };
+  const COLG = { bandoneones: "#d77aa0", piano: "#f1d58a", contrabajo: "#e0913c", cuerdas: "#a7d68f", voz: "#8fd18f", otros: "#7fb7d9" };
+  const porGrupo = {};
+  [...doc.querySelectorAll("score-partwise > part")].forEach(part => {
+    const info = (PTd.partes || []).find(p => p.id === part.getAttribute("id")) || { nombre: part.getAttribute("id"), grupo: "otros" };
+    const ip = PT_PARTES.length, Q0 = [], LQ = [], notas = [], abiertas = {};
+    let div = 1, largo = 4, q0 = 0;
+    for (const m of part.querySelectorAll(":scope > measure")) {
+      let pos = 0, maxpos = 0, ultimo = 0;
+      for (const e of m.children) {
+        if (e.tagName === "attributes") {
+          const d = e.querySelector("divisions"); if (d) div = +d.textContent || 1;
+          const b = e.querySelector("time > beats"), bt = e.querySelector("time > beat-type");
+          if (b && bt) { const s = b.textContent.split("+").reduce((x, y) => x + (+y || 0), 0); if (s) largo = s * 4 / (+bt.textContent || 4); }
+        } else if (e.tagName === "backup") pos -= (+(e.querySelector("duration") || {}).textContent || 0) / div;
+        else if (e.tagName === "forward") { pos += (+(e.querySelector("duration") || {}).textContent || 0) / div; maxpos = Math.max(maxpos, pos); }
+        else if (e.tagName === "note") {
+          if (e.querySelector(":scope > grace")) continue;
+          const dur = (+(e.querySelector(":scope > duration") || {}).textContent || 0) / div;
+          const acorde = !!e.querySelector(":scope > chord"), ini = acorde ? ultimo : pos;
+          if (!acorde) { ultimo = pos; pos += dur; maxpos = Math.max(maxpos, pos); }
+          const p = e.querySelector(":scope > pitch"); if (!p) continue;   // silencio (o percusión): nada
+          const midi = 12 * (+p.querySelector("octave").textContent + 1) + SEMI[p.querySelector("step").textContent] + Math.round(+((p.querySelector("alter") || {}).textContent || 0));
+          const ties = [...e.querySelectorAll(":scope > tie")].map(t => t.getAttribute("type"));
+          if (ties.includes("stop") && abiertas[midi]) {   // ligada: no es golpe, alarga la de antes
+            abiertas[midi][2] += dur; if (!ties.includes("start")) delete abiertas[midi]; continue;
+          }
+          const acc = e.querySelector("notations articulations strong-accent") ? 2 : e.querySelector("notations articulations accent") ? 1 : 0;
+          const n = [ip, q0 + ini, dur, midi, acc, 1]; notas.push(n);
+          if (ties.includes("start")) abiertas[midi] = n;
+        }
+      }
+      const q = (m.getAttribute("implicit") === "yes" && maxpos > 0) ? maxpos : largo;
+      Q0.push(q0); LQ.push(q); q0 += q;
+    }
+    PT_PARTES.push({ Q0, LQ });
+    (porGrupo[info.grupo] = porGrupo[info.grupo] || { partes: [], notas: [] }).partes.push(info.nombre);
+    porGrupo[info.grupo].notas.push(...notas);
+  });
+  const orden = ["bandoneones", "piano", "contrabajo", "cuerdas", "voz", "otros"].filter(g => porGrupo[g] && porGrupo[g].notas.length);
+  for (const g of orden) {
+    const G2 = porGrupo[g], f = "♪ " + (G2.partes.length === 1 ? G2.partes[0] : NOMG[g]);
+    G2.notas.sort((x, y) => x[1] - y[1] || y[3] - x[3]);
+    // acordes: las notas que empiezan juntas (en el mismo grupo) cuentan como un golpe más gordo
+    for (let i = 0; i < G2.notas.length;) { let j = i; while (j < G2.notas.length && Math.abs(G2.notas[j][1] - G2.notas[i][1]) < 1e-6) j++;
+      for (let k = i; k < j; k++) G2.notas[k][5] = j - i; i = j; }
+    PTF[f] = { grupo: g, partes: G2.partes, notas: G2.notas }; PT_FILAS.push(f); COL[f] = COLG[g];
+  }
+})();
+FUENTES.push(...PT_FILAS);
 FUENTES.push(...PIS_FILAS);
 const PISTA_DE = f => (f in AUD && f !== "mezcla") ? f : null;   // la pista de audio de cada fila (si tiene)
 const filaOculta = {};                                   // filas de la lupa escondidas (clic en «Filas»)
+// con muchas filas de partitura (12 partes = hasta 6 grupos), de entrada solo las de ritmo; las demás, en ⚙ Ver → Filas
+if (PT_FILAS.length > 3) PT_FILAS.forEach(f => { if (!["bandoneones", "piano", "contrabajo"].includes(PTF[f].grupo)) filaOculta[f] = true; });
 const FV = () => FUENTES.filter(f => !filaOculta[f]);
 const $ = id => document.getElementById(id);
 const beats = P.map(p => p.seg), unos = P.filter(p => p.tiempo === 1).map(p => p.seg);
@@ -756,6 +831,9 @@ async function escuchar(desde) {
   const cl = [];
   for (const gg of G) if (clic[gg.fuente] && gg.seg >= desde && gg.seg < fin) cl.push([gg.seg, TONO[gg.fuente] || 1000, 0.08 + 0.18 * gg.fuerza, 0.03]);
   // bajo (notas): un pitido con la nota que ha oído el modelo, dos octavas más alto para que se oiga
+  // golpes de la partitura: un clic en cada golpe escrito (más fuerte con acento o acorde), en su segundo cuadrado
+  for (const f of PT_FILAS) if (clic[f]) for (const [s, , , acc, nn] of golpesP(f, desde, fin))
+    if (s >= desde && s < fin) cl.push([s, TONO[PTF[f].grupo] || 1980, acc || nn > 2 ? 0.26 : 0.14, 0.03]);
   if (clic[BAJO_F]) for (const [s, e, p] of BJ) if (s >= desde && s < fin) cl.push([s, 440 * Math.pow(2, (p + 24 - 69) / 12), 0.12, Math.min(0.12, e - s)]);
   // pisadas de los bailarines: un clic en cada una (agudo ella, grave él)
   if (hayV()) { const V = VV(), dd = vDes[V.id] || 0;
@@ -892,8 +970,8 @@ function abreMenuFila(f, y) {
   const boton = (txt, on, fn, ti) => { const b = document.createElement("button"); b.textContent = txt; b.title = ti || ""; b.classList.toggle("on", !!on);
     b.onclick = () => { fn(); cierraMenuFila(); }; mf.appendChild(b); };
   if (p) boton(solo === p ? "🎧 dejar de oírlo solo" : "🎧 oír solo " + f, solo === p, () => ponSolo(solo === p ? null : p), "Solo se oye esta pista separada");
-  if (conClic) boton(clic[f] ? "🔔 quitar el clic" : (f === BAJO_F ? "🔔 tocar las notas del bajo" : f in PIS_F ? "🔔 clic en cada pisada" : "🔔 clic en sus golpes"), clic[f],
-                     () => { clic[f] = !clic[f]; cambiaClics(); }, f === BAJO_F ? "Un pitido con cada nota que ha oído la máquina" : "Un clic en cada golpe medido");
+  if (conClic) boton(clic[f] ? "🔔 quitar el clic" : (f === BAJO_F ? "🔔 tocar las notas del bajo" : f in PIS_F ? "🔔 clic en cada pisada" : f in PTF ? "🔔 clic en lo escrito" : "🔔 clic en sus golpes"), clic[f],
+                     () => { clic[f] = !clic[f]; cambiaClics(); }, f === BAJO_F ? "Un pitido con cada nota que ha oído la máquina" : f in PTF ? "Un clic en cada golpe que pone la partitura (más fuerte con acento o acorde)" : "Un clic en cada golpe medido");
   if (CMP && f === CMP.f) {
     boton("🎧 oír esta grabación desde aquí", false, oirComparada, "Para lo que suena y pone la otra grabación en el mismo compás (al 100 %)");
     boton("abrir su página en este compás", false, () => { location.href = "?c=" + encodeURIComponent(CMP.c) + "&compas=" + Math.max(1, compasDe(ahora() + 0.01) + CMP.off); });
@@ -930,7 +1008,12 @@ function dibujaVista() {
 
 // ---------- lupa
 let vIni = unos.length ? unos[0] : beats[0];
+let VREP = false;   // la lupa enseña justo el trozo que se repite (🔁 el trozo, en el menú de compases)
 function ventana() {
+  if (VREP && sel && sel.b > sel.a) {
+    const a = unos.filter(u => u <= sel.a + 0.05).pop() ?? sel.a, b = unos.find(u => u >= sel.b - 0.05) ?? sel.b;
+    return [a, b > a ? b : a + 4 * durBeat];
+  }
   const n = NCOMP;
   let i = unos.findIndex(t => t >= vIni - 0.01); if (i < 0) i = 0;
   const a = unos[i], b = unos[Math.min(i + n, unos.length - 1)] || a + n * 4 * durBeat;
@@ -985,6 +1068,7 @@ function vacia(f) {
   if (f in PIS_F) { const V = hayV() ? VV() : null, i = V ? V.bailarines.findIndex(b => b.nombre === PIS_F[f]) : -1;
     r = !(i >= 0 && (V.pisadas.some(q => q[1] === i) || (typeof marcando !== "undefined" && marcando))); }
   else if (f === BAJO_F || (CMP && f === CMP.f)) r = false;
+  else if (f in PTF) r = !PTF[f].notas.length;
   else r = !(($("ver_ondas").checked && PISTA_DE(f)) || ($("ver_golpes").checked && G.some(g => g.fuente === f))
              || ($("ver_notas").checked && NOTAS.some(n => n.fuente === f && n.fuerza >= 0.25)));
   return vacCache.v[f] = r;
@@ -1033,6 +1117,7 @@ async function dibujaLupa() {
     const kr = Math.min(1, m.fila / 78);   // filas bajas: puntos más pequeños
     if ($("ver_ondas").checked && PISTA_DE(f)) ondaFila(g, x, a, b, y, m, PISTA_DE(f), col);
     if (f in PIS_F) { pisadasFila(g, x, a, b, y, m, f, col); return; }
+    if (f in PTF) { partituraFila(g, x, a, b, y, m, f, col, ancho16); return; }
     if (CMP && f === CMP.f) { filaComparar(g, x, a, b, y, m, col, X0, X1); return; }
     if (f === BAJO_F) {   // barrita por nota: a lo ancho, lo que dura; de alto, lo aguda que es (entre la más grave y la más aguda)
       const vis = BJ.filter(n => n[1] >= a && n[0] <= b);
@@ -1108,7 +1193,7 @@ async function dibujaLupa() {
   if (clave === ventana().join("|")) rayasPartituraLupa(g, x, a, b, m, w);
   if (hayV() && clave === ventana().join("|")) rayasVideoLupa(g, x, a, b, m, w, h);
   if (MARCAS.length && clave === ventana().join("|")) marcasLupa(g, x, a, b, m, w, h);
-  $("donde").textContent = `compás ${compasDe(a + 0.01)}` + (NCOMP > 1 ? `–${compasDe(b - 0.01)}` : "");
+  $("donde").textContent = `compás ${compasDe(a + 0.01)}` + (compasDe(b - 0.01) > compasDe(a + 0.01) ? `–${compasDe(b - 0.01)}` : "");
 }
 
 // onda de cada pista separada, detrás de su fila (envolvente cada 10 ms, escala de toda la canción)
@@ -1217,7 +1302,11 @@ arrastre(cl, e => { const r = cl.getBoundingClientRect(), [a, b] = ventana(), m 
 // viene de partitura.py; las anclas puestas aquí (arrastrando en la lupa o con el botón) lo corrigen al momento y se
 // guardan en este navegador; para que valgan siempre, el texto ANCLAS se pasa a Claude (partitura.py --ancla).
 const PT = window.PARTITURA || null;
-const CLAVE_ANCLAS = "tdj_anclas:" + CANCION, CLAVE_PARTES = "tdj_partes:" + CANCION;
+// las anclas van con ESA partitura (nombre + nº de compases): con la clave solo por canción, las de una partitura
+// vieja corrían la nueva (pasó con «El buey solo», 23-11-2026: un ancla de la versión en 4/4 la movía 6 tiempos)
+const CLAVE_ANCLAS = "tdj_anclas:" + CANCION + (PT ? ":" + PT.partitura + ":" + PT.compases.length : ""),
+      CLAVE_PARTES = "tdj_partes:" + CANCION;
+try { localStorage.removeItem("tdj_anclas:" + CANCION); } catch (e) {}   // las de antes (sin partitura): fuera
 let anclas = {};      // índice de compás de la partitura → segundo
 try { anclas = JSON.parse(localStorage.getItem(CLAVE_ANCLAS) || "{}"); } catch (e) {}
 let TP = [];          // segundo en que empieza cada compás de la partitura (+ el final), ya con las anclas
@@ -1456,6 +1545,64 @@ function marcaPartitura(forzar) {
   } else if (ag) ag.remove();
 }
 // rayas de compás de la partitura en la lupa (azules, en la franja de la onda): se pueden arrastrar para cuadrarla
+// segundo de la grabación de un punto de la partitura (parte ip, q negras desde el principio), con el cuadre de ahora
+function tQ(ip, q) {
+  const P2 = PT_PARTES[ip]; if (!P2 || !TP.length) return null;
+  let lo = 0, hi = P2.Q0.length - 1;
+  while (lo < hi) { const k = (lo + hi + 1) >> 1; if (P2.Q0[k] <= q + 1e-6) lo = k; else hi = k - 1; }
+  if (lo >= TP.length - 1) return q >= P2.Q0[lo] && lo === TP.length - 1 ? TP[lo] : null;   // más allá del cuadre
+  return TP[lo] + (q - P2.Q0[lo]) / (P2.LQ[lo] || 1) * (TP[lo + 1] - TP[lo]);
+}
+// golpes escritos de una fila «♪ …» que caen entre a y b: [segundo, fin, nota (la más aguda), acento, nº de notas juntas, compás, q dentro del compás]
+function golpesP(f, a, b) {
+  const out = [], N = PTF[f].notas;
+  for (let i = 0; i < N.length;) {
+    let j = i, dur = 0; while (j < N.length && Math.abs(N[j][1] - N[i][1]) < 1e-6) { dur = Math.max(dur, N[j][2]); j++; }
+    const n = N[i], s = tQ(n[0], n[1]);
+    if (s !== null && s <= b + 0.05) {
+      const e = tQ(n[0], n[1] + dur) ?? s + 0.2;
+      if (e >= a - 0.05) { const P2 = PT_PARTES[n[0]]; let k = 0; while (k + 1 < P2.Q0.length && P2.Q0[k + 1] <= n[1] + 1e-6) k++;
+        out.push([s, e, n[3], Math.max(...N.slice(i, j).map(o => o[4])), j - i, k, n[1] - P2.Q0[k]]); }
+    }
+    i = j;
+  }
+  return out;
+}
+function partituraFila(g, x, a, b, y, m, f, col, ancho16) {
+  const yc = y + m.fila * 0.45, kr = Math.min(1, m.fila / 78);
+  let ultTxt = -1e9;
+  for (const [s, e, midi, acc, nn] of golpesP(f, a, b)) {
+    const x0 = x(s), x1 = Math.max(x0 + 2, x(e) - 3);
+    g.globalAlpha = 0.35; g.fillStyle = col; g.fillRect(x0, y + 3, 1.5, m.fila - 6);   // raya fina: dónde cae en la cuadrícula
+    g.globalAlpha = 0.4; g.fillRect(x0, yc - 2.5, x1 - x0, 5);                        // lo que dura (ligadas incluidas)
+    const lado = (11 + 3 * Math.min(nn - 1, 3) + 3 * acc) * Math.max(0.8, kr);
+    g.globalAlpha = 1; g.fillRect(x0 - lado / 2, yc - lado / 2, lado, lado);
+    if (acc) { g.strokeStyle = "#f1e8da"; g.lineWidth = 1.5; g.strokeRect(x0 - lado / 2 - 2.5, yc - lado / 2 - 2.5, lado + 5, lado + 5); g.lineWidth = 1; }
+    if (ancho16 > 13 && x0 - ultTxt > 24) {
+      g.fillStyle = "#f1e8da"; g.font = (m.movil ? "10px" : "11px") + " Segoe UI"; g.textAlign = "center";
+      g.fillText(nn > 1 ? "acorde" : NOMBRE_NOTA[midi % 12], x0, y + m.fila - (m.fila < 60 ? 3 : 6)); g.textAlign = "left"; ultTxt = x0 + (nn > 1 ? 18 : 0);
+    }
+  }
+}
+// pasar el ratón por un golpe escrito: qué es y a cuántos ms está el golpe o cambio de nota medido más cercano
+cl.addEventListener("pointermove", e => {
+  if (!PT_FILAS.length) return;
+  const r = cl.getBoundingClientRect(), m = medidas(), yy = e.clientY - r.top, px = e.clientX - r.left;
+  const k = m.ys.findIndex((y0, i) => yy >= y0 && yy < y0 + m.altos[i]), f = FV()[k];
+  if (!(f in PTF) || px < m.izq) { if (cl.dataset.pt) { cl.title = ""; delete cl.dataset.pt; } return; }
+  const [a, b] = ventana(), X0 = m.izq + m.pad, X1 = r.width - m.der, xx = t => X0 + (t - a) / (b - a) * (X1 - X0);
+  let mej = null, dm = 10;
+  for (const q of golpesP(f, a, b)) { const d = Math.abs(xx(q[0]) - px); if (d < dm) { dm = d; mej = q; } }
+  if (!mej) { cl.title = ""; delete cl.dataset.pt; return; }
+  const [s, , midi, acc, nn, kc, qd] = mej, gr = PTF[f].grupo, fu = FUENTES.includes(gr) ? [gr] : ["contrabajo", "piano", "bandoneones"];
+  const reales = G.filter(g2 => fu.includes(g2.fuente)).map(g2 => [g2.seg, g2.fuente]).concat(NOTAS.filter(n => fu.includes(n.fuente) && n.fuerza >= 0.25).map(n => [n.seg, n.fuente]));
+  let cerca = null; for (const q of reales) if (Math.abs(q[0] - s) <= durBeat / 2 && (!cerca || Math.abs(q[0] - s) < Math.abs(cerca[0] - s))) cerca = q;
+  const tiempo = Math.floor(qd + 1e-6) + 1, resto = qd - Math.floor(qd + 1e-6), trozo = resto < 0.01 ? "" : Math.abs(resto - 0.5) < 0.01 ? " y" : ` + ${Math.round(resto * 100) / 100}`;
+  const ms = cerca ? Math.round((cerca[0] - s) * 1000) : null;
+  cl.title = `Escrito: ${nn > 1 ? "acorde de " + nn : NOMBRE_NOTA[midi % 12]}${acc ? " con acento" : ""} · compás ${PT.compases[kc] ? PT.compases[kc].n : kc} de la partitura, tiempo ${tiempo}${trozo}\n` +
+    (cerca ? `Suena (${cerca[1]}) ${ms === 0 ? "justo a la vez" : Math.abs(ms) + " ms " + (ms > 0 ? "más tarde" : "antes")}` : "No hay golpe medido cerca (medio tiempo)");
+  cl.dataset.pt = 1;
+});
 function rayasPartituraLupa(g, x, a, b, m, w) {
   if (!PT || !$("ver_partitura_lupa").checked) return;
   g.save(); g.beginPath(); g.rect(m.izq, m.cab, w - m.izq, m.onda); g.clip();
@@ -1521,13 +1668,14 @@ $("exportar").onclick = () => {
 // ---------- ayuda manual
 function orden(uno) {
   const c = $("compas_ay").value;
-  $("orden").textContent = `"D:/Dropbox/TDJ/PYTHON/tgdj/herramientas/analizar_tango/ritmo.bat" "${M.audio}"` + (c ? ` --compas ${c}` : "") + (uno != null ? ` --uno ${uno.toFixed(3)}` : "");
+  $("orden").textContent = `ritmo.bat "${M.audio}"` + (c ? ` --compas ${c}` : "") + (uno != null ? ` --uno ${uno.toFixed(3)}` : "");
 }
 $("es_uno").onclick = () => orden(ahora()); $("compas_ay").onchange = () => orden(null); orden(null);
 
 // ---------- controles de la lupa
-$("atras").onclick = () => { const i = unos.findIndex(t => t >= vIni - 0.01); vIni = unos[Math.max(0, i - 1)]; pinta(); };
-$("adelante").onclick = () => { const i = unos.findIndex(t => t >= vIni - 0.01); vIni = unos[Math.min(unos.length - 1, i + 1)]; pinta(); };
+function salirRep() { if (VREP) { vIni = ventana()[0]; VREP = false; } }
+$("atras").onclick = () => { salirRep(); const i = unos.findIndex(t => t >= vIni - 0.01); vIni = unos[Math.max(0, i - 1)]; pinta(); };
+$("adelante").onclick = () => { salirRep(); const i = unos.findIndex(t => t >= vIni - 0.01); vIni = unos[Math.min(unos.length - 1, i + 1)]; pinta(); };
 document.addEventListener("keydown", e => {
   if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
   // con el vídeo a la vista (20-11-2026, moviola para ajustar pisadas): ← → = 1 fotograma, Mayús = ¼ de tiempo,
@@ -1537,11 +1685,19 @@ document.addEventListener("keydown", e => {
   if (verVideo && hayV()) { if (e.ctrlKey || e.metaKey) dir < 0 ? compasMenos() : compasMas(); else if (e.shiftKey) pasoRejilla(dir, 4); else pasoFotograma(dir); return; }
   if (e.shiftKey) $(dir < 0 ? "atras" : "adelante").click(); else dir < 0 ? compasMenos() : compasMas();
 });
-function ponNcomp(n) { NCOMP = n; $("ncomp_btn").textContent = `🔍 ${n} compás${n > 1 ? "es" : ""} ▾`; $("m_ncomp").classList.remove("abierto"); typeof guardaPos === "function" && guardaPos(); pinta(); }
+function ponNcomp(n) { if (VREP) { vIni = ventana()[0]; VREP = false; } NCOMP = n; $("m_ncomp").classList.remove("abierto"); typeof guardaPos === "function" && guardaPos(); pinta(); }
 document.querySelectorAll("[data-ncomp]").forEach(b => b.onclick = () => ponNcomp(+b.dataset.ncomp));
+$("ncomp_rep").onclick = () => {   // ver el trozo de «repetir»; si no hay trozo, el de las casillas «de … a …»
+  if (!sel || !(sel.b > sel.a)) { const n = Math.max(1, compasDe(ahora())); let a = Math.round(+$("rep_de").value) || n, b = Math.round(+$("rep_a").value) || a;
+    if (b < a) [a, b] = [b, a]; trozoDeCompases(a, b); }
+  VREP = true; $("m_ncomp").classList.remove("abierto"); guardaPos(); pinta();
+};
 document.querySelectorAll("[data-sub]").forEach(b => b.onclick = () => { SUB = +b.dataset.sub; pinta(); });
 function marcaSeg() {
-  document.querySelectorAll("[data-ncomp]").forEach(b => b.classList.toggle("on", +b.dataset.ncomp === NCOMP));
+  const rep = VREP && sel && sel.b > sel.a;
+  document.querySelectorAll("[data-ncomp]").forEach(b => b.classList.toggle("on", !rep && +b.dataset.ncomp === NCOMP));
+  $("ncomp_rep").classList.toggle("on", !!rep);
+  $("ncomp_btn").textContent = rep ? `🔍 🔁 ${Math.max(1, compasDe(sel.a + 0.02))}–${Math.max(1, compasDe(sel.b - 0.02))} ▾` : `🔍 ${NCOMP} ${NCOMP > 1 ? "compases" : "compás"} ▾`;
   document.querySelectorAll("[data-sub]").forEach(b => b.classList.toggle("on", +b.dataset.sub === SUB));
   document.querySelectorAll("[data-banda]").forEach(b => b.classList.toggle("on", b.dataset.banda === BANDA.join(",")));
 }
@@ -1567,8 +1723,11 @@ function ir(t, verLupa) {   // ir a un segundo: sonando sigue sonando desde ahí
   t = Math.max(0, Math.min(DUR() - 0.05, t));
   if ($("bucle").checked && sel && (t < sel.a - 0.01 || t >= sel.b - 0.01)) $("bucle").checked = false;   // salir del trozo = dejar de repetir
   cursor = t; ponInfo(t); guardaPos();
+  // irse a más de 2 fotogramas de la pisada elegida = soltarla (si no, el clic en el vídeo le cambiaba el sitio a ella)
+  if (selPis && hayV() && Math.abs(t - selPis[0] - (vDes[VV().id] || 0)) > 2.5 * VV().velocidad / VV().fps) soltarPis();
   const [a, b] = ventana();
-  if (verLupa || t < a || t >= b) vIni = unos.filter(u => u <= t + 0.01).pop() || unos[0];
+  if (t < a || t >= b) VREP = false;   // fuera del trozo: la lupa vuelve a ir sola
+  if ((verLupa && !VREP) || t < a || t >= b) vIni = unos.filter(u => u <= t + 0.01).pop() || unos[0];
   if (sonando) escuchar(t);
   pinta();
 }
@@ -1620,7 +1779,9 @@ function tic() {
     const t = ahora();
     if (t >= sonando.fin - 0.01) { if ($("bucle").checked && sel) escuchar(sel.a); else { parar(); cursor = 0; } }
     const [a, b] = ventana();
-    if ($("seguir").checked && (t > b || t < a)) vIni = unos.filter(u => u <= t + 0.01).pop() || unos[0];
+    // viendo el trozo (🔁): la lupa se queda en él; solo lo deja si la música se sale de verdad (sin repetir)
+    if (VREP && !($("bucle").checked && sel) && (t > b + 0.3 || t < a - 0.3)) VREP = false;
+    if (!VREP && $("seguir").checked && (t > b || t < a)) vIni = unos.filter(u => u <= t + 0.01).pop() || unos[0];
     ponInfo(t);
     pinta();
   }
@@ -1710,15 +1871,16 @@ function estrellasVideo() {
   const g = c.getContext("2d"); g.setTransform(k, 0, 0, k, 0, 0); g.clearRect(0, 0, w, h);
   if (!$("ver_estrellas").checked) return;
   const t = ahora(), dd = vDes[V.id] || 0, sx = w / V.ancho, sy = h / V.alto;
-  if (!marcando) for (const [s, b, pie, tipo, x, y] of V.pisadas) {
+  // 23-11-2026 (Edmundo: «le doy a play y algunos no salen»): sonando se ven TODAS, también marcando
+  if (!marcando || sonando) for (const [s, b, pie, tipo, x, y] of V.pisadas) {
     if (!x && !y) continue;
-    const d = t - (s + dd); if (d < -0.04 || d > 0.45) continue;
+    const d = t - (s + dd); if (d < -0.04 || d > EST.d) continue;   // cuánto dura: ajustable (23-11-2026)
     // 20-11-2026 (Edmundo: «las estrellas son muy grandes, casi no se ven los pies»): una onda fina que se abre
     // alrededor del pie y se apaga; el centro queda libre, así se ve el pie
-    const vida = Math.max(0, d) / 0.45, col = (V.bailarines[b] || {}).color || "#f0c05a";
+    const vida = Math.max(0, d) / EST.d, col = (V.bailarines[b] || {}).color || "#f0c05a";
     ondaPie(g, x * sx, y * sy, col, vida, tipo === "o");
   }
-  if (marcando) for (const q of arosVisibles(V)) {   // marcando: aros finos (se ve el pie a través); más claros cuanto más cerca del instante
+  if (marcando && !sonando) for (const q of arosVisibles(V)) {   // marcando: aros finos (se ve el pie a través); más claros cuanto más cerca del instante
     const [s, b, pie, tipo, x, y] = q; if ((!x && !y) || q === selPis) continue;
     const d = Math.abs(t - (s + dd)); if (d > 0.6 && !q.tenue) continue;
     aroPie(g, x * sx, y * sy, (V.bailarines[b] || {}).color || "#fff", q.tenue && !$("ver_todos_aros").checked ? 0.3 : d < 0.05 ? 1 : 0.45, pie);
@@ -1734,30 +1896,35 @@ function estrellasVideo() {
   lupaPie();
 }
 // 20-11-2026 (Edmundo: «que se vean los anteriores y los de él cuando voy a marcar no ayuda»): marcando, solo la
-// elegida y, muy tenue, la anterior del MISMO pie del MISMO bailarín; «⋯ más → ver todas las marcas» las enseña todas
+// solo la elegida (la anterior se quitó el 23-11-2026); «⋯ más → ver todas las marcas» las enseña todas
 function arosVisibles(V) {
   if ($("ver_todos_aros").checked) return V.pisadas;
   const q = selPis && V.pisadas.includes(selPis) ? selPis : ultimaPis && V.pisadas.includes(ultimaPis) ? ultimaPis : null;
   if (!q) return [];
-  const prev = V.pisadas.filter(p => p !== q && p[1] === q[1] && p[2] === q[2] && p[0] < q[0] && (p[4] || p[5])).pop();
-  if (prev) prev.tenue = true;
-  return prev ? [prev, q] : [q];
+  // 23-11-2026 (Edmundo, «El buey solo»: «al moverse la cámara no tiene mucho sentido»): la anterior ya NO se enseña;
+  // su sitio es el de SU fotograma y, si la cámara se mueve, engaña. Para verlas todas: «ver todas las marcas».
+  return [q];
 }
 function ondaPie(g, x, y, col, vida, adorno) {
   // (Edmundo, 20-11-2026) un píxel opaco en el centro y enseguida casi transparente hasta desaparecer (~32 px);
   // todo se apaga en 0,45 s
-  const R = 32, h = col.replace("#", ""), [r, gg, b] = [0, 2, 4].map(k => parseInt(h.length === 3 ? h[k / 2] + h[k / 2] : h.slice(k, k + 2), 16));
+  // 23-11-2026 (Edmundo: «no se ven en pantalla, círculos más grandes y lo opaco más grande»): R 32 → 46, centro opaco
+  // de 1 px → 5 px con borde oscuro fino, y la parte de color más fuerte
+  const R = EST.r, h = col.replace("#", ""), [r, gg, b] = [0, 2, 4].map(k => parseInt(h.length === 3 ? h[k / 2] + h[k / 2] : h.slice(k, k + 2), 16));
   const c = al => `rgba(${r},${gg},${b},${al})`;
   const gr = g.createRadialGradient(x, y, 0, x, y, R);
   // (2.ª vez) solo 1 px opaco; cae enseguida y el resto, el doble de grande, casi transparente
-  gr.addColorStop(0, c(1)); gr.addColorStop(1 / R, c(1)); gr.addColorStop(3 / R, c(0.3)); gr.addColorStop(0.25, c(0.1));
-  gr.addColorStop(0.55, c(0.035)); gr.addColorStop(1, c(0));
-  g.save(); g.globalAlpha = Math.pow(1 - vida, 1.3) * (adorno ? 0.6 : 1); g.fillStyle = gr;
-  g.beginPath(); g.arc(x, y, R, 0, 7); g.fill(); g.restore();
+  const C = Math.min(EST.c, R - 2), F = EST.f;   // centro opaco (px) y fuerza del color alrededor (0–1)
+  gr.addColorStop(0, c(1)); gr.addColorStop(C / R, c(1)); gr.addColorStop(Math.min(0.99, (C + 4) / R), c(0.55 * F + 0.1));
+  gr.addColorStop(Math.max(0.4, (C + 5) / R), c(0.25 * F)); gr.addColorStop(0.7, c(0.08 * F)); gr.addColorStop(1, c(0));
+  g.save(); g.globalAlpha = Math.pow(1 - vida, 1.1) * (adorno ? 0.6 : 1); g.fillStyle = gr;
+  g.beginPath(); g.arc(x, y, R, 0, 7); g.fill();
+  g.lineWidth = 1.5; g.strokeStyle = "rgba(0,0,0,.6)"; g.beginPath(); g.arc(x, y, C + 0.5, 0, 7); g.stroke();   // que el centro se vea sobre cualquier fondo
+  g.restore();
 }
 function aroPie(g, x, y, col, alfa, pie) {   // marca fina: aro del color del bailarín, punto en el centro y la letra del pie
-  g.save(); g.globalAlpha = alfa; g.strokeStyle = col; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 8, 0, 7); g.stroke();
-  g.fillStyle = col; g.beginPath(); g.arc(x, y, 1.6, 0, 7); g.fill();
+  g.save(); g.globalAlpha = alfa; g.strokeStyle = col; g.lineWidth = 2.5; g.beginPath(); g.arc(x, y, 11, 0, 7); g.stroke();   // 8 → 11 (23-11-2026)
+  g.fillStyle = col; g.beginPath(); g.arc(x, y, 3, 0, 7); g.fill();
   g.font = "bold 11px system-ui"; g.textAlign = "center"; g.lineWidth = 3; g.strokeStyle = "rgba(0,0,0,.7)";
   g.strokeText(pie === "I" ? "I" : "D", x + 14, y - 8); g.fillText(pie === "I" ? "I" : "D", x + 14, y - 8); g.restore();
 }
@@ -2110,13 +2277,16 @@ function iman(t) {   // t en segundos de la grabación (ya con la corrección de
 }
 function ponPisada(b, pie) {
   const V = VV(); if (!V.bailarines[b]) b = 0;
-  const t = iman(ahora() - (sonando ? (+$("retraso").value || 0) / 1000 * VEL : 0)), n = fotogramaDe(t);
+  // 23-11-2026: parado = en el fotograma que se ve, SIN imán (Edmundo ya lo ha buscado a ojo); sonando = con imán
+  const t = sonando ? iman(ahora() - (+$("retraso").value || 0) / 1000 * VEL) : ahora(), n = fotogramaDe(t);
   if (n < 0 || n / V.fps > V.dur) return;
-  const p = [+(($("iman").value ? t - (vDes[V.id] || 0) : V.inicio + n / V.fps * V.velocidad)).toFixed(3), b, pie, "a"];
+  const p = [+((sonando && $("iman").value ? t - (vDes[V.id] || 0) : V.inicio + n / V.fps * V.velocidad)).toFixed(3), b, pie, "a"];
   V.pisadas = V.pisadas.filter(q => !(q[1] === b && q[2] === pie && Math.abs(q[0] - p[0]) < 0.5 / V.fps * V.velocidad));   // la misma, otra vez = no repetir
   V.pisadas.push(p); V.pisadas.sort((x, y) => x[0] - y[0]); pilaPis.push({ que: "puesta", p }); ultimaPis = p;
   const tb = document.querySelector(`[data-pon="${b},${pie}"]`); if (tb) { tb.classList.add("flash"); setTimeout(() => tb.classList.remove("flash"), 160); }
-  guardaPis(V); cuentaPis(); pinta();
+  guardaPis(V); cuentaPis();
+  // la nueva queda ELEGIDA (antes seguía elegida la anterior y el clic en el vídeo le ponía el sitio a aquella)
+  if (sonando) { if (selPis) soltarPis(); else pinta(); } else { selPis = p; verPis(false); }
 }
 let ultimaPis = null;            // la última puesta: un clic en el pie, en el vídeo, le pone su sitio
 function deshazPis() {
@@ -2143,7 +2313,7 @@ function sitioPie(e) {   // marcando: clic en el pie dentro del vídeo = dónde 
 }
 // ---------- elegir y retocar una pisada (19-11-2026, Edmundo: «si pulsas un círculo, que lo seleccione y luego moverlo,
 // borrarlo, adelantarlo, atrasarlo, imantarlo al tiempo, ½, ¼ o tresillo»). Tocar = elegir; arrastrar = mover.
-let selPis = null, arrPis = null;
+var selPis = null, arrPis = null;   // var: ir() la mira y puede llamarse antes de llegar aquí
 function pisadaEn(e) {   // la pisada bajo el ratón (en las filas 👣), o null
   if (!hayV()) return null;
   const r = cl.getBoundingClientRect(), m = medidas(), y = e.clientY - r.top, px = e.clientX - r.left;
@@ -2165,7 +2335,7 @@ function ordenaGuarda() { const V = VV(); V.pisadas.sort((x, y) => x[0] - y[0]);
 function verPis(irAhi) {   // pinta, coloca la barrita junto a la pisada y (si se pide) lleva el vídeo a su fotograma
   if (!selPis || !hayV() || !VV().pisadas.includes(selPis)) { soltarPis(); return; }
   const V = VV(), dd = vDes[V.id] || 0, t = selPis[0] + dd, bi = V.bailarines[selPis[1]] || {};
-  if (irAhi) { if (sonando) parar(); cursor = t; ponInfo(t); const [a, b] = ventana(); if (t < a || t >= b) vIni = unos.filter(u => u <= t + 0.01).pop() || unos[0]; }
+  if (irAhi) { if (sonando) parar(); cursor = t; ponInfo(t); const [a, b] = ventana(); if (t < a || t >= b) VREP = false, vIni = unos.filter(u => u <= t + 0.01).pop() || unos[0]; }
   const n = Math.round((selPis[0] - V.inicio) / V.velocidad * V.fps), ps = P.findIndex(p => p.seg > t) - 1;
   let donde = ""; if (ps >= 0 && ps < P.length - 1) {   // en qué parte del tiempo cae (para ver si va a tiempo)
     const f = (t - P[ps].seg) / (P[ps + 1].seg - P[ps].seg);
@@ -2198,12 +2368,11 @@ $("pis_pie").onclick = () => { if (!selPis) return; pilaPis.push({ que: "cambio"
 $("pis_tipo").onclick = () => { if (!selPis) return; pilaPis.push({ que: "cambio", p: selPis, antes: selPis.slice() }); selPis[3] = selPis[3] === "o" ? "a" : "o"; ordenaGuarda(); };
 $("pis_borrar").onclick = () => { if (!selPis) return; const V = VV(); V.pisadas = V.pisadas.filter(q => q !== selPis); pilaPis.push({ que: "borrada", p: selPis }); guardaPis(V); cuentaPis(); soltarPis(); };
 $("pis_cerrar").onclick = soltarPis;
-// con una pisada elegida: ← → la mueven un fotograma, Supr la borra, Esc la suelta (antes que las teclas de siempre)
+// con una pisada elegida: Supr la borra, Esc la suelta (antes que las teclas de siempre)
 document.addEventListener("keydown", e => {
   if (!selPis || e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
-  const k = { ArrowLeft: -1, ArrowRight: 1 }[e.code];
-  if (k && !e.shiftKey) { e.preventDefault(); e.stopImmediatePropagation(); document.querySelector(`[data-pmueve="${k}"]`).click(); }
-  else if (e.code === "Delete" || e.code === "Backspace") { e.preventDefault(); e.stopImmediatePropagation(); $("pis_borrar").click(); }
+  // (23-11-2026: ← → ya NO mueven la pisada elegida: mueven el vídeo, como siempre; la pisada, con ◀ 1 fot. ▶)
+  if (e.code === "Delete" || e.code === "Backspace") { e.preventDefault(); e.stopImmediatePropagation(); $("pis_borrar").click(); }
   else if (e.code === "Escape") soltarPis();
 }, true);
 function borraPisEn(e) {   // (ya no se usa: tocar una pisada la elige)
@@ -2236,6 +2405,31 @@ $("sig_pis").onclick = () => siguienteSinSitio(1);
 $("estrellas_pis").onclick = () => { const c = $("ver_estrellas"); c.checked = !c.checked; c.onchange && c.onchange(); marcaEstrellas(); estrellasVideo(); };
 function marcaEstrellas() { $("estrellas_pis").classList.toggle("apagado", !$("ver_estrellas").checked); }
 $("ver_estrellas").addEventListener("change", () => { marcaEstrellas(); estrellasVideo(); });
+// ajustes de los destellos (23-11-2026, Edmundo: «un sitio donde pudiera cambiar las marcas… a mi antojo»)
+let estProbar = 0;
+function pintaAjusteEst() {
+  for (const k of ["r", "c", "f", "d"]) { $("est_" + k).value = EST[k]; $("est_" + k + "_v").textContent = k === "d" ? EST[k] + " s" : k === "f" ? Math.round(EST[k] * 100) + " %" : EST[k] + " px"; }
+}
+for (const k of ["r", "c", "f", "d"]) $("est_" + k).addEventListener("input", e => {
+  EST[k] = +e.target.value; try { localStorage.setItem("tdj_estrellas", JSON.stringify(EST)); } catch (er) {}
+  pintaAjusteEst(); probarEst();
+});
+$("est_defecto").onclick = () => { EST = { ...EST_DEF }; try { localStorage.removeItem("tdj_estrellas"); } catch (e) {} pintaAjusteEst(); probarEst(); };
+$("est_probar").onclick = () => probarEst();
+function probarEst() {   // un destello en el centro del vídeo, para ver cómo queda
+  const t0 = performance.now(), V = VV(), id = ++estProbar;
+  const paso = () => {
+    if (id !== estProbar) return;
+    const d = (performance.now() - t0) / 1000, c = $("estrellas"), v = $("video");
+    if (!c || !v || !V) return;
+    estrellasVideo();
+    const g = c.getContext("2d"), w = v.clientWidth, h = v.clientHeight;
+    const col = (V.bailarines[0] || {}).color || "#f0c05a";
+    if (d <= EST.d) { ondaPie(g, w / 2, h * 0.8, col, d / EST.d, false); requestAnimationFrame(paso); }
+  };
+  paso();
+}
+pintaAjusteEst();
 $("ver_todos_aros").onchange = () => estrellasVideo();
 function pintaTeclas() {   // nombres, papel (leader / follower) y colores de los dos bailarines en el teclado de pisadas
   const V = VV();
@@ -2345,19 +2539,19 @@ const CLAVE_POS = "tdj_pos:" + CANCION;
 let guardaPosT = 0;
 function guardaPos() {
   clearTimeout(guardaPosT);
-  guardaPosT = setTimeout(() => { try { localStorage.setItem(CLAVE_POS, JSON.stringify({ t: +ahora().toFixed(2), ncomp: NCOMP, sel })); } catch (e) {} }, 400);
+  guardaPosT = setTimeout(() => { try { localStorage.setItem(CLAVE_POS, JSON.stringify({ t: +ahora().toFixed(2), ncomp: NCOMP, rep: VREP, sel })); } catch (e) {} }, 400);
 }
 {
   let pos = null; try { pos = JSON.parse(localStorage.getItem(CLAVE_POS) || "null"); } catch (e) {}
   const cN = +new URLSearchParams(location.search).get("compas");
   if (cN && inicioCompas(cN) !== null) pos = { t: inicioCompas(cN), ncomp: pos ? pos.ncomp : NCOMP, sel: null };
   if (pos) {
-    if ([1, 2, 4, 8].includes(pos.ncomp)) { NCOMP = pos.ncomp; $("ncomp_btn").textContent = `🔍 ${NCOMP} compás${NCOMP > 1 ? "es" : ""} ▾`; }
-    if (pos.sel && pos.sel.b > pos.sel.a) sel = pos.sel;
+    if ([1, 2, 4, 8].includes(pos.ncomp)) { NCOMP = pos.ncomp; $("ncomp_btn").textContent = `🔍 ${NCOMP} ${NCOMP > 1 ? "compases" : "compás"} ▾`; }
+    if (pos.sel && pos.sel.b > pos.sel.a) { sel = pos.sel; if (pos.rep && !cN) VREP = true; }
     if (pos.t > 0 && pos.t < DUR()) { cursor = pos.t; vIni = unos.filter(u => u <= cursor + 0.01).pop() || unos[0]; }
   }
   setInterval(() => { if (sonando) guardaPos(); }, 3000);
-  addEventListener("pagehide", () => { try { localStorage.setItem(CLAVE_POS, JSON.stringify({ t: +ahora().toFixed(2), ncomp: NCOMP, sel })); } catch (e) {} });
+  addEventListener("pagehide", () => { try { localStorage.setItem(CLAVE_POS, JSON.stringify({ t: +ahora().toFixed(2), ncomp: NCOMP, rep: VREP, sel })); } catch (e) {} });
 }
 // ---------- comparar con otra grabación (19-11-2026): su onda en una fila, cuadrada compás a compás con esta
 // (compás N, tiempo k y la fracción de tiempo de aquí = lo mismo allí; «su compás = este + n» si una tiene más introducción)

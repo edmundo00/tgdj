@@ -15,16 +15,17 @@ si no, --video ruta.
 """
 import os, sys, json, glob, shutil, argparse, subprocess
 
-FF = shutil.which("ffmpeg") or r"C:\ffmpeg\bin\ffmpeg.exe"
-FP = shutil.which("ffprobe") or r"C:\ffmpeg\bin\ffprobe.exe"
-SALIDA = r"D:\Dropbox\TDJ\Instagram\borradores\_clips"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import rutas
+FF, FP = rutas.preparar_ffmpeg()
+SALIDA = os.path.join(rutas.TDJ, "Instagram", "borradores", "_clips")
 CASA = os.path.expanduser("~")
 
 
 def ruta_audio(a):
-    for r in (a, os.path.join(r"D:\Dropbox\TDJ\MUSICA", a), os.path.join(r"D:\Dropbox\TDJ", a)):
-        if r and os.path.exists(r):
-            return r
+    r = rutas.buscar_audio(a)
+    if r:
+        return r
     raise SystemExit(f"No encuentro la grabación: {a}")
 
 

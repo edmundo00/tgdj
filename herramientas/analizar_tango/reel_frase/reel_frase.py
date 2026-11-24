@@ -26,9 +26,10 @@ import os, sys, json, subprocess, shutil, argparse, html
 import numpy as np
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
-RITMO = r"D:\Dropbox\TDJ\Analisis tangos\_ritmo"
-DATOS = r"D:\Dropbox\TDJ\Analisis tangos\_datos"
-NODE = r"C:\Users\edmun\herramientas\node"
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import rutas
+RITMO, DATOS = rutas.RITMO, rutas.DATOS
+NODE = os.environ.get("TDJ_NODE") or os.path.join(os.path.expanduser("~"), "herramientas", "node")
 SR = 48000
 
 DEFECTO = {
@@ -232,7 +233,7 @@ class Reel:
                 shutil.copy(os.path.join(AQUI, "base", b), self.proy)
 
     def hyperframes(self, *args):
-        env = dict(os.environ, DO_NOT_TRACK="1", PATH=NODE + os.pathsep + r"C:\ffmpeg\bin" + os.pathsep + os.environ["PATH"])
+        env = dict(os.environ, DO_NOT_TRACK="1", PATH=NODE + os.pathsep + os.environ["PATH"])
         r = subprocess.run([os.path.join(NODE, "npx.cmd"), "--yes", "hyperframes@0.9.41", *args], cwd=self.proy, env=env, capture_output=True,
                            text=True, encoding="utf-8", errors="replace")
         return r.stdout + r.stderr
@@ -306,8 +307,7 @@ def main():
     falta = [k for k in ("cancion", "video", "pisadas", "frase", "anacrusa", "proyecto", "salida", "nombre", "pareja", "cuenta") if k not in g]
     if falta:
         raise SystemExit("faltan en el guion: " + ", ".join(falta))
-    if shutil.which("ffmpeg") is None:
-        os.environ["PATH"] = r"C:\ffmpeg\bin" + os.pathsep + os.environ["PATH"]
+    rutas.preparar_ffmpeg()
     r = Reel(g)
     r.preparar()
     r.montar()

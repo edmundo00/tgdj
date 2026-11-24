@@ -13,8 +13,10 @@ Uso (python de venvs\\analizar_tango):
 import os, sys, json, argparse, subprocess
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
-RAIZ = r"D:\Dropbox\TDJ\Analisis tangos"
-PY_YOURMT3 = os.path.join(os.path.expanduser("~"), "venvs", "yourmt3", "Scripts", "python.exe")
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import rutas
+RAIZ = rutas.ANALISIS
+PY_YOURMT3 = rutas.python_de("yourmt3")
 TECHO = 50          # re3: lo que quede por debajo cuenta como bajo
 NOMBRES = ["Do", "Do#", "Re", "Mib", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "Sib", "Si"]
 

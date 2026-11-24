@@ -5,11 +5,13 @@
     d.golpes  -> {"piano": [(t_video, fuerza_db)], "contrabajo": [...], ...}
     d.semicorchea(t) -> (compás, tiempo, 0-3)   0 = número, 1 = e, 2 = y, 3 = a
 """
-import os, csv
+import os, sys, csv
 
-ANALISIS = r"D:\Dropbox\TDJ\Analisis tangos"
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import rutas
+ANALISIS = rutas.ANALISIS
 HERR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))     # ...\analizar_tango
-PY = os.path.expandvars(r"%USERPROFILE%\venvs\analizar_tango\Scripts\python.exe")
+PY = rutas.python_de("analizar_tango")
 NOM = ["", "e", "y", "a"]
 
 

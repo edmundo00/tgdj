@@ -20,17 +20,13 @@ import numpy as np, librosa, soundfile as sf
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # ffmpeg: si no está en el PATH (p. ej. el PC del trabajo), buscarlo en las carpetas de siempre (como ritmo.py)
-import shutil
-if not shutil.which("ffmpeg"):
-    for _d in (r"C:\ffmpeg\bin", os.path.expandvars(r"%USERPROFILE%\herramientas\ffmpeg\bin")):
-        if os.path.isfile(os.path.join(_d, "ffmpeg.exe")):
-            os.environ["PATH"] = _d + os.pathsep + os.environ.get("PATH", "")
-            break
+import shutil, rutas
+rutas.preparar_ffmpeg()
 
 import separar, pulso, golpes as golpes_mod, informe, articulacion
 
-SALIDA_DEF = r"D:\Dropbox\TDJ\Analisis tangos"
-MODELOS = os.path.join(os.path.expanduser("~"), "venvs", "modelos_separador")
+SALIDA_DEF = rutas.ANALISIS
+MODELOS = os.path.join(rutas.VENVS, "modelos_separador")
 
 
 def main():

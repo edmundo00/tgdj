@@ -123,15 +123,14 @@ def actualizar_indice(raiz):
 if __name__ == "__main__":
     # Rehace la página de los análisis ya hechos (sin volver a analizar): python pagina_ritmo.py [carpeta de _ritmo …]
     import sys, glob
-    raiz = r"D:\Dropbox\TDJ\Analisis tangos"
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import rutas
+    raiz = rutas.ANALISIS
     carpetas = sys.argv[1:] or glob.glob(os.path.join(raiz, "_ritmo", "*"))
-    if os.path.exists(r"C:\ffmpeg\bin\ffmpeg.exe") and r"C:\ffmpeg\bin" not in os.environ["PATH"]:
-        os.environ["PATH"] = r"C:\ffmpeg\bin;" + os.environ["PATH"]   # PC del trabajo
+    rutas.preparar_ffmpeg()
     def audio_de(a):
         # algunos análisis guardaron la ruta relativa (a MUSICA o a TDJ)
-        for r in (a, os.path.join(r"D:\Dropbox\TDJ\MUSICA", a), os.path.join(r"D:\Dropbox\TDJ", a)):
-            if os.path.exists(r): return r
-        return None
+        return rutas.buscar_audio(a)
     mal = []
     for c in carpetas:
         f = os.path.join(c, "ritmo.json")

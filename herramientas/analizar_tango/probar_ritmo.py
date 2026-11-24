@@ -13,7 +13,9 @@ Si la canción tiene partitura (partitura_datos.js) prueba también el panel «P
 import asyncio, json, os, subprocess, sys, tempfile, time, urllib.request, pathlib
 import websockets
 
-EDGE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import rutas
+EDGE = rutas.buscar_edge()
 PUERTO = 9333
 
 
@@ -79,7 +81,9 @@ async def probar(url):
             await ev("parar(); 1")
             await probar_reproductor(ev, fallos)
             await probar_menus(ev, fallos)
+            await probar_trozo(ev, fallos)
             await probar_video(ev, cdp, fallos)
+            await probar_estrellas(ev, fallos)
             # partitura (19-11-2026): solo si la canción tiene partitura_datos.js
             hay = await ev("!!window.PARTITURA")
             oculto = await ev("document.getElementById('panel_partitura').hidden")
@@ -207,6 +211,46 @@ async def probar_reproductor(ev, fallos):
     await ev("sel=null; $('bucle').checked=false; cursor=0; ponInfo(0); pinta(); 1")
 
 
+async def probar_trozo(ev, fallos):
+    """«🔁 el trozo» en el menú de compases (23-11-2026): la lupa enseña justo los compases de «repetir de … a …»;
+    1/2/4/8 o ◀ ▶ vuelven a lo de siempre."""
+    def mal(txt): fallos.append("trozo: " + txt)
+    espera = "new Promise(r=>setTimeout(r,80))"
+    n = await ev("NC")
+    if n < 12: print("trozo: canción corta, no se prueba"); return
+    await ev(f"$('rep_de').value=5; $('rep_a').value=10; $('rep_a').onchange(); {espera}.then(()=>1)")
+    await ev(f"$('ncomp_rep').click(); {espera}.then(()=>1)")
+    r = await ev("(()=>{ const [a,b]=ventana(); return [compasDe(a+0.01), compasDe(b-0.01), $('ncomp_btn').textContent, $('donde').textContent, $('ncomp_rep').classList.contains('on')]; })()")
+    print(f"trozo: repetir 5–10 → la lupa enseña {r}")
+    if r[:2] != [5, 10] or "5–10" not in r[2] or not r[4]: mal(f"no enseña los compases 5–10: {r}")
+    for k in sorted({7, n // 2, n - 38, n - 10}):   # varios sitios de la canción (con «El buey solo» 66–71 empezaba mal)
+        if k < 2 or k + 5 > n: continue
+        await ev(f"$('rep_de').value={k}; $('rep_a').value={k + 5}; $('rep_a').onchange(); {espera}.then(()=>1)")
+        r = await ev("(()=>{ const [a,b]=ventana(); return [compasDe(a+0.01), compasDe(b-0.01)]; })()")
+        if r != [k, k + 5]: mal(f"repetir {k}–{k + 5}: la lupa enseña {r}")
+    await ev(f"$('rep_de').value=7; $('rep_a').value=12; $('rep_a').onchange(); {espera}.then(()=>1)")
+    r = await ev("(()=>{ const [a,b]=ventana(); return [compasDe(a+0.01), compasDe(b-0.01)]; })()")
+    if r != [7, 12]: mal(f"al cambiar a 7–12 la lupa no lo sigue: {r}")
+    # sonando con «repetir»: al dar la vuelta la lupa sigue en el trozo (fallaba: se iba a 8 compases)
+    await ev(f"$('rep_de').value=5; $('rep_a').value=5; $('rep_a').onchange(); {espera}.then(()=>1)")
+    await ev("escuchar(sel.a).then(()=>1)")
+    vistas = set()
+    for _ in range(int((await ev("sel.b - sel.a")) * 2 + 2) * 4):
+        await asyncio.sleep(0.25)
+        vistas.add(tuple(await ev("(()=>{ const [a,b]=ventana(); return [VREP, compasDe(a+0.01), compasDe(b-0.01)]; })()")))
+    await ev("parar(); 1")
+    print(f"trozo: sonando y repitiendo el 5, la lupa enseña {sorted(vistas)}")
+    if vistas != {(True, 5, 5)}: mal(f"al repetir, la lupa se va del trozo: {sorted(vistas)}")
+    await ev(f"$('rep_de').value=7; $('rep_a').value=12; $('rep_a').onchange(); {espera}.then(()=>1)")
+    await ev(f"document.querySelector('[data-ncomp=\"2\"]').click(); {espera}.then(()=>1)")
+    r = await ev("(()=>{ const [a,b]=ventana(); return [VREP, compasDe(a+0.01), compasDe(b-0.01), $('ncomp_btn').textContent]; })()")
+    if r[0] or r[2] - r[1] != 1 or "2 compases" not in r[3]: mal(f"«2» no vuelve a 2 compases: {r}")
+    await ev(f"$('ncomp_rep').click(); $('adelante').click(); {espera}.then(()=>1)")
+    r = await ev("(()=>{ const [a,b]=ventana(); return [VREP, compasDe(a+0.01)]; })()")
+    if r != [False, 8]: mal(f"▶ desde el trozo no sigue desde su principio: {r}")
+    await ev("sel=null; $('bucle').checked=false; VREP=false; pinta(); 1")
+
+
 async def probar_menus(ev, fallos):
     """Encima de la lupa (19-11-2026): «🔔 Comprobar» y «⚙ Ver» se abren y se cierran; clic en el nombre de una fila
     = su menú (🎧 oírla sola, 🔔 clic, ocultar); lo encendido sale en chips que lo apagan."""
@@ -324,7 +368,7 @@ async def probar_video(ev, cdp, fallos):
       $('ver_todos_aros').checked=true; const n=arosVisibles(V).length; $('ver_todos_aros').checked=false; soltarPis();
       return [a.length<=2 && a.includes(q), a.every(p=>p[1]===q[1] && p[2]===q[2]), n===V.pisadas.length]; })()""")
     print("marcando, marcas en el vídeo [solo la elegida (+ anterior), mismo bailarín y pie, «ver todas» = todas]:", g)
-    if g != [True, True, True]: mal(f"marcas al marcar: {g}")
+    if g != "pocas" and g != [True, True, True]: mal(f"marcas al marcar: {g}")
     if FOTO_MARCAR:
         await ev("(()=>{ const V=VV(), q=V.pisadas.find(p=>p[4]||p[5]); if(q) eligePis(q); const r=$('video').getBoundingClientRect();"
                  " if(q){ ratonV=[q[4]*r.width/V.ancho+6, q[5]*r.height/V.alto-4]; } estrellasVideo(); return 1; })()")
@@ -376,26 +420,47 @@ async def probar_video(ev, cdp, fallos):
       cl.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,clientX:x,clientY:y,pointerId:7}));
       cl.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,clientX:x,clientY:y,pointerId:7}));
       const elegida=selPis===q, barra=!$('pis_sel').hidden, n=V.pisadas.length;
-      document.dispatchEvent(new KeyboardEvent('keydown',{code:'ArrowRight',bubbles:true}));
+      document.querySelector('[data-pmueve="1"]').click();
       const paso=Math.round((q[0]-t0)*V.fps/V.velocidad);
       document.querySelector('[data-piman="1"]').click(); const enTiempo=P.some(p=>Math.abs(p.seg-(q[0]+dd))<0.002);
       document.dispatchEvent(new KeyboardEvent('keydown',{code:'Delete',bubbles:true})); const borrada=!V.pisadas.includes(q);
       deshazPis(); deshazPis(); deshazPis(); const vuelta=V.pisadas.includes(q) && Math.abs(q[0]-t0)<0.001 && V.pisadas.length===n;
       soltarPis(); localStorage.removeItem(CLAVE_PIS(V.id));
       return [elegida, barra, paso, enTiempo, borrada, vuelta]; })()""")
-    print("pisada elegida [tocada, barrita, → fotogramas, 🧲 al tiempo, Supr borra, Z ×3 la devuelve]:", r)
+    print("pisada elegida [tocada, barrita, ▶ 1 fot., 🧲 al tiempo, Supr borra, Z ×3 la devuelve]:", r)
     if r != 'sin pisadas' and r != [True, True, 1, True, True, True]: mal(f"retocar una pisada: {r}")   # sin pisadas: no se prueba
+    # marcar como Edmundo (23-11-2026): fotograma con → , pie, clic en el vídeo; → otra vez y otro pie. Antes: la nueva
+    # no quedaba elegida (el clic movía la anterior), → movía la pisada elegida, el imán la corría y sonando no se veían
+    r = await ev("""(async()=>{ const V=VV(), dd=vDes[V.id]||0, guarda=V.pisadas.map(q=>q.slice()), fot=V.velocidad/V.fps;
+      const k=code=>document.dispatchEvent(new KeyboardEvent('keydown',{code,bubbles:true})), espera=ms=>new Promise(r=>setTimeout(r,ms));
+      const clic=(fx,fy)=>{ const r=$('video').getBoundingClientRect(); $('video').dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:r.left+r.width*fx,clientY:r.top+r.height*fy})); };
+      ponMarcar(true); soltarPis(); const i=P.findIndex(p=>p.seg>vidIni()+5); ir(P[i].seg+0.09); await espera(300);
+      k('KeyQ'); const p1=selPis, t1=ahora(); const nueva=!!p1 && !guarda.some(q=>q[0]===p1[0]&&q[1]===p1[1]&&q[2]===p1[2]);
+      const sinIman=p1 ? Math.abs(p1[0]+dd-t1)<fot : false;
+      clic(0.25,0.75); const sitio1=p1 && Math.abs(p1[4]-V.ancho*0.25)<V.ancho*0.01;
+      for(let j=0;j<5;j++) k('ArrowRight'); await espera(100);
+      const vidSeMueve=Math.round((ahora()-t1)/fot), p1quieta=p1 && Math.abs(p1[0]+dd-t1)<fot, suelta=selPis===null;
+      k('KeyO'); const p2=selPis; clic(0.6,0.4);
+      const sitio2=p2 && p2!==p1 && Math.abs(p2[4]-V.ancho*0.6)<V.ancho*0.01, p1igual=p1 && Math.abs(p1[4]-V.ancho*0.25)<V.ancho*0.01;
+      // sonando, también marcando, se dibujan todas las marcas
+      const o=ondaPie; let n=0; ondaPie=(...a)=>{ n++; return o(...a); };
+      soltarPis(); await escuchar(p1[0]+dd-0.05); await espera(150); estrellasVideo(); parar(); ondaPie=o;
+      V.pisadas=guarda; localStorage.removeItem(CLAVE_PIS(V.id)); soltarPis(); ponMarcar(false);
+      return [nueva, sinIman, sitio1, vidSeMueve, p1quieta, suelta, sitio2, p1igual, n>0]; })()""")
+    print("marcar como Edmundo [la nueva elegida, sin imán parado, clic = su sitio, → mueve el vídeo, la pisada quieta, se suelta, la 2.ª su sitio, la 1.ª igual, sonando se ven]:", r)
+    if r != [True, True, True, 5, True, True, True, True, True]: mal(f"marcar como Edmundo: {r}")
     # con una pisada elegida, el clic en el vídeo le pone el sitio a ELLA, aunque otra esté más cerca (20-11-2026)
     r = await ev("""(()=>{ const V=VV(); if(V.pisadas.length<2) return 'pocas pisadas';
       const q=V.pisadas.find(p=>p[1]===1)||V.pisadas[1], otra=V.pisadas.find(p=>p!==q), dd=vDes[V.id]||0;
       const guarda=[q[4],q[5],otra[4],otra[5]], u=ultimaPis; ultimaPis=otra; eligePis(q);
-      vIni=otra[0]+dd; pinta();
+      vIni=q[0]+dd; pinta();   // en el fotograma de la elegida (irse a más de 2 fotogramas la suelta, a propósito)
       const r=$('video').getBoundingClientRect();
       $('video').dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:r.left+r.width*0.25,clientY:r.top+r.height*0.75}));
-      const ok=[Math.abs(q[4]-V.ancho*0.25)<3 && Math.abs(q[5]-V.alto*0.75)<3, otra[4]===guarda[2] && otra[5]===guarda[3]];
+      const tol=Math.max(3, 1.5*V.ancho/r.width);   // un píxel de pantalla = varios del vídeo (4K: 5)
+      const ok=[Math.abs(q[4]-V.ancho*0.25)<tol && Math.abs(q[5]-V.alto*0.75)<tol, otra[4]===guarda[2] && otra[5]===guarda[3]];
       q[4]=guarda[0]; q[5]=guarda[1]; ultimaPis=u; soltarPis(); localStorage.removeItem(CLAVE_PIS(V.id)); return ok; })()""")
     print("clic en el vídeo con una pisada elegida [se mueve la elegida, la otra quieta]:", r)
-    if r != 'pocas pisadas' and r != [True, True]: mal(f"el clic en el vídeo no va a la pisada elegida: {r}")
+    if r != "pocas pisadas" and r != [True, True]: mal(f"el clic en el vídeo no va a la pisada elegida: {r}")
     await ev("$('video_cerrar').click(); 1")
     if not await ev("$('panel_video').hidden"): mal("✕ no lo oculta")
     await ev("$('ver_video').click(); 1")
@@ -434,6 +499,46 @@ async def probar_extras(ev, cdp, url, fallos):
         r = await ev(f"[cursor, {esperado}]")
         if not r or abs(r[0] - r[1]) > 0.1: mal(f"al volver a la página no recuerda dónde iba ({u[-12:]}): {r}")
 
+
+
+async def probar_estrellas(ev, fallos):
+    """23-11-2026 (Edmundo: «las dos últimas pisadas de Amelia no se ven en el vídeo»): cada pisada con sitio tiene que
+    dar un destello en el lienzo del vídeo, PARADO justo después de ella y SONANDO al 50 %. Si el vídeo no tiene pisadas
+    con sitio, se ponen 6 seguidas (cada 0,25 s) en el centro para probar. Mide píxeles pintados alrededor del pie."""
+    if not await ev("(typeof VV==='function') && !!VV() && !!document.getElementById('estrellas')"):
+        return
+    def mal(t): fallos.append("estrellas: " + t)
+    await ev("""(()=>{ if($('panel_video').hidden && $('boton_video')) $('boton_video').click(); window.__pisGuarda=VV().pisadas.map(q=>q.slice());
+      const V=VV(); if(!V.pisadas.some(q=>q[4]||q[5])){ const t0=(V.inicio||0)+V.dur*0.5*V.velocidad;
+        for(let i=0;i<6;i++) V.pisadas.push([t0+0.25*i, i%2, i%2?'D':'I', 'p', V.ancho*(0.4+0.04*i), V.alto*0.85]); }
+      return 1; })()""")
+    # parado, justo después de cada pisada
+    r = await ev("""(()=>{ const V=VV(), dd=vDes[V.id]||0, c=$('estrellas'), v=$('video');
+      const out=[]; const qs=V.pisadas.filter(q=>q[4]||q[5]);
+      for(const q of qs){ ir(q[0]+dd+0.05); estrellasVideo();
+        const k=c.width/v.clientWidth, x=Math.round(q[4]*v.clientWidth/V.ancho*k), y=Math.round(q[5]*v.clientHeight/V.alto*k);
+        const r=Math.round(10*k), d=c.getContext('2d').getImageData(Math.max(0,x-r),Math.max(0,y-r),2*r,2*r).data;
+        let n=0; for(let i=3;i<d.length;i+=4) if(d[i]>40) n++; out.push(n); }
+      return out; })()""")
+    if not r:
+        mal("no hay pisadas con sitio")
+    elif min(r) == 0:
+        mal(f"parado, hay pisadas sin destello (píxeles por pisada): {r}")
+    print(f"estrellas: parado, píxeles pintados en cada pisada ({len(r)}): mín {min(r) if r else 0} · máx {max(r) if r else 0}")
+    # sonando al 50 %: las 3 últimas pisadas con sitio
+    r2 = await ev("""(async()=>{ const V=VV(), dd=vDes[V.id]||0, c=$('estrellas'), v=$('video');
+      const qs=V.pisadas.filter(q=>q[4]||q[5]).sort((a,b)=>a[0]-b[0]).slice(-3); if(!qs.length) return [];
+      const vista=qs.map(()=>0); ponVel(0.5); await escuchar(qs[0][0]+dd-0.4);
+      const fin=performance.now()+((qs[qs.length-1][0]-qs[0][0])+1.2)/0.5*1000;
+      while(performance.now()<fin){ await new Promise(r=>requestAnimationFrame(r));
+        const k=c.width/v.clientWidth, g=c.getContext('2d');
+        qs.forEach((q,i)=>{ const x=Math.round(q[4]*v.clientWidth/V.ancho*k), y=Math.round(q[5]*v.clientHeight/V.alto*k);
+          const a=g.getImageData(x,y,1,1).data[3]; if(a>vista[i]) vista[i]=a; }); }
+      parar(); ponVel(1); return vista; })()""")
+    if r2 and min(r2) < 100:
+        mal(f"sonando al 50 %, alguna de las últimas pisadas no se ve (opacidad máxima en el pie, 0–255): {r2}")
+    print(f"estrellas: sonando al 50 %, opacidad máxima en el pie de las 3 últimas: {r2}")
+    await ev("VV().pisadas=window.__pisGuarda; estrellasVideo(); 1")
 
 async def probar_subir(ev, cdp, url, fallos):
     """Subir un vídeo desde la página (19-11-2026): que lo cuadre solo, que se guarde al recargar y que se pueda quitar."""
@@ -478,9 +583,40 @@ async def probar_vistas(ev, cdp, fallos):
     await ev("window.dispatchEvent(new Event('resize')); 1"); await asyncio.sleep(0.5)
 
 
+async def probar_golpes_partitura(ev, fallos):
+    """Filas «♪ …» de la lupa (golpes de la partitura, 23-11-2026): cada golpe cae dentro de su compás cuadrado,
+    tantos golpes como notas no ligadas (los acordes, uno), van con las anclas y suenan con 🔔."""
+    r = await ev("""(()=>{ const out=[]; for (const f of PT_FILAS) { const gs=golpesP(f,-1,1e9);
+        const malos=gs.filter(q=>!(q[0]>=TP[q[5]]-0.002 && q[0]<TP[q[5]+1]+0.002)).length;
+        const onsets=new Set(PTF[f].notas.map(n=>n[0]+':'+n[1].toFixed(4))).size;
+        out.push([f, gs.length, onsets, malos, PTF[f].notas.length]); } return out; })()""")
+    if not r: fallos.append("hay partitura pero ninguna fila «♪» de golpes en la lupa"); return
+    for f, n, ons, malos, notas in r:
+        print(f"golpes de la partitura: fila «{f}» · {n} golpes ({notas} notas sin contar ligadas) · fuera de su compás: {malos}")
+        if n == 0: fallos.append(f"«{f}»: sin golpes")
+        if malos: fallos.append(f"«{f}»: {malos} golpes fuera de su compás")
+        if n > ons: fallos.append(f"«{f}»: {n} golpes y solo {ons} sitios distintos")
+    f = r[0][0]
+    # mover un ancla mueve los golpes de ese compás lo mismo (y se deja como estaba)
+    d = await ev(f"""(()=>{{ const f={json.dumps(f)}, gs=golpesP(f,-1,1e9), q=gs.find(x=>x[5]>0) || gs[0], k=q[5];
+        const antes=JSON.stringify(anclas), t0=q[0]; anclas={{}}; anclas[k]=TP[k]+0.25; rehazTiempos();
+        const t1=golpesP(f,-1,1e9).find(x=>x[5]===k && Math.abs(x[6]-q[6])<1e-6)[0];
+        anclas=JSON.parse(antes); rehazTiempos(); return t1-t0; }})()""")
+    print(f"golpes de la partitura: un ancla +0,25 s mueve los golpes de su compás {d:+.3f} s")
+    if d is None or abs(d - 0.25) > 0.01: fallos.append(f"los golpes no siguen a las anclas: {d}")
+    # 🔔 clic en lo escrito: un clic por golpe en el trozo que suena
+    c = await ev(f"""(async()=>{{ const f={json.dumps(f)}; for (const k in clic) clic[k]=false; clic[f]=true; parar(); const a=TP[0], b=TP[TP.length-1];
+        sel={{a,b}}; $('bucle').checked=true; await escuchar(a);
+        const n=sonando.cl.length, esp=golpesP(f,a,b).filter(q=>q[0]>=a && q[0]<b).length;
+        parar(); clic[f]=false; sel=null; $('bucle').checked=false; cambiaClics(); return [n, esp]; }})()""")
+    print(f"golpes de la partitura: 🔔 {c[0]} clics programados, {c[1]} golpes en el trozo")
+    if not c or c[0] != c[1]: fallos.append(f"clic en lo escrito: {c}")
+
+
 async def probar_partitura(ev, fallos):
     """El panel «Partitura»: se dibuja, marca el compás que suena (a 100 % y a 60 %), clic en un compás, bucle,
     elegir partes, anclas y ← →."""
+    await probar_golpes_partitura(ev, fallos)
     # la página la prepara sola de antemano (sin sonar): esperar a que esté y medir lo que tarda en ABRIRSE el panel
     for _ in range(300):
         if await ev("window.__partituraLista===true"): break
@@ -538,7 +674,7 @@ async def probar_partitura(ev, fallos):
     await ev("$('adelante').click(); 1"); await asyncio.sleep(0.4)
     if not await ev("document.querySelectorAll('#partitura rect.marca_lupa').length>0"): fallos.append("lo que se ve en la lupa no se marca en la partitura")
     # anclas: mover un compás medio segundo
-    an = await ev("const v=TP[10]; ponAncla(10, v+0.5); [TP[10]-v, $('anclas_txt').textContent]")
+    an = await ev("const k=Math.min(10,TP.length-2), v=TP[k]; ponAncla(k, v+0.5); [TP[k]-v, $('anclas_txt').textContent]")
     if abs(an[0] - 0.5) > 0.01 or "ANCLAS" not in an[1]: fallos.append(f"las anclas no van: {an}")
     await ev("$('borra_anclas').click(); 1")
     # elegir partes: solo piano → menos pentagramas

@@ -1,0 +1,17 @@
+# Analizar tangos · lo necesario para ritmo.py, pagina_ritmo.py, partitura.py, video.py y juntar.py
+# Probado con Python 3.13 en Windows. Hace falta además ffmpeg (https://ffmpeg.org) en el PATH o en C:\ffmpeg\bin.
+numpy>=2.2
+scipy>=1.14
+librosa>=0.10
+soundfile>=0.12
+matplotlib>=3.9
+pillow>=10
+torch>=2.5
+torchaudio>=2.5
+beat-this @ https://github.com/CPJKU/beat_this/archive/main.zip
+
+# Separar instrumentos (analizar_tango.py, o ritmo.py --separar). Baja los modelos la primera vez (~1 GB).
+audio-separator[cpu]>=0.30
+
+# Pruebas sin ventana de la página (probar_ritmo.py): usan Edge o Chrome
+websockets>=12

@@ -11,7 +11,9 @@ Uso: python probar_beat_this.py [modelo]   (final0 = grande, small0 = pequeño)
 import sys, os, csv, glob
 import numpy as np
 
-RAIZ = r"D:\Dropbox\TDJ\Analisis tangos"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import rutas
+RAIZ = rutas.ANALISIS
 MODELO = sys.argv[1] if len(sys.argv) > 1 else "final0"
 
 

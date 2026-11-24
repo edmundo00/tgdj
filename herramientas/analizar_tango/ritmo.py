@@ -28,15 +28,11 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import golpes as golpes_mod
 
 # ffmpeg: si no está en el PATH (p. ej. el PC del trabajo), buscarlo en las carpetas de siempre
-import shutil
-if not shutil.which("ffmpeg"):
-    for _d in (r"C:\ffmpeg\bin", os.path.expandvars(r"%USERPROFILE%\herramientas\ffmpeg\bin")):
-        if os.path.isfile(os.path.join(_d, "ffmpeg.exe")):
-            os.environ["PATH"] = _d + os.pathsep + os.environ.get("PATH", "")
-            break
+import shutil, rutas
+rutas.preparar_ffmpeg()
 
 SR = 44100
-SALIDA_DEF = r"D:\Dropbox\TDJ\Analisis tangos"
+SALIDA_DEF = rutas.ANALISIS
 AQUI = os.path.dirname(os.path.abspath(__file__))
 BANDAS = {"graves": (35, 200), "medios": (200, 2000), "agudos": (2000, 10000)}
 SUB_BIN = {0: "", 1: "e", 2: "y", 3: "a"}          # 1 e y a
@@ -156,7 +152,7 @@ def fuentes(y, nombre, audio=None, separar_ya=False):
         import separar
         dir_p = os.path.join(SALIDA_DEF, "_datos", nombre, "pistas")
         print("    separando instrumentos (unos minutos la primera vez)…", flush=True)
-        p = separar.separar(audio, dir_p, os.path.join(os.path.expanduser("~"), "venvs", "modelos_separador"))
+        p = separar.separar(audio, dir_p, os.path.join(rutas.VENVS, "modelos_separador"))
         return {"contrabajo": p["contrabajo"], "piano": p["piano"], "bandoneones": p["resto"]}, "pistas separadas"
     _, perc = librosa.effects.hpss(y, margin=2.0)
     out = {}

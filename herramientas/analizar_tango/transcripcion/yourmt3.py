@@ -6,7 +6,9 @@ notas (88 en 3 min de contrabajo, con o sin subir el volumen, 18-11-2026): pasar
 Tarda unas 3 veces la duración del audio con la mezcla, algo menos con una pista suelta.
 """
 import os, sys, time, shutil
-CODIGO = os.path.join(os.path.expanduser("~"), "venvs", "yourmt3_code")
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import rutas
+CODIGO = os.path.join(rutas.VENVS, "yourmt3_code")
 os.chdir(CODIGO)
 sys.path[:0] = [CODIGO, os.path.join(CODIGO, "amt", "src")]
 import numpy as np, torch, librosa

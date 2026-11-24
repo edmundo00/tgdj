@@ -13,7 +13,9 @@ Uso (python de venvs\\analizar_tango):
 import os, sys, glob, time, datetime, subprocess, argparse
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
-TDJ = r"D:\Dropbox\TDJ"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import rutas
+TDJ = rutas.TDJ
 RITMO = os.path.join(TDJ, "Analisis tangos", "_ritmo")
 ESTADO = os.path.join(RITMO, "_RITMO_ESTADO.txt")
 BAJA = 0x00004000 | 0x08000000   # BELOW_NORMAL_PRIORITY_CLASS | CREATE_NO_WINDOW

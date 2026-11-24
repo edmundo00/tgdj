@@ -5,7 +5,9 @@ Uso: python probar_pagina.py "<carpeta marcar_...>" [captura.png]
 """
 import os, json, time, base64, asyncio, subprocess, tempfile, shutil, urllib.request, pathlib, sys
 import websockets
-EDGE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import rutas
+EDGE = rutas.buscar_edge()
 PAG = pathlib.Path(sys.argv[1], "index.html").as_uri()
 OUT = sys.argv[2] if len(sys.argv) > 2 else os.path.join(tempfile.gettempdir(), "probar_pagina.png")
 VIEJAS = [{"n": 129, "quien": "S", "pie": "I", "x": 300, "y": 1650}, {"n": 185, "quien": "L", "pie": "D", "x": 700, "y": 1700}]

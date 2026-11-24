@@ -38,7 +38,9 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import datos_tango as DT
 
-FF = shutil.which("ffmpeg") or r"C:\ffmpeg\bin\ffmpeg.exe"
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import rutas
+FF = rutas.preparar_ffmpeg()[0]
 ORO, CREMA, ROSA = (240, 192, 90), (248, 241, 228), (214, 190, 180)
 FONDO, CASILLA = (30, 6, 12, 205), (66, 20, 28, 255)
 COLORES = [(240, 192, 90), (80, 160, 250), (240, 110, 170), (120, 220, 130)]          # color de cada bailarín (fila)

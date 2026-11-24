@@ -31,7 +31,9 @@ from fractions import Fraction
 import numpy as np
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
-RAIZ = r"D:\Dropbox\TDJ\Analisis tangos"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import rutas
+RAIZ = rutas.ANALISIS
 SR = 22050
 PENAL = 0.35       # lo que se paga por cada tiempo de más o de menos en un compás (cuadre compás a compás)
 SEMI = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
@@ -155,6 +157,12 @@ def alinear(notas, partes, compases, audio, pistas, pulsos, anclas=None):
     # ¿el tiempo de la partitura es la negra del pulso, o está escrita al doble / a la mitad?
     dur_musica = pb[-1] - pb[0]
     factor = min((1, 2, 0.5), key=lambda x: abs(np.log(q_total * x * med / dur_musica)))
+    # con 2 anclas o más, el factor sale de ellas: una partitura de un TROZO no dura lo que el disco entero
+    # (con el solo de «El buey solo», 14 compases, salía ×2 y la anacrusa ocupaba un tiempo de más, 23-11-2026)
+    an = sorted((m, t) for m, t in (anclas or {}).items() if 0 <= m < len(compases))
+    if len(an) >= 2 and compases[an[-1][0]]["q0"] > compases[an[0][0]]["q0"]:
+        seg_por_q = (an[-1][1] - an[0][1]) / (compases[an[-1][0]]["q0"] - compases[an[0][0]]["q0"])
+        factor = min((1, 2, 0.5), key=lambda x: abs(np.log(seg_por_q / (x * med))))
     if factor != 1:
         notas = [(q * factor, m, ip) for q, m, ip in notas]
         compases = [dict(c, q0=c["q0"] * factor, q=c["q"] * factor) for c in compases]
@@ -219,6 +227,12 @@ def alinear(notas, partes, compases, audio, pistas, pulsos, anclas=None):
     ruta = ruta[::-1]
     jf = ruta[-1] + largos[-1]
     t0 = np.array([pb[j] for j in ruta] + [pb[jf] if jf < nP else pb[-1] + (jf - nP + 1) * med])
+    # anacrusa más corta que un pulso (p. ej. una corchea): el compás 0 no puede empezar en un pulso entero;
+    # se pone justo lo que dura antes del compás 1 (antes salía un tiempo entero antes, 23-11-2026)
+    q_ana = compases[0]["q"]
+    if nM > 1 and abs(q_ana - round(q_ana)) > 0.01:
+        dur_q = (t0[2] - t0[1]) / compases[1]["q"] if nM > 2 else med
+        t0[0] = t0[1] - q_ana * dur_q
     coste = [float(E[m, ruta[m]]) for m in range(nM)]
     return t0, coste, afin, factor
 
@@ -261,17 +275,11 @@ def pistas_de(nombre):
 
 
 def audio_de(a):
-    for r in (a, os.path.join(r"D:\Dropbox\TDJ\MUSICA", a), os.path.join(r"D:\Dropbox\TDJ", a)):
-        if r and os.path.exists(r):
-            return r
-    return None
+    return rutas.buscar_audio(a)
 
 
 def ruta_partitura(p):
-    for r in (p, os.path.join(r"D:\Dropbox\TDJ\Partituras\convertidas", p), os.path.join(r"D:\Dropbox\TDJ", p)):
-        if r and os.path.exists(r):
-            return os.path.abspath(r)
-    return None
+    return rutas.buscar_partitura(p)
 
 
 def hacer(carpeta, mxl=None, anclas=None, sin_anclas=False):
@@ -352,8 +360,7 @@ if __name__ == "__main__":
         sys.stdout.reconfigure(encoding="utf-8")
     except Exception:
         pass
-    if os.path.exists(r"C:\ffmpeg\bin\ffmpeg.exe") and r"C:\ffmpeg\bin" not in os.environ["PATH"]:
-        os.environ["PATH"] = r"C:\ffmpeg\bin;" + os.environ["PATH"]
+    rutas.preparar_ffmpeg()
     sys.path.insert(0, AQUI)
     a = sys.argv[1:]
     anclas = {}

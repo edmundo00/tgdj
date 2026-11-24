@@ -25,8 +25,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import datos_tango as DT
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
-FF = shutil.which("ffmpeg") or r"C:\ffmpeg\bin\ffmpeg.exe"
-FP = shutil.which("ffprobe") or r"C:\ffmpeg\bin\ffprobe.exe"
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import rutas
+FF, FP = rutas.preparar_ffmpeg()
 COLORES = ["240,192,90", "90,209,240", "240,120,170", "120,220,130"]
 ANCHO = 720                                   # ancho de los fotogramas de la página
 

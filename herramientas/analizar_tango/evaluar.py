@@ -15,7 +15,8 @@ import numpy as np, librosa
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import separar, pulso, golpes as G
 
-RAIZ = r"D:\Dropbox\TDJ\Analisis tangos"
+import rutas
+RAIZ = rutas.ANALISIS
 SR = separar.SR
 LOCA = {"Juan D'arienzo - Loca 69681_rp", "Los Reyes del Tango - loca"}
 PARTITURA = {"contrabajo": {1: [1, 2, 3, 4], 2: [1, 2, 3, 4], 7: [1, 2, 3, 4], 8: [1, 2, 3, 4]},

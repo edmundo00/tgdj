@@ -18,8 +18,9 @@ Necesita ritmo.json (ritmo.py) y _datos\\<canción>\\pistas\\bandoneones.flac + 
 import os, sys, json, glob
 import numpy as np
 
-RITMO = r"D:\Dropbox\TDJ\Analisis tangos\_ritmo"
-DATOS = r"D:\Dropbox\TDJ\Analisis tangos\_datos"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import rutas
+RITMO, DATOS = rutas.RITMO, rutas.DATOS
 PISTAS = ("bandoneones", "contrabajo")
 VECINOS = 3
 N_AZAR = 2000

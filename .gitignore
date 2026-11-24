@@ -103,3 +103,6 @@ herramientas/partituras/audiveris/
 # resultados que vuelven a salir con las herramientas (ordenar_musica, fichas por sonido)
 herramientas/ordenar_musica/_*
 data/fichas_sonido.csv
+
+# rutas propias de cada ordenador (analizar_tango)
+herramientas/analizar_tango/rutas_local.json

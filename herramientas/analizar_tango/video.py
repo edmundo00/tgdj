@@ -28,9 +28,10 @@ import os, sys, json, glob, shutil, argparse, subprocess
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(AQUI, "bailarines"))
-RAIZ = r"D:\Dropbox\TDJ\Analisis tangos"
-FF = shutil.which("ffmpeg") or r"C:\ffmpeg\bin\ffmpeg.exe"
-FP = shutil.which("ffprobe") or r"C:\ffmpeg\bin\ffprobe.exe"
+sys.path.insert(0, AQUI)
+import rutas
+RAIZ = rutas.ANALISIS
+FF, FP = rutas.preparar_ffmpeg()
 COLORES = {"follower": ["#f0c05a", "#f08a4b"], "leader": ["#5ad1f0", "#5af0c0"]}   # follower cálidos, leader fríos (como marcar_pisadas)
 
 
@@ -88,9 +89,9 @@ def copia_ligera(video, destino):
 
 def audio_de_cancion(carpeta):
     a = json.load(open(os.path.join(carpeta, "ritmo.json"), encoding="utf-8"))["meta"]["audio"]
-    for r in (a, os.path.join(r"D:\Dropbox\TDJ\MUSICA", a), os.path.join(r"D:\Dropbox\TDJ", a)):
-        if os.path.exists(r):
-            return r
+    r = rutas.buscar_audio(a)
+    if r:
+        return r
     raise SystemExit(f"No encuentro el audio de la canción: {a}")
 
 
